@@ -177,31 +177,17 @@ from streamlit_autorefresh import st_autorefresh
 
 try:
 # --- TAB 5: SATELLITE IMAGERY ---
-    with tab5:
+with tab5:
     st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
     st.markdown("""
     This visualization provides near real-time tracking of aerosols and smoke plumes. 
-    Data is provided courtesy of **NASA’s Earth Science Data Systems**.
+    Data is provided courtesy of **NASA’s Fire Information for Resource Management System (FIRMS)**.
     """)
-
-    try:
-        # Connecting to NASA GIBS (Global Imagery Browse Services)
-        wms = WebMapService('https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?', version='1.1.1')
-        
-        # Requesting the 'MODIS_Terra_Aerosol' layer (AOD data)
-        img_response = wms.getmap(
-            layers=['MODIS_Terra_Aerosol'],
-            srs='epsg:4326',
-            bbox=(-82.5, 33.5, -75.5, 36.5), 
-            size=(800, 600),
-            format='image/png',
-            transparent=True
-        )
-        
-        # Display image by reading the response stream
-        st.image(img_response.read(), caption="NASA MODIS Aerosol Optical Depth (NC Region)", use_container_width=True)
-        
-    except Exception as e:
-        st.error(f"Could not fetch NASA imagery: {e}")
-
-    st.caption("Source: NASA Earth Science Data Systems (ESDS).")
+    
+    # NASA FIRMS embedded interactive map
+    st.markdown("""
+    <iframe src="https://firms.modaps.eosdis.nasa.gov/map/#d:today;l:aerosol_optical_depth,fires_all;@-78.6,35.7,8z" 
+    width="100%" height="600px" frameborder="0" style="border:0; border-radius: 10px;"></iframe>
+    """, unsafe_allow_html=True)
+    
+    st.caption("Source: NASA Earth Science Data Systems (ESDS) and FIRMS. Aerosol Optical Depth (AOD) data helps identify particulate density in the atmosphere.")
