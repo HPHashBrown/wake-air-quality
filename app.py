@@ -1,3 +1,5 @@
+from owslib.wms import WebMapService
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -174,9 +176,7 @@ with tab4:
 from streamlit_autorefresh import st_autorefresh
 
 try:
-        # --- TAB 5: SATELLITE IMAGERY ---
-from owslib.wms import WebMapService
-
+# --- TAB 5: SATELLITE IMAGERY ---
 with tab5:
     st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
     st.markdown("""
@@ -188,7 +188,7 @@ with tab5:
         # Connecting to NASA GIBS (Global Imagery Browse Services)
         wms = WebMapService('https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?', version='1.1.1')
         
-        # Requesting the 'MODIS_Terra_Aerosol' layer
+        # Requesting the 'MODIS_Terra_Aerosol' layer (AOD data)
         img_response = wms.getmap(
             layers=['MODIS_Terra_Aerosol'],
             srs='epsg:4326',
@@ -198,10 +198,10 @@ with tab5:
             transparent=True
         )
         
-        # Use .read() to get the actual image data
+        # Display image by reading the response stream
         st.image(img_response.read(), caption="NASA MODIS Aerosol Optical Depth (NC Region)", use_container_width=True)
         
     except Exception as e:
         st.error(f"Could not fetch NASA imagery: {e}")
 
-    st.caption("Source: NASA Earth Science Data Systems (ESDS). Aerosol Optical Depth (AOD) data helps identify particulate density in the atmosphere.")
+    st.caption("Source: NASA Earth Science Data Systems (ESDS).")
