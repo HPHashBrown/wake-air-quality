@@ -11,14 +11,7 @@ st.set_page_config(
     page_icon="🌤️",
     layout="wide"
 )
-
-col1, col2 = st.columns([2, 1])
-with col1:
-    st.pyplot(fig)
-with col2:
-    st.metric("Current Year", current_year)
-    st.metric("Mean PM2.5", f"{mean_pm25:.2f} µg/m³")
-
+ 
 # ============================================
 # CONFIG — ENTER YOUR EPA API INFO
 # ============================================
