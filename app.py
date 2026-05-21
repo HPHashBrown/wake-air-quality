@@ -42,7 +42,6 @@ st.markdown("""
 EMAIL = st.secrets.get("EPA_EMAIL", "test@example.com")
 API_KEY = st.secrets.get("EPA_API_KEY", "testkey")
 
-# 1. Weather function now accepts lat and lon
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m"
@@ -51,8 +50,6 @@ def fetch_live_weather(lat, lon):
         return res.get("current", None)
     except: return None
 
-# 2. PM2.5 function remains US-only (EPA limitation), 
-# so we keep it specific but make the county/state dynamic.
 @st.cache_data(ttl=86400)
 def fetch_pm25_epa(year, state_code, county_code):
     url = (f"https://aqs.epa.gov/data/api/dailyData/byCounty?"
@@ -64,13 +61,10 @@ def fetch_pm25_epa(year, state_code, county_code):
         df = pd.DataFrame(res["Data"])
         return df[["date_local", "arithmetic_mean"]] if not df.empty else None
     except: return None
-        
-    try:
-        res = requests.get(url).json()
-        if "Data" not in res: return None
-        df = pd.DataFrame(res["Data"])
-        return df[["date_local", "arithmetic_mean"]] if not df.empty else None
-    except: return None
+
+# Helper to maintain compatibility with your existing UI calls
+def fetch_pm25(year):
+    return fetch_pm25_epa(year, "37", "183")
 
 def get_aqi_badge(value):
     if value <= 12.0: return "<span class='good-badge'>🟢 Good</span>"
@@ -88,7 +82,8 @@ except:
 current_year = datetime.now().year
 with st.spinner("Fetching EPA and Weather data..."):
     df_daily = fetch_pm25(current_year)
-    live_weather = fetch_live_weather()
+    # Fixed: Passing hardcoded coords to match previous behavior
+    live_weather = fetch_live_weather(35.7796, -78.6382)
 
 if df_daily is not None:
     mean_pm25 = df_daily["arithmetic_mean"].mean()
@@ -109,7 +104,6 @@ future_df = pd.DataFrame({"year": future_years, "predicted_pm25": future_preds})
 st.markdown('<p class="big-font">Wake County Air Quality Intelligence</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Medical-grade analytics for atmospheric particulate matter (PM2.5).</p>', unsafe_allow_html=True)
 
-# Updated tab definition
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 Overview & Forecast", 
     "🗃️ Data Explorer", 
@@ -187,7 +181,6 @@ with tab4:
 with tab5:
     st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
     
-    # Adding the explanation for the viewer
     st.markdown("""
     ### What are you looking at?
     This map displays **Aerosol Optical Depth (AOD)** captured by NASA's Terra satellite. 
@@ -202,10 +195,8 @@ with tab5:
         import folium
         from streamlit_folium import st_folium
         
-        # Create a base map centered on Raleigh, NC
         m = folium.Map(location=[35.7796, -78.6382], zoom_start=6, tiles="CartoDB positron")
         
-        # Add the NASA WMS layer over the base map
         folium.raster_layers.WmsTileLayer(
             url='https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
             layers='MODIS_Terra_Aerosol',
@@ -216,10 +207,7 @@ with tab5:
             overlay=True,
         ).add_to(m)
         
-        # Add a layer control so users can toggle the NASA data on and off
         folium.LayerControl().add_to(m)
-        
-        # Display the interactive map in Streamlit
         st_folium(m, use_container_width=True, height=500)
         
     except ImportError:
@@ -228,5 +216,3 @@ with tab5:
         st.error(f"Could not load the interactive map: {e}")
 
     st.caption("Source: NASA Earth Science Data Systems (ESDS).")
-
- 
