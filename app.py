@@ -176,28 +176,45 @@ with tab4:
 # --- TAB 5: SATELLITE IMAGERY ---
 with tab5:
     st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
+    
+    # Adding the explanation for the viewer
     st.markdown("""
-    This visualization provides near real-time tracking of aerosols and smoke plumes 
-    using NASA's Global Imagery Browse Services (GIBS).
+    ### What are you looking at?
+    This map displays **Aerosol Optical Depth (AOD)** captured by NASA's Terra satellite. 
+    Instead of measuring ground-level air like a normal sensor, AOD looks at the entire sky from space to see how much sunlight is being blocked by airborne particles.
+    
+    * 🟨 **Yellows/Light colors:** Low aerosol concentration (Clearer skies).
+    * 🟥 **Reds/Dark colors:** High aerosol concentration (Thick smoke, dust, or pollution).
+    * ⬛ **No Color / Transparent:** The satellite couldn't get a reading, usually because dense clouds were blocking the view!
     """)
 
     try:
-        # Connecting to NASA GIBS
-        wms = WebMapService('https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?', version='1.1.1')
+        import folium
+        from streamlit_folium import st_folium
         
-        # Requesting the 'MODIS_Terra_Aerosol' layer
-        img_response = wms.getmap(
-            layers=['MODIS_Terra_Aerosol'],
-            srs='epsg:4326',
-            bbox=(-82.5, 33.5, -75.5, 36.5), 
-            size=(800, 600),
-            format='image/png',
-            transparent=True
-        )
+        # Create a base map centered on Raleigh, NC
+        m = folium.Map(location=[35.7796, -78.6382], zoom_start=6, tiles="CartoDB positron")
         
-        st.image(img_response.read(), caption="NASA MODIS Aerosol Optical Depth (NC Region)", use_container_width=True)
+        # Add the NASA WMS layer over the base map
+        folium.raster_layers.WmsTileLayer(
+            url='https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
+            layers='MODIS_Terra_Aerosol',
+            fmt='image/png',
+            transparent=True,
+            name='NASA Aerosol Optical Depth',
+            attr='NASA Global Imagery Browse Services',
+            overlay=True,
+        ).add_to(m)
         
+        # Add a layer control so users can toggle the NASA data on and off
+        folium.LayerControl().add_to(m)
+        
+        # Display the interactive map in Streamlit
+        st_folium(m, use_container_width=True, height=500)
+        
+    except ImportError:
+        st.error("Map libraries missing! Please install 'folium' and 'streamlit-folium'.")
     except Exception as e:
-        st.error(f"Could not fetch NASA imagery: {e}")
+        st.error(f"Could not load the interactive map: {e}")
 
     st.caption("Source: NASA Earth Science Data Systems (ESDS).")
