@@ -8,3 +8,5 @@ plotly
 streamlit-autorefresh
 scipy
 owslib
+folium
+streamlit-folium
