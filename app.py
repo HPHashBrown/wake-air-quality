@@ -89,7 +89,13 @@ st.markdown('<p class="big-font">Wake County Air Quality Intelligence</p>', unsa
 st.markdown('<p class="sub-font">Predictive analytics and health literacy for atmospheric particulate matter (PM2.5).</p>', unsafe_allow_html=True)
 
 # App Navigation using Tabs
-tab1, tab2, tab3 = st.tabs(["📊 Overview & Forecast", "🗃️ Data Explorer", "🩺 Health Literacy & FAQ"])
+# Update your tabs to include the new Advanced Analytics tab
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 Overview & Forecast", 
+    "🗃️ Data Explorer", 
+    "🩺 Health Literacy", 
+    "🧠 Advanced Analytics"
+])
 
 # --------------------------------------------
 # TAB 1: OVERVIEW & FORECAST
@@ -165,6 +171,80 @@ with tab3:
         2. **Stay Indoors:** On 'Unhealthy' days, keep windows closed and run air purifiers with HEPA filters.
         3. **Mask Up:** If you must be outside during severe events (like wildfire smoke), wear a well-fitted N95 or KN95 mask.
         """)
+
+with tab4:
+    st.subheader("Deep-Dive Forecasting & Analytics")
+    
+    if not df_yearly.empty:
+        # ---- ROW 1: GAUGE & OUTLIERS ----
+        col_gauge, col_outlier = st.columns(2)
+        
+        with col_gauge:
+            st.markdown("**Current PM2.5 Threat Level**")
+            # Create a Speedometer-style Gauge Chart
+            gauge_fig = go.Figure(go.Indicator(
+                mode = "gauge+number",
+                value = y.iloc[-1],
+                domain = {'x': [0, 1], 'y': [0, 1]},
+                title = {'text': "Annual Mean (µg/m³)"},
+                gauge = {
+                    'axis': {'range': [None, 50], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                    'bar': {'color': "black"},
+                    'steps': [
+                        {'range': [0, 12], 'color': "#dcfce7"},      # Good
+                        {'range': [12, 35.4], 'color': "#fef08a"},   # Moderate
+                        {'range': [35.4, 50], 'color': "#fee2e2"}    # Unhealthy
+                    ],
+                    'threshold': {
+                        'line': {'color': "red", 'width': 4},
+                        'thickness': 0.75,
+                        'value': 35.4
+                    }
+                }
+            ))
+            gauge_fig.update_layout(height=300, margin=dict(l=10, r=10, t=40, b=10))
+            st.plotly_chart(gauge_fig, use_container_width=True)
+
+        with col_outlier:
+            st.markdown("**Outlier Detection (Spikes)**")
+            st.write("Using Z-score analysis to detect years with abnormal pollution spikes (e.g., severe wildfire seasons or rapid industrialization).")
+            
+            # Calculate Z-Scores to find anomalies
+            df_yearly['z_score'] = (df_yearly['mean_pm25'] - df_yearly['mean_pm25'].mean()) / df_yearly['mean_pm25'].std()
+            outliers = df_yearly[df_yearly['z_score'].abs() > 1.5] # Flag anything 1.5 std devs away
+            
+            if not outliers.empty:
+                st.warning(f"⚠️ Found {len(outliers)} anomalous years.")
+                st.dataframe(outliers[['year', 'mean_pm25']], hide_index=True, use_container_width=True)
+            else:
+                st.success("✅ No extreme statistical outliers detected in the historical data.")
+
+        st.divider()
+
+        # ---- ROW 2: SCENARIO SIMULATION ----
+        st.markdown("### 🎛️ Scenario Simulator: Emission Reductions")
+        st.write("Adjust the slider below to simulate how aggressive policy changes or reduced traffic would impact the 10-year forecast.")
+        
+        reduction_pct = st.slider("Simulated Emissions Reduction (%)", min_value=0, max_value=50, value=0, step=5)
+        
+        if reduction_pct > 0:
+            # Apply reduction to the predicted future values
+            multiplier = 1 - (reduction_pct / 100)
+            simulated_preds = future_preds * multiplier
+            
+            sim_fig = go.Figure()
+            sim_fig.add_trace(go.Scatter(x=future_df["year"], y=future_preds, mode="lines", name="Baseline Forecast", line=dict(color="gray", dash="dash")))
+            sim_fig.add_trace(go.Scatter(x=future_df["year"], y=simulated_preds, mode="lines+markers", name=f"-{reduction_pct}% Scenario", line=dict(color="green", width=3)))
+            
+            sim_fig.update_layout(title=f"Forecast adjusted for {reduction_pct}% reduction", xaxis_title="Year", yaxis_title="Predicted PM2.5", template="plotly_white", height=350)
+            st.plotly_chart(sim_fig, use_container_width=True)
+            
+            st.info(f"💡 A {reduction_pct}% reduction in emissions would bring the 10-year average down to **{simulated_preds.mean():.2f} µg/m³**.")
+        else:
+            st.info("Move the slider to simulate air quality improvements.")
+
+    else:
+        st.warning("Insufficient data for advanced analytics.")
 
 # Footer
 st.divider()
