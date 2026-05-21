@@ -173,7 +173,7 @@ with tab4:
 
 from streamlit_autorefresh import st_autorefresh
 
-    try:
+try:
         # --- TAB 5: SATELLITE IMAGERY ---
 from owslib.wms import WebMapService
 
