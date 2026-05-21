@@ -1,5 +1,4 @@
 from owslib.wms import WebMapService
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,6 +6,7 @@ import plotly.graph_objects as go
 import requests
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
+from streamlit_autorefresh import st_autorefresh
 
 # ============================================
 # PAGE CONFIG & THEMING
