@@ -97,7 +97,14 @@ future_df = pd.DataFrame({"year": future_years, "predicted_pm25": future_preds})
 st.markdown('<p class="big-font">Wake County Air Quality Intelligence</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Medical-grade analytics for atmospheric particulate matter (PM2.5).</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview & Forecast", "🗃️ Data Explorer", "🩺 Health Literacy", "🧠 Advanced Analytics"])
+# Updated tab definition
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 Overview & Forecast", 
+    "🗃️ Data Explorer", 
+    "🩺 Health Literacy", 
+    "🧠 Advanced Analytics", 
+    "🛰️ Satellite Imagery"
+])
 
 # --- TAB 1: OVERVIEW ---
 with tab1:
@@ -165,6 +172,22 @@ with tab4:
         st.metric("Estimated 2034 PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}%")
 
 from streamlit_autorefresh import st_autorefresh
+
+# --- TAB 5: SATELLITE IMAGERY ---
+with tab5:
+    st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
+    st.markdown("""
+    This visualization provides near real-time tracking of aerosols and smoke plumes. 
+    Data is provided courtesy of **NASA’s Fire Information for Resource Management System (FIRMS)**.
+    """)
+    
+    # NASA FIRMS embedded interactive map
+    st.markdown("""
+    <iframe src="https://firms.modaps.eosdis.nasa.gov/map/#d:today;l:aerosol_optical_depth,fires_all;@-78.6,35.7,8z" 
+    width="100%" height="600px" frameborder="0" style="border:0; border-radius: 10px;"></iframe>
+    """, unsafe_allow_html=True)
+    
+    st.caption("Source: NASA Earth Science Data Systems (ESDS) and FIRMS. Aerosol Optical Depth (AOD) data helps identify particulate density in the atmosphere.")
 
 # Run this once every 10 minutes (600,000 milliseconds)
 st_autorefresh(interval=600000, key="datarefresh")
