@@ -137,11 +137,11 @@ with tab2:
     with c1:
         st.write("**Historical Dataset**")
         st.dataframe(df_yearly, hide_index=True, use_container_width=True)
-        st.download_button("📥 Download Historical CSV", df_yearly.to_csv(index=False), "historical_pm25.csv")
+        st.download_button("📥 Download Historical CSV", df_yearly.to_csv(index=False).encode('utf-8'), "historical_pm25.csv")
     with c2:
         st.write("**Forecasted Estimates**")
         st.dataframe(future_df, hide_index=True, use_container_width=True)
-        st.download_button("📥 Download Forecast CSV", future_df.to_csv(index=False), "forecast_pm25.csv")
+        st.download_button("📥 Download Forecast CSV", future_df.to_csv(index=False).encode('utf-8'), "forecast_pm25.csv")
 
 # --- TAB 3: HEALTH LITERACY ---
 with tab3:
@@ -173,12 +173,7 @@ with tab4:
         sim_val = future_preds[-1] * (1 - (reduction/100))
         st.metric("Estimated 2034 PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}%")
 
-from streamlit_autorefresh import st_autorefresh
-
-try:
-# ============================================
-# TAB 5: SATELLITE IMAGERY (FIXED)
-# ============================================
+# --- TAB 5: SATELLITE IMAGERY ---
 with tab5:
     st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
     st.markdown("""
