@@ -6,6 +6,12 @@ import requests
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 
+st.set_page_config(
+    page_title="Wake County Air Quality",
+    page_icon="🌤️",
+    layout="wide"
+)
+
 # ============================================
 # CONFIG — ENTER YOUR EPA API INFO
 # ============================================
