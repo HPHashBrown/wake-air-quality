@@ -175,7 +175,7 @@ with tab4:
 
 from streamlit_autorefresh import st_autorefresh
 
-try:
+    try:
 # --- TAB 5: SATELLITE IMAGERY ---
 with tab5:
     st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
