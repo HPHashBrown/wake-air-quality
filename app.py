@@ -7,6 +7,7 @@ import requests
 from datetime import datetime
 from sklearn.linear_model import LinearRegression
 from streamlit_autorefresh import st_autorefresh
+from geopy.geocoders import Nominatim
 
 # ============================================
 # PAGE CONFIG & THEMING
@@ -41,20 +42,29 @@ st.markdown("""
 EMAIL = st.secrets.get("EPA_EMAIL", "test@example.com")
 API_KEY = st.secrets.get("EPA_API_KEY", "testkey")
 
+# 1. Weather function now accepts lat and lon
 @st.cache_data(ttl=3600)
-def fetch_live_weather():
-    lat, lon = 35.7796, -78.6382
+def fetch_live_weather(lat, lon):
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m"
     try:
         res = requests.get(url).json()
         return res.get("current", None)
     except: return None
 
+# 2. PM2.5 function remains US-only (EPA limitation), 
+# so we keep it specific but make the county/state dynamic.
 @st.cache_data(ttl=86400)
-def fetch_pm25(year):
+def fetch_pm25_epa(year, state_code, county_code):
     url = (f"https://aqs.epa.gov/data/api/dailyData/byCounty?"
            f"email={EMAIL}&key={API_KEY}&param=88101&bdate={year}0101&edate={year}1231"
-           f"&state=37&county=183")
+           f"&state={state_code}&county={county_code}")
+    try:
+        res = requests.get(url).json()
+        if "Data" not in res: return None
+        df = pd.DataFrame(res["Data"])
+        return df[["date_local", "arithmetic_mean"]] if not df.empty else None
+    except: return None
+        
     try:
         res = requests.get(url).json()
         if "Data" not in res: return None
@@ -218,3 +228,5 @@ with tab5:
         st.error(f"Could not load the interactive map: {e}")
 
     st.caption("Source: NASA Earth Science Data Systems (ESDS).")
+
+ 
