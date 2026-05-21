@@ -177,7 +177,7 @@ from streamlit_autorefresh import st_autorefresh
 
 try:
 # --- TAB 5: SATELLITE IMAGERY ---
-with tab5:
+    with tab5:
     st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
     st.markdown("""
     This visualization provides near real-time tracking of aerosols and smoke plumes. 
