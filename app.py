@@ -164,5 +164,10 @@ with tab4:
         sim_val = future_preds[-1] * (1 - (reduction/100))
         st.metric("Estimated 2034 PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}%")
 
+from streamlit_autorefresh import st_autorefresh
+
+# Run this once every 10 minutes (600,000 milliseconds)
+st_autorefresh(interval=600000, key="datarefresh")
+
 st.divider()
 st.caption("Data sources: EPA AirData API & Open-Meteo. Updated automatically every 24 hours.")
