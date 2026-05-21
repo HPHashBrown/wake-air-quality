@@ -6,3 +6,5 @@ scikit-learn
 requests
 plotly
 streamlit-autorefresh
+scipy
+owslib
