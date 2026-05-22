@@ -96,7 +96,7 @@ def fetch_wildfire_data():
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
 # ============================================
-st.set_page_config(page_title="Wake AQI Intelligence", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
