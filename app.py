@@ -257,16 +257,40 @@ with tab4:
             "Winston-Salem": [36.0999, -80.2442]
         }
         
+# --- TAB 4: NC MAP (UPDATED) ---
+    try:
+        m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
+        
+        nc_cities = {
+            "Raleigh": [35.7796, -78.6382], "Charlotte": [35.2271, -80.8431],
+            "Greensboro": [36.0726, -79.7920], "Wilmington": [34.2104, -77.8868],
+            "Asheville": [35.5951, -82.5515], "Fayetteville": [35.0527, -78.8782],
+            "Greenville": [35.6127, -77.3663], "Durham": [35.9940, -78.8986],
+            "Winston-Salem": [36.0999, -80.2442]
+        }
+        
         for city, coords in nc_cities.items():
-            data = fetch_current_aqi(coords[0], coords[1])
+            # Pass the dynamically selected metric_key
+            data = fetch_current_aqi(coords[0], coords[1], metric_key)
             aqi = data.get('us_aqi', 0)
-            pm = data.get('pm2_5', 0)
-            color = "#10b981" if aqi <= 50 else "#f59e0b" if aqi <= 100 else "#ef4444"
-                
-            folium.CircleMarker(
-                location=coords, radius=12, color=color, fill=True, fill_color=color, fill_opacity=0.8,
-                popup=f"<div style='width: 120px;'><b>{city}</b><br><b>AQI:</b> {aqi}<br><b>PM2.5:</b> {pm} µg/m³</div>"
-            ).add_to(m)
+            val = data.get(metric_key, 0)
+            
+            # Determine the category string for filtering
+            if aqi <= 50: category = "Good (0-50)"; color = "#10b981"
+            elif aqi <= 100: category = "Moderate (51-100)"; color = "#f59e0b"
+            else: category = "Unhealthy (101+)"; color = "#ef4444"
+            
+            # Only render if the category is checked in the sidebar filter
+            if category in selected_risks:
+                folium.CircleMarker(
+                    location=coords, 
+                    radius=12, 
+                    color=color, 
+                    fill=True, 
+                    fill_color=color, 
+                    fill_opacity=0.8,
+                    popup=f"<b>{city}</b><br><b>{selected_metric}:</b> {val}<br><b>AQI:</b> {aqi}"
+                ).add_to(m)
         
         st_folium(m, use_container_width=True, height=600)
     except Exception as e:
