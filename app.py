@@ -7,6 +7,7 @@ from datetime import datetime
 import folium
 from streamlit_folium import st_folium
 from sklearn.linear_model import LinearRegression
+from fpdf import FPDF
 
 # Try importing Meta's Prophet for advanced forecasting
 try:
@@ -161,6 +162,20 @@ else:
     })
 
 current_aqi = current_aqi_data.get('us_aqi', 0)
+
+def generate_pdf_report(df_yearly, future_df, current_aqi):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, txt="Wake County AQI Intelligence Report", ln=True, align='C')
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
+    pdf.ln(10)
+    pdf.cell(200, 10, txt=f"Current AQI Level: {current_aqi}", ln=True)
+    pdf.ln(5)
+    pdf.cell(200, 10, txt="Historical Data Summary:", ln=True)
+    pdf.cell(200, 10, txt=df_yearly.to_string(), ln=True)
+    return pdf.output(dest='S').encode('latin-1')
 
 # ============================================
 # UI LAYOUT
