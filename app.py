@@ -76,18 +76,17 @@ st.markdown("""
 # ============================================
 with st.sidebar:
     st.markdown("### 🔔 Automated Alerting")
-    st.write("Deploy threshold triggers to receive automated environmental warnings.")
-    
     with st.form("alert_form"):
-        target_email = st.text_input("Operator Email", placeholder="operator@wake.gov")
+        target_email = st.text_input("Operator Email", placeholder="operator@nc.gov")
         alert_threshold = st.slider("US AQI Trigger Threshold", min_value=50, max_value=300, value=100, step=10)
         submit_alert = st.form_submit_button("Initialize Protocol")
-        
         if submit_alert:
-            if target_email:
-                st.success(f"Protocol Active: Monitoring matrix for AQI > {alert_threshold}. Alerts will route to {target_email}.")
-            else:
-                st.error("Error: Valid Email Required.")
+            if target_email: st.success("Protocol Active.")
+            else: st.error("Error: Valid Email Required.")
+
+    st.markdown("---")
+    st.markdown("### 📂 Data Ingest")
+    uploaded_file = st.file_uploader("Upload custom CSV", type=['csv'])
 
 # ============================================
 # DATA FETCHING (API)
