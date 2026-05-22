@@ -43,7 +43,6 @@ st.markdown("""
 # ============================================
 EMAIL = st.secrets.get("EPA_EMAIL", "test@example.com")
 API_KEY = st.secrets.get("EPA_API_KEY", "testkey")
-AIRNOW_API_KEY = st.secrets.get("AIRNOW_API_KEY", "")
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
@@ -66,16 +65,14 @@ def fetch_pm25_epa(year, state_code, county_code):
     except: return None
 
 @st.cache_data(ttl=3600)
-def fetch_airnow_data(zip_code="27601"):
-    if not AIRNOW_API_KEY: return None
-    # Fetches real-time observations from AirNow
-    url = f"https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode={zip_code}&distance=25&API_KEY={AIRNOW_API_KEY}"
+def fetch_current_aqi(lat=35.7796, lon=-78.6382):
+    # Switched to Open-Meteo Air Quality API - No API Key Required!
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,pm2_5"
     try:
         res = requests.get(url).json()
-        # Filter for PM2.5
-        pm25_obs = [obs for obs in res if obs.get('ParameterName') == 'PM2.5']
-        return pm25_obs
-    except: return None
+        return res.get("current", {})
+    except: 
+        return {}
 
 # Helper to maintain compatibility
 def fetch_pm25(year):
@@ -95,9 +92,9 @@ except:
     df_yearly = pd.DataFrame({"year": [2020, 2021, 2022, 2023], "mean_pm25": [8.5, 9.2, 8.1, 7.9]})
 
 current_year = datetime.now().year
-with st.spinner("Fetching EPA, Weather, and AirNow data..."):
+with st.spinner("Fetching EPA, Weather, and AQI data..."):
     df_daily = fetch_pm25(current_year)
-    airnow_data = fetch_airnow_data()
+    current_aqi_data = fetch_current_aqi()
     live_weather = fetch_live_weather(35.7796, -78.6382)
 
 if df_daily is not None:
@@ -113,8 +110,8 @@ future_years = np.arange(current_year + 1, current_year + 11)
 future_preds = model.predict(future_years.reshape(-1, 1))
 future_df = pd.DataFrame({"year": future_years, "predicted_pm25": future_preds})
 
-# Determine current AQI for display
-current_aqi = airnow_data[0]['AQI'] if airnow_data else 0
+# Determine current AQI for display securely from Open-Meteo
+current_aqi = current_aqi_data.get('us_aqi', 0)
 
 # ============================================
 # UI LAYOUT
@@ -197,35 +194,48 @@ with tab4:
 
 # --- TAB 5: SATELLITE IMAGERY ---
 with tab5:
-    st.subheader("🛰️ Real-time Aerosol & Official Monitoring")
+    st.subheader("🛰️ Real-time Satellite & Official Monitoring")
     
     st.markdown("""
-    This map displays NASA Aerosol Optical Depth (AOD) layered with **official AirNow Monitoring Stations**.
+    This map displays **NASA's Daily True Color Satellite Imagery** layered with live AQI monitors across Wake County.
     """)
 
     try:
         m = folium.Map(location=[35.7796, -78.6382], zoom_start=10, tiles="CartoDB positron")
         
-        # NASA Layer
-        folium.raster_layers.WmsTileLayer(
-            url='https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
-            layers='MODIS_Terra_Aerosol',
-            fmt='image/png',
-            transparent=True,
-            name='NASA Aerosol Optical Depth',
-            attr='NASA Global Imagery Browse Services',
+        # NASA Satellite Layer (Updated to a reliable WMTS feed)
+        folium.TileLayer(
+            tiles="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/current/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
+            attr="NASA Global Imagery Browse Services",
+            name="NASA Satellite Imagery",
             overlay=True,
         ).add_to(m)
         
-        # AirNow Stations
-        if airnow_data:
-            for obs in airnow_data:
-                # Basic coordinates for display (using Raleigh area for visual context)
-                folium.Marker(
-                    location=[35.7796, -78.6382], 
-                    popup=f"Station: {obs['ReportingArea']}<br>AQI: {obs['AQI']}<br>Category: {obs['Category']['Name']}",
-                    icon=folium.Icon(color="blue", icon="info-sign")
-                ).add_to(m)
+        # Wake County Cities to monitor
+        wake_cities = {
+            "Raleigh": [35.7796, -78.6382],
+            "Cary": [35.7915, -78.7811],
+            "Wake Forest": [35.9799, -78.5097],
+            "Apex": [35.7327, -78.8503],
+            "Garner": [35.7113, -78.6142]
+        }
+        
+        # Fetch and plot live Open-Meteo AQI for each city
+        for city, coords in wake_cities.items():
+            live_data = fetch_current_aqi(coords[0], coords[1])
+            val = live_data.get('us_aqi', 0)
+            pm = live_data.get('pm2_5', 0)
+            
+            # Marker colors based on US AQI
+            if val <= 50: color = "green"
+            elif val <= 100: color = "orange"
+            else: color = "red"
+                
+            folium.Marker(
+                location=coords, 
+                popup=f"<b>{city}</b><br>AQI: {val}<br>PM2.5: {pm} µg/m³",
+                icon=folium.Icon(color=color, icon="info-sign")
+            ).add_to(m)
         
         folium.LayerControl().add_to(m)
         st_folium(m, use_container_width=True, height=500)
@@ -233,4 +243,4 @@ with tab5:
     except Exception as e:
         st.error(f"Could not load the map: {e}")
 
-    st.caption("Source: NASA ESDS & Official AirNow Data.")
+    st.caption("Source: NASA ESDS & Open-Meteo Air Quality Feed.")
