@@ -16,6 +16,16 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
+st.markdown("---")
+st.markdown("### 📄 Export Report")
+pdf_data = generate_pdf_report(df_yearly, future_df, current_aqi)
+st.download_button(
+        label="📥 Download PDF Summary",
+        data=pdf_data,
+        file_name="AQI_Report.pdf",
+        mime="application/pdf"
+    )
+
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
 # ============================================
@@ -89,15 +99,7 @@ with st.sidebar:
     st.markdown("### 📂 Data Ingest")
     uploaded_file = st.file_uploader("Upload custom CSV", type=['csv'])
 
-st.markdown("---")
-st.markdown("### 📄 Export Report")
-pdf_data = generate_pdf_report(df_yearly, future_df, current_aqi)
-st.download_button(
-        label="📥 Download PDF Summary",
-        data=pdf_data,
-        file_name="AQI_Report.pdf",
-        mime="application/pdf"
-    )
+
 
 # ============================================
 # DATA FETCHING (API)
