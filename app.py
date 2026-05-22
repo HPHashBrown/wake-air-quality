@@ -8,6 +8,8 @@ from datetime import datetime
 from sklearn.linear_model import LinearRegression
 from streamlit_autorefresh import st_autorefresh
 from geopy.geocoders import Nominatim
+import folium
+from streamlit_folium import st_folium
 
 # ============================================
 # PAGE CONFIG & THEMING
@@ -41,6 +43,7 @@ st.markdown("""
 # ============================================
 EMAIL = st.secrets.get("EPA_EMAIL", "test@example.com")
 API_KEY = st.secrets.get("EPA_API_KEY", "testkey")
+PA_API_KEY = st.secrets.get("PURPLEAIR_KEY", "")
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
@@ -62,6 +65,17 @@ def fetch_pm25_epa(year, state_code, county_code):
         return df[["date_local", "arithmetic_mean"]] if not df.empty else None
     except: return None
 
+@st.cache_data(ttl=600)
+def fetch_purpleair_sensors():
+    if not PA_API_KEY: return pd.DataFrame()
+    # Wake County Bounding Box
+    url = "https://api.purpleair.com/v1/sensors?fields=name,pm2.5_atm,latitude,longitude&nwlng=-78.9&nwlat=36.0&selng=-78.3&selat=35.5"
+    headers = {"X-API-Key": PA_API_KEY}
+    try:
+        res = requests.get(url, headers=headers).json()
+        return pd.DataFrame(res['data'], columns=res['fields'])
+    except: return pd.DataFrame()
+
 # Helper to maintain compatibility with your existing UI calls
 def fetch_pm25(year):
     return fetch_pm25_epa(year, "37", "183")
@@ -80,9 +94,8 @@ except:
     df_yearly = pd.DataFrame({"year": [2020, 2021, 2022, 2023], "mean_pm25": [8.5, 9.2, 8.1, 7.9]})
 
 current_year = datetime.now().year
-with st.spinner("Fetching EPA and Weather data..."):
+with st.spinner("Fetching EPA, Weather, and Sensor data..."):
     df_daily = fetch_pm25(current_year)
-    # Fixed: Passing hardcoded coords to match previous behavior
     live_weather = fetch_live_weather(35.7796, -78.6382)
 
 if df_daily is not None:
@@ -179,24 +192,17 @@ with tab4:
 
 # --- TAB 5: SATELLITE IMAGERY ---
 with tab5:
-    st.subheader("🛰️ Real-time Aerosol & Smoke Analysis")
+    st.subheader("🛰️ Real-time Aerosol & Sensor Network")
     
     st.markdown("""
-    ### What are you looking at?
-    This map displays **Aerosol Optical Depth (AOD)** captured by NASA's Terra satellite. 
-    Instead of measuring ground-level air like a normal sensor, AOD looks at the entire sky from space to see how much sunlight is being blocked by airborne particles.
-    
-    * 🟨 **Yellows/Light colors:** Low aerosol concentration (Clearer skies).
-    * 🟥 **Reds/Dark colors:** High aerosol concentration (Thick smoke, dust, or pollution).
-    * ⬛ **No Color / Transparent:** The satellite couldn't get a reading, usually because dense clouds were blocking the view!
+    This map displays NASA Aerosol Optical Depth (AOD) layered with **live PurpleAir sensors** across Wake County.
+    * 🟢 Good | 🟡 Moderate | 🔴 Unhealthy
     """)
 
     try:
-        import folium
-        from streamlit_folium import st_folium
+        m = folium.Map(location=[35.7796, -78.6382], zoom_start=10, tiles="CartoDB positron")
         
-        m = folium.Map(location=[35.7796, -78.6382], zoom_start=6, tiles="CartoDB positron")
-        
+        # NASA Layer
         folium.raster_layers.WmsTileLayer(
             url='https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi?',
             layers='MODIS_Terra_Aerosol',
@@ -207,12 +213,24 @@ with tab5:
             overlay=True,
         ).add_to(m)
         
+        # PurpleAir Sensors
+        sensors = fetch_purpleair_sensors()
+        if not sensors.empty:
+            for _, row in sensors.iterrows():
+                val = row['pm2.5_atm']
+                color = "green" if val < 12 else "yellow" if val < 35 else "red"
+                folium.CircleMarker(
+                    location=[row['latitude'], row['longitude']],
+                    radius=6,
+                    popup=f"{row['name']}<br>PM2.5: {val}",
+                    color=color,
+                    fill=True
+                ).add_to(m)
+        
         folium.LayerControl().add_to(m)
         st_folium(m, use_container_width=True, height=500)
         
-    except ImportError:
-        st.error("Map libraries missing! Please install 'folium' and 'streamlit-folium'.")
     except Exception as e:
         st.error(f"Could not load the interactive map: {e}")
 
-    st.caption("Source: NASA Earth Science Data Systems (ESDS).")
+    st.caption("Source: NASA ESDS & PurpleAir Sensor Network.")
