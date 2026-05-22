@@ -18,6 +18,7 @@ count = st_autorefresh(interval=300000, key="datarefresh")
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
 
+FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
 
 def get_nasa_climate_data(lat, lon):
     # Calculate a date 30 days ago to ensure data is available
