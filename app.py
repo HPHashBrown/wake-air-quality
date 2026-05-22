@@ -103,9 +103,10 @@ def fetch_live_weather(lat, lon):
     except: return None
 
 @st.cache_data(ttl=3600)
-def fetch_current_aqi(lat=35.7796, lon=-78.6382):
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,pm2_5"
-    try:
+def fetch_current_aqi(lat=35.7796, lon=-78.6382, metric_key="pm2_5"):
+    # We inject the metric_key into the API string dynamically
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric_key}"
+    try: 
         return requests.get(url).json().get("current", {})
     except: return {}
 
