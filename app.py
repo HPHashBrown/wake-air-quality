@@ -59,6 +59,33 @@ metric_key = "pm2_5"
 selected_metric = "PM2.5" 
 selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 
+# 1. Define your Key clearly at the top
+FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
+
+# 2. Define the function safely
+def fetch_wildfire_data():
+    # Use the specific FIRMS key
+    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
+    
+    try:
+        # Attempt to read the data
+        df = pd.read_csv(url)
+        
+        # Standardize columns (NASA sometimes changes names)
+        # We rename whatever the latitude/longitude column is called to 'latitude'/'longitude'
+        if 'latitude' not in df.columns and 'lat' in df.columns:
+            df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
+            
+        # Filter for NC area
+        nc_fires = df[(df['latitude'] >= 34) & (df['latitude'] <= 37) & 
+                      (df['longitude'] >= -84) & (df['longitude'] <= -75)]
+        return nc_fires
+        
+    except Exception as e:
+        # If anything goes wrong, this block catches the error 
+        # so your app doesn't crash.
+        return pd.DataFrame()
+
 
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
@@ -293,32 +320,6 @@ with tab4:
     try:
         m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
 
-# 1. Define your Key clearly at the top
-FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
-
-# 2. Define the function safely
-def fetch_wildfire_data():
-    # Use the specific FIRMS key
-    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
-    
-    try:
-        # Attempt to read the data
-        df = pd.read_csv(url)
-        
-        # Standardize columns (NASA sometimes changes names)
-        # We rename whatever the latitude/longitude column is called to 'latitude'/'longitude'
-        if 'latitude' not in df.columns and 'lat' in df.columns:
-            df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
-            
-        # Filter for NC area
-        nc_fires = df[(df['latitude'] >= 34) & (df['latitude'] <= 37) & 
-                      (df['longitude'] >= -84) & (df['longitude'] <= -75)]
-        return nc_fires
-        
-    except Exception as e:
-        # If anything goes wrong, this block catches the error 
-        # so your app doesn't crash.
-        return pd.DataFrame()
         
         nc_cities = {
             "Raleigh": [35.7796, -78.6382], "Charlotte": [35.2271, -80.8431],
