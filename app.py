@@ -293,20 +293,41 @@ with tab4:
         m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
 
 # --- TAB 4: FIRE MARKER LOOP ---
-fires = fetch_wildfire_data()
+def fetch_wildfire_data():
+    url = "https://firms.modaps.eosdis.nasa.gov/mapkey_placeholder/map/C6/firms/csv/USA_contiguous_and_Hawaii_24h.csv"
+    try:
+        # Use a timeout to ensure the app doesn't hang forever
+        df = pd.read_csv(url, timeout=10)
+        # Verify columns exist before returning
+        required_cols = ['latitude', 'longitude']
+        if all(col in df.columns for col in required_cols):
+            return df[(df['latitude'] > 30) & (df['latitude'] < 40) & 
+                      (df['longitude'] > -85) & (df['longitude'] < -75)]
+        return pd.DataFrame() # Empty if columns missing
+    except Exception as e:
+        # Silently fail so the rest of the map loads
+        return pd.DataFrame()
 
-# Only run if fires data is not empty
-if not fires.empty:
-    for _, fire in fires.iterrows():
-        # Check if 'bright_ti4' exists, if not, try 'brightness'
-        brightness = fire.get('bright_ti4', fire.get('brightness', 'N/A'))
+    # --- TAB 4: FIRE MARKER LOOP ---
+    fires = fetch_wildfire_data()
+    
+    # DEBUG: See what the columns are (remove this line once it works)
+    if not fires.empty:
+        st.write(f"Fire Data Found! Columns: {list(fires.columns)}")
         
-        folium.Marker(
-            location=[fire['latitude'], fire['longitude']],
-            # prefix='fa' is required to use FontAwesome icons like 'fire'
-            icon=folium.Icon(color='red', icon='fire', prefix='fa'),
-            popup=f"Fire Hotspot!<br>Brightness: {brightness}"
-        ).add_to(m)
+        for _, fire in fires.iterrows():
+            # Safely get values, defaulting to 'N/A' if columns don't exist
+            lat = fire.get('latitude')
+            lon = fire.get('longitude')
+            # Look for common brightness column names
+            bright = fire.get('bright_ti4', fire.get('brightness', 'N/A'))
+            
+            if lat is not None and lon is not None:
+                folium.Marker(
+                    location=[lat, lon],
+                    icon=folium.Icon(color='red', icon='fire', prefix='fa'),
+                    popup=f"Fire Hotspot!<br>Brightness: {bright}"
+                ).add_to(m)
         
         nc_cities = {
             "Raleigh": [35.7796, -78.6382], "Charlotte": [35.2271, -80.8431],
