@@ -8,8 +8,11 @@ import folium
 from streamlit_folium import st_folium
 from sklearn.linear_model import LinearRegression
 from fpdf import FPDF
-
 from datetime import datetime, timedelta
+from streamlit_autorefresh import st_autorefresh
+
+# Refresh every 5 minutes (300,000 ms)
+count = st_autorefresh(interval=300000, key="datarefresh")
 
 
 def get_nasa_climate_data(lat, lon):
@@ -47,22 +50,22 @@ def fetch_wildfire_data():
     except:
         return pd.DataFrame()
 
-# Try importing Meta's Prophet for advanced forecasting
+
 try:
     from prophet import Prophet
     PROPHET_AVAILABLE = True
 except ImportError:
     PROPHET_AVAILABLE = False
 
-# Add this right after your imports
+
 metric_key = "pm2_5" 
 selected_metric = "PM2.5" 
 selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 
-# 1. Define your Key clearly at the top
+
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
 
-# 2. Define the function safely
+
 def fetch_wildfire_data():
     # Use the specific FIRMS key
     url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
