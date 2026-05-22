@@ -11,5 +11,3 @@ owslib
 folium
 streamlit-folium
 geopy
-fpdf
-FPDF
