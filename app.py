@@ -210,7 +210,7 @@ def generate_pdf_report(df_yearly, future_df, current_aqi):
 st.markdown('<p class="title-gradient">NC AQI Intelligence</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence"])
 
 # --- TAB 1: OVERVIEW & ADVANCED CHART ---
 with tab1:
@@ -304,6 +304,22 @@ with tab4:
         st_folium(m, use_container_width=True, height=600)
     except Exception as e:
         st.error(f"Orbital Feed Interrupted: {e}")
+
+
+    # Update your tabs definition:
+# tab1, tab2, tab3, tab4, tab5 = st.tabs([... , "🛰️ Space Intelligence"])
+
+with tab5:
+    st.markdown("### 🌍 Satellite-Derived Context")
+    st.write("Cross-referencing local nodes with NASA Earth Observation platforms.")
+    
+    nasa_data = get_nasa_climate_data(35.7796, -78.6382)
+    
+    col1, col2 = st.columns(2)
+    col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²", help="NASA POWER: Measures potential for ozone formation.")
+    col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s", help="NASA POWER: High-altitude wind drift data.")
+    
+    st.info("💡 **Why this matters:** NASA monitors surface solar radiation because high levels contribute to ground-level ozone formation, which directly impacts your AQI readings.")
 
 
 # --- PLACE THIS AFTER THE 4 COLUMNS IN TAB 1 ---
