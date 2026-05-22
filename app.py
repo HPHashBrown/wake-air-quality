@@ -16,6 +16,11 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
+# Add this right after your imports
+metric_key = "pm2_5" 
+selected_metric = "PM2.5" 
+selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
+
 
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
