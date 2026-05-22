@@ -182,6 +182,32 @@ with st.sidebar:
         
     st.write(f"🕒 Data updated: **{time_str} ago**")
 
+with st.sidebar:
+    st.markdown("---")
+    
+    # 1. The Manual Reset Button
+    if st.button("🔄 Manual Refresh"):
+        # Reset the timer to now
+        st.session_state.start_time = datetime.now()
+        
+        # Pro-Tip: If you want to force the data to re-fetch 
+        # (clearing the cache for current session), uncomment the line below:
+        # st.cache_data.clear() 
+        
+        st.rerun() # Forces the app to re-run immediately
+
+    # 2. The Timer Display
+    elapsed = datetime.now() - st.session_state.start_time
+    seconds = int(elapsed.total_seconds())
+    
+    if seconds < 60:
+        time_str = f"{seconds} seconds"
+    else:
+        minutes = seconds // 60
+        time_str = f"{minutes} minutes"
+        
+    st.write(f"🕒 Data updated: **{time_str} ago**")
+
 
 
 # ============================================
