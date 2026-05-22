@@ -85,7 +85,6 @@ with st.sidebar:
         
         if submit_alert:
             if target_email:
-                # In a production app, this would write to a database and trigger an AWS Lambda/CRON job
                 st.success(f"Protocol Active: Monitoring matrix for AQI > {alert_threshold}. Alerts will route to {target_email}.")
             else:
                 st.error("Error: Valid Email Required.")
@@ -164,7 +163,7 @@ current_aqi = current_aqi_data.get('us_aqi', 0)
 st.markdown('<p class="title-gradient">Wake AQI Intelligence</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Next-Generation Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🛰️ Orbital Vector Map"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Orbital Vector Map"])
 
 # --- TAB 1: OVERVIEW & ADVANCED CHART ---
 with tab1:
@@ -235,8 +234,22 @@ with tab2:
         sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
         st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
 
-# --- TAB 3: SATELLITE & WIND VECTOR MAP ---
+# --- TAB 3: HEALTH LITERACY ---
 with tab3:
+    st.markdown("### 🩺 Biological Impact Protocols")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("#### The Wake County Vector")
+        st.write("Rapid urban expansion impacts local air quality. Monitoring particulate matter is crucial for public health management.")
+    with c2:
+        st.markdown("#### Medical Glossary")
+        with st.expander("🔬 What is PM2.5?"):
+            st.write("Particulate matter 2.5 micrometers or smaller, capable of entering the bloodstream.")
+        with st.expander("🛡️ What is a Healthy Level?"):
+            st.write("The EPA considers annual mean concentrations below 12.0 µg/m³ as sustainable for the general public.")
+
+# --- TAB 4: SATELLITE & WIND VECTOR MAP ---
+with tab4:
     st.markdown("### 🛰️ Orbital & Vector Mesh")
     st.write("NASA MODIS True Color imagery synchronized with ground sensors. **Arrows indicate real-time wind particle dispersion vectors.**")
 
@@ -268,7 +281,7 @@ with tab3:
             # Node Marker
             folium.CircleMarker(
                 location=coords, radius=8, color=color, fill=True, fill_color=color, fill_opacity=0.7,
-                popup=f"<b>{city}</b><br>AQI: {val}<br>Wind Dir: {wind_dir}°"
+                popup=f"<b>{city}</b><br>AQI: {val}<br>PM2.5: {pm} µg/m³<br>Wind Dir: {wind_dir}°"
             ).add_to(m)
             
             # Wind Vector Arrow (HTML rotated based on actual wind direction)
