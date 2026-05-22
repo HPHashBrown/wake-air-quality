@@ -90,7 +90,7 @@ with st.sidebar:
     uploaded_file = st.file_uploader("Upload custom CSV", type=['csv'])
 
 st.markdown("---")
-    st.markdown("### 📄 Export Report")
+st.markdown("### 📄 Export Report")
     pdf_data = generate_pdf_report(df_yearly, future_df, current_aqi)
     st.download_button(
         label="📥 Download PDF Summary",
