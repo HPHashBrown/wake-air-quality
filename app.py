@@ -246,18 +246,7 @@ with tab3:
 # --- TAB 4: NC MAP ---
 with tab4:
     st.markdown("### 🛰️ North Carolina Sensor Mesh")
-    try:
-        m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
         
-        nc_cities = {
-            "Raleigh": [35.7796, -78.6382], "Charlotte": [35.2271, -80.8431],
-            "Greensboro": [36.0726, -79.7920], "Wilmington": [34.2104, -77.8868],
-            "Asheville": [35.5951, -82.5515], "Fayetteville": [35.0527, -78.8782],
-            "Greenville": [35.6127, -77.3663], "Durham": [35.9940, -78.8986],
-            "Winston-Salem": [36.0999, -80.2442]
-        }
-        
-# --- TAB 4: NC MAP (UPDATED) ---
     try:
         m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
         
