@@ -292,14 +292,21 @@ with tab4:
     try:
         m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
 
-# Inside your Tab 4 map block, AFTER you define the map (m = folium.Map...)
+# --- TAB 4: FIRE MARKER LOOP ---
 fires = fetch_wildfire_data()
-for _, fire in fires.iterrows():
-    folium.Marker(
-        location=[fire['latitude'], fire['longitude']],
-        icon=folium.Icon(color='red', icon='fire'),
-        popup=f"Fire Hotspot! Brightness: {fire['bright_ti4']}"
-    ).add_to(m)
+
+# Only run if fires data is not empty
+if not fires.empty:
+    for _, fire in fires.iterrows():
+        # Check if 'bright_ti4' exists, if not, try 'brightness'
+        brightness = fire.get('bright_ti4', fire.get('brightness', 'N/A'))
+        
+        folium.Marker(
+            location=[fire['latitude'], fire['longitude']],
+            # prefix='fa' is required to use FontAwesome icons like 'fire'
+            icon=folium.Icon(color='red', icon='fire', prefix='fa'),
+            popup=f"Fire Hotspot!<br>Brightness: {brightness}"
+        ).add_to(m)
         
         nc_cities = {
             "Raleigh": [35.7796, -78.6382], "Charlotte": [35.2271, -80.8431],
