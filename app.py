@@ -160,10 +160,13 @@ current_aqi = current_aqi_data.get('us_aqi', 0)
 # ============================================
 # UI LAYOUT
 # ============================================
-st.markdown('<p class="title-gradient">Wake AQI Intelligence</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-font">Next-Generation Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
+# ============================================
+# UI LAYOUT
+# ============================================
+st.markdown('<p class="title-gradient">NC AQI Intelligence</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Orbital Vector Map"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map"])
 
 # --- TAB 1: OVERVIEW & ADVANCED CHART ---
 with tab1:
@@ -180,39 +183,12 @@ with tab1:
         val = f"{live_weather['wind_direction_10m']}°" if live_weather else "N/A"
         st.markdown(f"<div class='glass-card'><h5>Vector Heading</h5><h3>{val}</h3><span>Atmospheric Drift</span></div>", unsafe_allow_html=True)
 
-    # Advanced Plotly Chart with Confidence Intervals
     fig = go.Figure()
-    
-    # Historical Data
-    fig.add_trace(go.Scatter(
-        x=df_yearly["year"], y=df_yearly["mean_pm25"], 
-        mode="lines+markers", name="Recorded Telemetry", 
-        line=dict(color="#00f2fe", width=4),
-        marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#00f2fe"))
-    ))
-    
-    # AI Forecast Line
+    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded Telemetry", line=dict(color="#00f2fe", width=4), marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#00f2fe"))))
     forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
-    fig.add_trace(go.Scatter(
-        x=forecast_future["year"], y=forecast_future["predicted_pm25"], 
-        mode="lines+markers", name="Algorithmic Forecast", 
-        line=dict(color="#f87171", width=4, dash="dot"),
-        marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#f87171"))
-    ))
-
-    # AI Confidence Interval (Shaded Area)
-    fig.add_trace(go.Scatter(
-        x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]),
-        y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]),
-        fill='toself', fillcolor='rgba(248, 113, 113, 0.15)',
-        line=dict(color='rgba(255,255,255,0)'),
-        hoverinfo="skip", showlegend=True, name="AI Confidence Interval"
-    ))
-
-    fig.update_layout(
-        title="PM2.5 Long-Term Atmospheric Trajectory (Prophet Forecasting)", 
-        template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", hovermode="x unified"
-    )
+    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Algorithmic Forecast", line=dict(color="#f87171", width=4, dash="dot"), marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#f87171"))))
+    fig.add_trace(go.Scatter(x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), fill='toself', fillcolor='rgba(248, 113, 113, 0.15)', line=dict(color='rgba(255,255,255,0)'), hoverinfo="skip", showlegend=True, name="AI Confidence Interval"))
+    fig.update_layout(title="PM2.5 Long-Term Atmospheric Trajectory", template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
 # --- TAB 2: ADVANCED ANALYTICS ---
@@ -220,12 +196,7 @@ with tab2:
     g1, g2 = st.columns(2)
     with g1:
         st.markdown("**Current Threat Level (AQI)**")
-        gauge = go.Figure(go.Indicator(
-            mode="gauge+number", value=current_aqi, 
-            gauge={'axis': {'range': [0, 300], 'tickwidth': 1, 'tickcolor': "white"}, 'bar': {'color': "#00f2fe"}, 
-                   'bgcolor': "rgba(255,255,255,0.05)",
-                   'steps': [{'range': [0, 50], 'color': "rgba(16, 185, 129, 0.3)"}, {'range': [50, 100], 'color': "rgba(245, 158, 11, 0.3)"}, {'range': [100, 300], 'color': "rgba(239, 68, 68, 0.3)"}]}
-        ))
+        gauge = go.Figure(go.Indicator(mode="gauge+number", value=current_aqi, gauge={'axis': {'range': [0, 300], 'tickwidth': 1, 'tickcolor': "white"}, 'bar': {'color': "#00f2fe"}, 'bgcolor': "rgba(255,255,255,0.05)", 'steps': [{'range': [0, 50], 'color': "rgba(16, 185, 129, 0.3)"}, {'range': [50, 100], 'color': "rgba(245, 158, 11, 0.3)"}, {'range': [100, 300], 'color': "rgba(239, 68, 68, 0.3)"}]}))
         gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
         st.plotly_chart(gauge, use_container_width=True)
     with g2:
@@ -239,8 +210,8 @@ with tab3:
     st.markdown("### 🩺 Biological Impact Protocols")
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown("#### The Wake County Vector")
-        st.write("Rapid urban expansion impacts local air quality. Monitoring particulate matter is crucial for public health management.")
+        st.markdown("#### The Regional Vector")
+        st.write("Urban expansion across North Carolina impacts air quality. Monitoring particulate matter is critical.")
     with c2:
         st.markdown("#### Medical Glossary")
         with st.expander("🔬 What is PM2.5?"):
@@ -248,53 +219,31 @@ with tab3:
         with st.expander("🛡️ What is a Healthy Level?"):
             st.write("The EPA considers annual mean concentrations below 12.0 µg/m³ as sustainable for the general public.")
 
-# --- TAB 4: SATELLITE & WIND VECTOR MAP ---
+# --- TAB 4: NC MAP ---
 with tab4:
-    st.markdown("### 🛰️ Orbital & Vector Mesh")
-    st.write("NASA MODIS True Color imagery synchronized with ground sensors. **Arrows indicate real-time wind particle dispersion vectors.**")
-
+    st.markdown("### 🛰️ North Carolina Sensor Mesh")
     try:
-        m = folium.Map(location=[35.7796, -78.6382], zoom_start=10, tiles="CartoDB dark_matter")
+        m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
         
-        folium.TileLayer(
-            tiles="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/current/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
-            attr="NASA GIBS", name="NASA Orbital Imagery", overlay=True, opacity=0.5
-        ).add_to(m)
-        
-        wake_cities = {
-            "Raleigh Node": [35.7796, -78.6382],
-            "Cary Node": [35.7915, -78.7811],
-            "Wake Forest Node": [35.9799, -78.5097]
+        nc_cities = {
+            "Raleigh": [35.7796, -78.6382], "Charlotte": [35.2271, -80.8431],
+            "Greensboro": [36.0726, -79.7920], "Wilmington": [34.2104, -77.8868],
+            "Asheville": [35.5951, -82.5515], "Fayetteville": [35.0527, -78.8782],
+            "Greenville": [35.6127, -77.3663], "Durham": [35.9940, -78.8986],
+            "Winston-Salem": [36.0999, -80.2442]
         }
         
-        for city, coords in wake_cities.items():
-            # Get local AQI and Wind Data for each node
-            local_weather = fetch_live_weather(coords[0], coords[1])
-            local_aqi_data = fetch_current_aqi(coords[0], coords[1])
-            
-            val = local_aqi_data.get('us_aqi', 0)
-            pm = local_aqi_data.get('pm2_5', 0)
-            wind_dir = local_weather.get('wind_direction_10m', 0) if local_weather else 0
-            
-            color = "green" if val <= 50 else "orange" if val <= 100 else "red"
+        for city, coords in nc_cities.items():
+            data = fetch_current_aqi(coords[0], coords[1])
+            aqi = data.get('us_aqi', 0)
+            pm = data.get('pm2_5', 0)
+            color = "#10b981" if aqi <= 50 else "#f59e0b" if aqi <= 100 else "#ef4444"
                 
-            # Node Marker
             folium.CircleMarker(
-                location=coords, radius=8, color=color, fill=True, fill_color=color, fill_opacity=0.7,
-                popup=f"<b>{city}</b><br>AQI: {val}<br>PM2.5: {pm} µg/m³<br>Wind Dir: {wind_dir}°"
-            ).add_to(m)
-            
-            # Wind Vector Arrow (HTML rotated based on actual wind direction)
-            folium.Marker(
-                location=coords,
-                icon=folium.DivIcon(html=f"""
-                    <div style="transform: rotate({wind_dir}deg); font-size: 24px; color: #00f2fe; text-shadow: 0 0 5px #000;">
-                        ↑
-                    </div>
-                """)
+                location=coords, radius=12, color=color, fill=True, fill_color=color, fill_opacity=0.8,
+                popup=f"<div style='width: 120px;'><b>{city}</b><br><b>AQI:</b> {aqi}<br><b>PM2.5:</b> {pm} µg/m³</div>"
             ).add_to(m)
         
-        st_folium(m, use_container_width=True, height=550)
-        
+        st_folium(m, use_container_width=True, height=600)
     except Exception as e:
         st.error(f"Orbital Feed Interrupted: {e}")
