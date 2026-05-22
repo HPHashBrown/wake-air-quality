@@ -343,7 +343,7 @@ with tab5:
     
     st.info("💡 **Why this matters:** NASA monitors surface solar radiation because high levels contribute to ground-level ozone formation, which directly impacts your AQI readings.")
 
-    with tab5:
+with tab5:
     st.markdown("### 🔥 Real-Time Wildfire Hotspots")
     fires = fetch_wildfire_data()
     
