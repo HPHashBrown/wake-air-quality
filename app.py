@@ -293,7 +293,7 @@ with tab4:
         m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
 
 # --- TAB 4: FIRE MARKER LOOP ---
-def fetch_wildfire_data():
+    def fetch_wildfire_data():
     url = "https://firms.modaps.eosdis.nasa.gov/mapkey_placeholder/map/C6/firms/csv/USA_contiguous_and_Hawaii_24h.csv"
     try:
         # Use a timeout to ensure the app doesn't hang forever
