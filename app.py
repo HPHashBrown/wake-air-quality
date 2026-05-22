@@ -105,11 +105,17 @@ def fetch_current_aqi(lat=35.7796, lon=-78.6382):
         return requests.get(url).json().get("current", {})
     except: return {}
 
-# Mock Historical Fetch (Since AQS requires valid keys)
-try:
-    df_yearly = pd.read_csv("wake_pm25_by_year.csv").sort_values("year")
-except:
-    df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
+# ============================================
+# PROCESSING & MODELING
+# ============================================
+# Automatically use uploaded file if exists, otherwise fallback to local CSV
+if uploaded_file is not None:
+    df_yearly = pd.read_csv(uploaded_file).sort_values("year")
+else:
+    try:
+        df_yearly = pd.read_csv("wake_pm25_by_year.csv").sort_values("year")
+    except:
+        df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
 
 current_year = datetime.now().year
 with st.spinner("Initializing Atmospheric Sensors & Predictive AI..."):
