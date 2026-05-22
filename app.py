@@ -43,7 +43,7 @@ st.markdown("""
 # ============================================
 EMAIL = st.secrets.get("EPA_EMAIL", "test@example.com")
 API_KEY = st.secrets.get("EPA_API_KEY", "testkey")
-PA_API_KEY = st.secrets.get("PURPLEAIR_KEY", "")
+AIRNOW_API_KEY = st.secrets.get("AIRNOW_API_KEY", "")
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
@@ -65,24 +65,25 @@ def fetch_pm25_epa(year, state_code, county_code):
         return df[["date_local", "arithmetic_mean"]] if not df.empty else None
     except: return None
 
-@st.cache_data(ttl=600)
-def fetch_purpleair_sensors():
-    if not PA_API_KEY: return pd.DataFrame()
-    # Wake County Bounding Box
-    url = "https://api.purpleair.com/v1/sensors?fields=name,pm2.5_atm,latitude,longitude&nwlng=-78.9&nwlat=36.0&selng=-78.3&selat=35.5"
-    headers = {"X-API-Key": PA_API_KEY}
+@st.cache_data(ttl=3600)
+def fetch_airnow_data(zip_code="27601"):
+    if not AIRNOW_API_KEY: return None
+    # Fetches real-time observations from AirNow
+    url = f"https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode={zip_code}&distance=25&API_KEY={AIRNOW_API_KEY}"
     try:
-        res = requests.get(url, headers=headers).json()
-        return pd.DataFrame(res['data'], columns=res['fields'])
-    except: return pd.DataFrame()
+        res = requests.get(url).json()
+        # Filter for PM2.5
+        pm25_obs = [obs for obs in res if obs.get('ParameterName') == 'PM2.5']
+        return pm25_obs
+    except: return None
 
-# Helper to maintain compatibility with your existing UI calls
+# Helper to maintain compatibility
 def fetch_pm25(year):
     return fetch_pm25_epa(year, "37", "183")
 
 def get_aqi_badge(value):
-    if value <= 12.0: return "<span class='good-badge'>🟢 Good</span>"
-    elif value <= 35.4: return "<span class='mod-badge'>🟡 Moderate</span>"
+    if value <= 50: return "<span class='good-badge'>🟢 Good</span>"
+    elif value <= 100: return "<span class='mod-badge'>🟡 Moderate</span>"
     else: return "<span class='unh-badge'>🔴 Unhealthy</span>"
 
 # ============================================
@@ -94,8 +95,9 @@ except:
     df_yearly = pd.DataFrame({"year": [2020, 2021, 2022, 2023], "mean_pm25": [8.5, 9.2, 8.1, 7.9]})
 
 current_year = datetime.now().year
-with st.spinner("Fetching EPA, Weather, and Sensor data..."):
+with st.spinner("Fetching EPA, Weather, and AirNow data..."):
     df_daily = fetch_pm25(current_year)
+    airnow_data = fetch_airnow_data()
     live_weather = fetch_live_weather(35.7796, -78.6382)
 
 if df_daily is not None:
@@ -110,6 +112,9 @@ model = LinearRegression().fit(X, y)
 future_years = np.arange(current_year + 1, current_year + 11)
 future_preds = model.predict(future_years.reshape(-1, 1))
 future_df = pd.DataFrame({"year": future_years, "predicted_pm25": future_preds})
+
+# Determine current AQI for display
+current_aqi = airnow_data[0]['AQI'] if airnow_data else 0
 
 # ============================================
 # UI LAYOUT
@@ -130,7 +135,7 @@ with tab1:
     st.subheader("🌐 Real-Time Environmental Context")
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        st.markdown(f"<div class='metric-card'><h5>Current PM2.5</h5><h3>{y.iloc[-1]:.2f} µg/m³</h3>{get_aqi_badge(y.iloc[-1])}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='metric-card'><h5>Current AQI</h5><h3>{current_aqi}</h3>{get_aqi_badge(current_aqi)}</div>", unsafe_allow_html=True)
     with m2:
         val = f"{live_weather['temperature_2m']}°C" if live_weather else "N/A"
         st.markdown(f"<div class='metric-card'><h5>Live Temp</h5><h3>{val}</h3><span>Raleigh, NC</span></div>", unsafe_allow_html=True)
@@ -182,7 +187,7 @@ with tab4:
     g1, g2 = st.columns(2)
     with g1:
         st.markdown("**AQI Status Gauge**")
-        gauge = go.Figure(go.Indicator(mode="gauge+number", value=y.iloc[-1], gauge={'axis': {'range': [0, 40]}, 'bar': {'color': "#1E3A8A"}, 'steps': [{'range': [0, 12], 'color': "#dcfce7"}, {'range': [12, 35.4], 'color': "#fef08a"}, {'range': [35.4, 40], 'color': "#fee2e2"}]}))
+        gauge = go.Figure(go.Indicator(mode="gauge+number", value=current_aqi, gauge={'axis': {'range': [0, 300]}, 'bar': {'color': "#1E3A8A"}, 'steps': [{'range': [0, 50], 'color': "#dcfce7"}, {'range': [50, 100], 'color': "#fef08a"}, {'range': [100, 300], 'color': "#fee2e2"}]}))
         st.plotly_chart(gauge, use_container_width=True)
     with g2:
         st.markdown("**Scenario Simulator**")
@@ -192,11 +197,10 @@ with tab4:
 
 # --- TAB 5: SATELLITE IMAGERY ---
 with tab5:
-    st.subheader("🛰️ Real-time Aerosol & Sensor Network")
+    st.subheader("🛰️ Real-time Aerosol & Official Monitoring")
     
     st.markdown("""
-    This map displays NASA Aerosol Optical Depth (AOD) layered with **live PurpleAir sensors** across Wake County.
-    * 🟢 Good | 🟡 Moderate | 🔴 Unhealthy
+    This map displays NASA Aerosol Optical Depth (AOD) layered with **official AirNow Monitoring Stations**.
     """)
 
     try:
@@ -213,24 +217,20 @@ with tab5:
             overlay=True,
         ).add_to(m)
         
-        # PurpleAir Sensors
-        sensors = fetch_purpleair_sensors()
-        if not sensors.empty:
-            for _, row in sensors.iterrows():
-                val = row['pm2.5_atm']
-                color = "green" if val < 12 else "yellow" if val < 35 else "red"
-                folium.CircleMarker(
-                    location=[row['latitude'], row['longitude']],
-                    radius=6,
-                    popup=f"{row['name']}<br>PM2.5: {val}",
-                    color=color,
-                    fill=True
+        # AirNow Stations
+        if airnow_data:
+            for obs in airnow_data:
+                # Basic coordinates for display (using Raleigh area for visual context)
+                folium.Marker(
+                    location=[35.7796, -78.6382], 
+                    popup=f"Station: {obs['ReportingArea']}<br>AQI: {obs['AQI']}<br>Category: {obs['Category']['Name']}",
+                    icon=folium.Icon(color="blue", icon="info-sign")
                 ).add_to(m)
         
         folium.LayerControl().add_to(m)
         st_folium(m, use_container_width=True, height=500)
         
     except Exception as e:
-        st.error(f"Could not load the interactive map: {e}")
+        st.error(f"Could not load the map: {e}")
 
-    st.caption("Source: NASA ESDS & PurpleAir Sensor Network.")
+    st.caption("Source: NASA ESDS & Official AirNow Data.")
