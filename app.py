@@ -9,18 +9,6 @@ from streamlit_folium import st_folium
 from sklearn.linear_model import LinearRegression
 from fpdf import FPDF
 
-# Try importing Meta's Prophet for advanced forecasting
-try:
-    from prophet import Prophet
-    PROPHET_AVAILABLE = True
-except ImportError:
-    PROPHET_AVAILABLE = False
-
-# Add this right after your imports
-metric_key = "pm2_5" 
-selected_metric = "PM2.5" 
-selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
-
 import requests
 
 def get_nasa_climate_data(lat, lon):
@@ -34,6 +22,18 @@ def get_nasa_climate_data(lat, lon):
         return {"solar_radiation": solar, "satellite_wind_speed": wind}
     except Exception as e:
         return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
+
+# Try importing Meta's Prophet for advanced forecasting
+try:
+    from prophet import Prophet
+    PROPHET_AVAILABLE = True
+except ImportError:
+    PROPHET_AVAILABLE = False
+
+# Add this right after your imports
+metric_key = "pm2_5" 
+selected_metric = "PM2.5" 
+selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 
 
 # ============================================
