@@ -356,6 +356,8 @@ with tab4:
     except Exception as e:
         st.error(f"Orbital Feed Interrupted: {e}")
 
+fires = fetch_wildfire_data()
+
 
     # Update your tabs definition:
 # tab1, tab2, tab3, tab4, tab5 = st.tabs([... , "🛰️ Space Intelligence"])
