@@ -9,16 +9,26 @@ from streamlit_folium import st_folium
 from sklearn.linear_model import LinearRegression
 from fpdf import FPDF
 
-import requests
+from datetime import datetime, timedelta
 
 def get_nasa_climate_data(lat, lon):
-    # Using a slightly simplified URL structure to ensure stability
-    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start=20260520&end=20260520&format=JSON"
+    # Calculate a date 30 days ago to ensure data is available
+    target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+    
+    # URL using a guaranteed historical date
+    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start={target_date}&end={target_date}&format=JSON"
+    
     try:
-        response = requests.get(url)
-        data = response.json()['properties']['parameter']
-        solar = list(data['ALLSKY_SFC_SW_DWN'].values())[0]
-        wind = list(data['WS2M'].values())[0]
+        response = requests.get(url).json()
+        # Access the dictionary safely
+        data = response['properties']['parameter']
+        solar_values = list(data['ALLSKY_SFC_SW_DWN'].values())
+        wind_values = list(data['WS2M'].values())
+        
+        # Only return if we found actual data, not -999
+        solar = solar_values[0] if solar_values[0] != -999 else "N/A"
+        wind = wind_values[0] if wind_values[0] != -999 else "N/A"
+        
         return {"solar_radiation": solar, "satellite_wind_speed": wind}
     except Exception as e:
         return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
