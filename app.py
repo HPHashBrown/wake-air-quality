@@ -14,6 +14,10 @@ from streamlit_autorefresh import st_autorefresh
 # Refresh every 5 minutes (300,000 ms)
 count = st_autorefresh(interval=300000, key="datarefresh")
 
+# Initialize session state for the timer if it doesn't exist
+if 'start_time' not in st.session_state:
+    st.session_state.start_time = datetime.now()
+
 
 def get_nasa_climate_data(lat, lon):
     # Calculate a date 30 days ago to ensure data is available
@@ -165,7 +169,18 @@ with st.sidebar:
 
 with st.sidebar:
     st.markdown("---")
-    st.write(f"🕒 Last refresh: {datetime.now().strftime('%H:%M:%S')}")
+    
+    # Calculate time passed since page load
+    elapsed = datetime.now() - st.session_state.start_time
+    seconds = int(elapsed.total_seconds())
+    
+    if seconds < 60:
+        time_str = f"{seconds} seconds"
+    else:
+        minutes = seconds // 60
+        time_str = f"{minutes} minutes"
+        
+    st.write(f"🕒 Data updated: **{time_str} ago**")
 
 
 
