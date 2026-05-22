@@ -91,7 +91,7 @@ with st.sidebar:
 
 st.markdown("---")
 st.markdown("### 📄 Export Report")
-    pdf_data = generate_pdf_report(df_yearly, future_df, current_aqi)
+pdf_data = generate_pdf_report(df_yearly, future_df, current_aqi)
     st.download_button(
         label="📥 Download PDF Summary",
         data=pdf_data,
