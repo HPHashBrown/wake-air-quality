@@ -293,26 +293,31 @@ with tab4:
     try:
         m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
 
+# 1. Define your Key clearly at the top
+FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
+
+# 2. Define the function safely
 def fetch_wildfire_data():
-    FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" # Put your key here
-    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{MAP_KEY}/VIIRS_SNPP_NRT/USA/1"
+    # Use the specific FIRMS key
+    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
     
     try:
+        # Attempt to read the data
         df = pd.read_csv(url)
-        # Check column names: 
-        # FIRMS sometimes uses 'latitude'/'longitude' or 'lat'/'lon'
-        lat_col = 'latitude' if 'latitude' in df.columns else 'lat'
-        lon_col = 'longitude' if 'longitude' in df.columns else 'lon'
         
-        # Rename them to standard so the rest of your app works
-        df = df.rename(columns={lat_col: 'latitude', lon_col: 'longitude'})
-        
-        # Filter for NC area (roughly 34 to 37 latitude, -84 to -75 longitude)
+        # Standardize columns (NASA sometimes changes names)
+        # We rename whatever the latitude/longitude column is called to 'latitude'/'longitude'
+        if 'latitude' not in df.columns and 'lat' in df.columns:
+            df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
+            
+        # Filter for NC area
         nc_fires = df[(df['latitude'] >= 34) & (df['latitude'] <= 37) & 
                       (df['longitude'] >= -84) & (df['longitude'] <= -75)]
         return nc_fires
+        
     except Exception as e:
-        st.write(f"Error fetching fires: {e}")
+        # If anything goes wrong, this block catches the error 
+        # so your app doesn't crash.
         return pd.DataFrame()
         
         nc_cities = {
