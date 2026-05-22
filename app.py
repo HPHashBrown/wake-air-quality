@@ -247,3 +247,18 @@ with tab4:
         st_folium(m, use_container_width=True, height=600)
     except Exception as e:
         st.error(f"Orbital Feed Interrupted: {e}")
+
+
+# --- PLACE THIS AFTER THE 4 COLUMNS IN TAB 1 ---
+    st.markdown("---")
+    st.subheader("🩺 Public Health Advisory")
+    
+    # Dynamic Alert Logic
+    if current_aqi <= 50:
+        st.success("✅ **Air Quality is Good.** Air quality is considered satisfactory, and air pollution poses little or no risk.")
+    elif current_aqi <= 100:
+        st.warning("⚠️ **Air Quality is Moderate.** Air quality is acceptable; however, there may be a risk for some people, particularly those who are unusually sensitive to air pollution.")
+    elif current_aqi <= 150:
+        st.error("🚫 **Unhealthy for Sensitive Groups.** Members of sensitive groups may experience health effects. The general public is less likely to be affected.")
+    else:
+        st.error("🚨 **Health Alert.** Some members of the general public may experience health effects; members of sensitive groups may experience more serious health effects. Reduce prolonged outdoor exertion.")
