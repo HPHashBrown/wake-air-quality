@@ -24,16 +24,15 @@ selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 import requests
 
 def get_nasa_climate_data(lat, lon):
-    # This fetches recent solar radiation and wind speed data from NASA POWER
-    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start=20260520&end=20260522&format=JSON"
+    # Using a slightly simplified URL structure to ensure stability
+    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start=20260520&end=20260520&format=JSON"
     try:
-        response = requests.get(url).json()
-        data = response['properties']['parameter']
-        # Extract latest available values
-        solar = list(data['ALLSKY_SFC_SW_DWN'].values())[-1]
-        wind = list(data['WS2M'].values())[-1]
+        response = requests.get(url)
+        data = response.json()['properties']['parameter']
+        solar = list(data['ALLSKY_SFC_SW_DWN'].values())[0]
+        wind = list(data['WS2M'].values())[0]
         return {"solar_radiation": solar, "satellite_wind_speed": wind}
-    except:
+    except Exception as e:
         return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
 
 
