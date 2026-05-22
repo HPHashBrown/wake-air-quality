@@ -163,6 +163,10 @@ with st.sidebar:
     st.markdown("### 📂 Data Ingest")
     uploaded_file = st.file_uploader("Upload custom CSV", type=['csv'])
 
+with st.sidebar:
+    st.markdown("---")
+    st.write(f"🕒 Last refresh: {datetime.now().strftime('%H:%M:%S')}")
+
 
 
 # ============================================
