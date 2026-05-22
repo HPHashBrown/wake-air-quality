@@ -33,6 +33,19 @@ def get_nasa_climate_data(lat, lon):
     except Exception as e:
         return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
 
+def fetch_wildfire_data():
+    # NASA FIRMS Global Fire Data (latest 24h)
+    url = "https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_placeholder/map/C6/firms/csv/USA_contiguous_and_Hawaii_24h.csv"
+    try:
+        df = pd.read_csv(url)
+        # Filter for fires roughly in the Eastern US to keep the list relevant
+        # (Latitude 30-40, Longitude -85 to -75 covers the general NC region)
+        nc_fires = df[(df['latitude'] > 30) & (df['latitude'] < 40) & 
+                      (df['longitude'] > -85) & (df['longitude'] < -75)]
+        return nc_fires
+    except:
+        return pd.DataFrame()
+
 # Try importing Meta's Prophet for advanced forecasting
 try:
     from prophet import Prophet
@@ -329,6 +342,16 @@ with tab5:
     col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s", help="NASA POWER: High-altitude wind drift data.")
     
     st.info("💡 **Why this matters:** NASA monitors surface solar radiation because high levels contribute to ground-level ozone formation, which directly impacts your AQI readings.")
+
+    with tab5:
+    st.markdown("### 🔥 Real-Time Wildfire Hotspots")
+    fires = fetch_wildfire_data()
+    
+    if not fires.empty:
+        st.warning(f"Detected {len(fires)} active fire hotspots in the Eastern US.")
+        st.dataframe(fires[['latitude', 'longitude', 'acq_time', 'bright_ti4']])
+    else:
+        st.success("No active fire hotspots detected in the immediate NC region.")
 
 
 # --- PLACE THIS AFTER THE 4 COLUMNS IN TAB 1 ---
