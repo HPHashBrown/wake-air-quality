@@ -67,8 +67,6 @@ selected_metric = "PM2.5"
 selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 
 
-FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
-
 
 def fetch_wildfire_data():
     # Use the specific FIRMS key
