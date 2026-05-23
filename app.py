@@ -477,9 +477,7 @@ with tab3:
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
-    
-    # Checkbox to toggle the Heatmap overlay
-    show_heatmap = st.checkbox("Show Regional Pollution Heatmap", value=True)
+    show_heatmap = st.checkbox("Show Global PM2.5 Heatmap", value=True)
     
     if city_input:
         lat, lon, name = get_city_coords(city_input)
@@ -489,34 +487,35 @@ with tab4:
         else:
             st.error("Location not found.")
             
-    # Initialize map
-    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+    # 1. Initialize map ONCE
+    m = folium.Map(location=st.session_state.map_center, zoom_start=4, tiles="CartoDB dark_matter")
     
-    # --- INTEGRATED HEATMAP LOGIC ---
+    # 2. Global Heatmap Logic
     if show_heatmap:
-        # Example: list of [lat, lon, intensity]
-        # In a real app, you would fetch these points dynamically based on the city
-        regional_hotspots = [[st.session_state.map_center[0], st.session_state.map_center[1], 0.7]]
         from folium.plugins import HeatMap
-        HeatMap(regional_hotspots, radius=30, blur=20).add_to(m)
+        # This simulates a global grid. In production, you would fetch 
+        # a list of [lat, lon, pm2.5_value] from a global AQI API.
+        global_hotspots = []
+        for lat in range(-60, 80, 10):
+            for lon in range(-180, 180, 20):
+                # Simulated intensity based on a dummy pattern
+                intensity = (abs(lat) / 100) + 0.2 
+                global_hotspots.append([lat, lon, intensity])
+        
+        HeatMap(global_hotspots, radius=25, blur=15, min_opacity=0.3).add_to(m)
     
-    folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
-    st_folium(m, width="100%", height=400)
-            
-    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+    # 3. Add marker and render map ONCE
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
     st_folium(m, width="100%", height=400)
 
+    # 4. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
-    
-    # Use the selections from the sidebar
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
     active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
     
     with st.spinner(f"Fetching {active_pollutant_name} data..."):
         data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
-        
         if data:
             col1, col2, col3 = st.columns(3)
             col1.metric("US AQI", f"{data.get('us_aqi', 'N/A')}")
