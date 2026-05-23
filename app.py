@@ -381,7 +381,7 @@ with tab4:
     if city_input:
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
-            st.session_state.map_center = [lat, lon]
+        st.session_state.map_center = [lat, lon]
             st.success(f"📍 Navigation locked to: {name}")
         else:
             st.error("Location not found.")
