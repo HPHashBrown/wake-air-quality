@@ -224,11 +224,6 @@ with st.sidebar:
         st.session_state.start_time = datetime.now()
         st.rerun()
 
-# Add this to your Sidebar section
-with st.sidebar:
-    st.markdown("### 🧪 Atmospheric Lab")
-    selected_name = st.selectbox("Select Pollutant", options=list(POLLUTANT_MAP.keys()))
-    selected_key = POLLUTANT_MAP[selected_name]
 
 # ============================================
 # PROCESSING & MODELING
