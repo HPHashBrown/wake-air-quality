@@ -378,7 +378,11 @@ with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
-if city_input:
+# --- TAB 4: MAP / SEARCH ---
+    st.markdown("### 🔍 Global Sensor Search")
+    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
+    
+    if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
             st.session_state.map_center = [lat, lon]
@@ -386,6 +390,7 @@ if city_input:
         else:
             st.error("Location not found.")
 
+    # THESE LINES MUST BE AT THE SAME INDENTATION LEVEL AS 'if city_input:'
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     m.add_child(folium.LatLngPopup())
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
@@ -396,7 +401,7 @@ if city_input:
         new_lat = map_data['last_clicked']['lat']
         new_lon = map_data['last_clicked']['lng']
         st.session_state.map_center = [new_lat, new_lon]
-        st.rerun() 
+        st.rerun()
     
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
