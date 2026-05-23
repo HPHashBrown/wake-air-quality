@@ -448,7 +448,7 @@ with tab4:
 # ... (After your map_data = st_folium line) ...
     
 st.markdown("### 📊 Atmospheric Report")
-    curr_lat, curr_lon = st.session_state.map_center
+curr_lat, curr_lon = st.session_state.map_center
     
     try:
         data = fetch_global_aqi(curr_lat, curr_lon)
