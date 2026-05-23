@@ -390,6 +390,7 @@ if city_input:
             st.error("Location not found.")
 
     # Map initialization
+# Ensure these 4 lines start with exactly 4 spaces
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     m.add_child(folium.LatLngPopup())
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
