@@ -378,10 +378,12 @@ with tab3:
 
     
 # --- TAB 4: MAP / SEARCH ---
-st.markdown("### 🔍 Global Sensor Search")
-city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
+with tab4:
+    # Everything here must have exactly 4 spaces of indentation
+    st.markdown("### 🔍 Global Sensor Search")
+    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
-if city_input:
+    if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
             st.session_state.map_center = [lat, lon]
@@ -389,8 +391,7 @@ if city_input:
         else:
             st.error("Location not found.")
 
-    # Map initialization
-# Ensure these 4 lines start with exactly 4 spaces
+    # These lines must also have exactly 4 spaces
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     m.add_child(folium.LatLngPopup())
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
