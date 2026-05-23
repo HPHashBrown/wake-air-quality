@@ -291,7 +291,7 @@ else:
 st.markdown('<p class="title-gradient">Project Wake AQI</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence", "🚲 The Clean-Air Commute"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence", "🚲 The Clean-Air Commute"])
 
 # --- TAB 1: OVERVIEW ---
 
