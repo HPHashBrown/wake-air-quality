@@ -482,6 +482,9 @@ with tab6:
         else:
             st.error("Location not found.")
 
-    # 3. DISPLAY the map from session state (if it exists)
+# 3. DISPLAY the map from session state (if it exists)
     if st.session_state.route_map:
-        st_folium(st.session_state.route_map, width="100%", height=400)
+        # Create a stable container
+        map_placeholder = st.empty()
+        with map_placeholder:
+            st_folium(st.session_state.route_map, width="100%", height=400)
