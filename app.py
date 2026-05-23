@@ -483,7 +483,7 @@ with tab6:
             # Calculate total distance for the time estimate
 # Replace your current total_dist_meters line with this:
     total_dist_meters = sum(ox.routing.get_route_edge_attributes(graph, route, 'length'))
-            total_time_min = (total_dist_meters / 1000) / 40 * 60 # 40 km/h avg speed
+    total_time_min = (total_dist_meters / 1000) / 40 * 60 # 40 km/h avg speed
             
             # Save to state
             st.session_state.route_data = {
