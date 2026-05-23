@@ -22,9 +22,11 @@ import google.generativeai as genai
 # 1. Update Initialization
 # --- GEMINI INITIALIZATION ---
 # --- GEMINI INITIALIZATION ---
+# Change your initialization to this:
 try:
     genai.configure(api_key=st.secrets["GEM_KEY"])
-    gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+    # Some older versions of the SDK require the 'models/' prefix
+    gemini_model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
 except Exception as e:
     st.error(f"Error initializing Gemini: {e}")
     gemini_model = None
