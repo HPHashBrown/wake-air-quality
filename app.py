@@ -496,20 +496,24 @@ with tab6:
                 start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
                 end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
                 
-                route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
-                route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
-                
-                # Direct edge access for distance/time
-                total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
-                total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
-                
-                st.session_state.route_data = {
-                    "route": route_coords,
-                    "s_lat": s_lat, "s_lon": s_lon,
-                    "e_lat": e_lat, "e_lon": e_lon,
-                    "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
-                    "time_est": round(total_time_min, 1)
-                }
+                # SAFETY CHECK: Wrap pathfinding in a try-except block
+                try:
+                    route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
+                    route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+                    
+                    # Direct edge access for distance/time
+                    total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
+                    total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
+                    
+                    st.session_state.route_data = {
+                        "route": route_coords,
+                        "s_lat": s_lat, "s_lon": s_lon,
+                        "e_lat": e_lat, "e_lon": e_lon,
+                        "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
+                        "time_est": round(total_time_min, 1)
+                    }
+                except nx.NetworkXNoPath:
+                    st.error("Could not find a path between these locations. Try points closer to main roads.")
             else:
                 st.error("OSM Servers are busy. Please try again.")
         else:
