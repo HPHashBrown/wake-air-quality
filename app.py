@@ -19,6 +19,7 @@ count = st_autorefresh(interval=300000, key="datarefresh")
 # Initialize session state for the map center
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [35.7796, -78.6382] # Default to Raleigh
+    
 
 # Initialize session state for the timer if it doesn't exist
 if 'start_time' not in st.session_state:
@@ -280,6 +281,10 @@ st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence"])
 
 # --- TAB 1: OVERVIEW ---
+
+# Add this right before your markdown line
+current_aqi = current_data.get('us_aqi', 'N/A')
+
 with tab1:
     m1, m2, m3, m4 = st.columns(4)
     with m1:
