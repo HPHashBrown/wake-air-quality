@@ -383,14 +383,12 @@ def fetch_global_aqi(lat, lon, metric="pm2_5"):
 
 # --- IN YOUR MAIN TAB 4 (GLOBAL MAP) ---
 # --- TAB 4: GLOBAL INTERACTIVE MAP ---
-with tab4:
-   with tab4:
-    st.markdown("### 🔍 Global Sensor Search")
-    
-    # 1. Search Bar
-    @st.cache_data(ttl=86400)
-    def get_city_coords(city_name):
+@st.cache_data(ttl=86400)
+def get_city_coords(city_name):
+    # This URL must be indented 4 spaces
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
+    
+    # Everything inside the function must be indented 4 spaces
     try:
         response = requests.get(url).json()
         if "results" in response:
