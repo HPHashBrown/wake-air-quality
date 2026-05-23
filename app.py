@@ -450,7 +450,7 @@ with tab4:
 st.markdown("### 📊 Atmospheric Report")
 curr_lat, curr_lon = st.session_state.map_center
     
-    try:
+try:
         data = fetch_global_aqi(curr_lat, curr_lon)
         
         if data:
