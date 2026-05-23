@@ -19,6 +19,7 @@ import google.generativeai as genai
 
 
 # Setup Gemini
+genai.configure(api_key=st.secrets["GEM_KEY"])
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 def get_ai_health_briefing(pm25_val, aqi_val):
