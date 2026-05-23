@@ -467,8 +467,8 @@ with tab6:
         s_lat, s_lon, _ = get_city_coords(start_addr)
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
-if s_lat and e_lat:
-            # Increase the search distance (dist=20000 = 20km) to ensure roads are connected
+        if s_lat and e_lat:
+            # Increase the search distance to ensure road connectivity
             center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
             graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
             
@@ -484,6 +484,7 @@ if s_lat and e_lat:
             total_dist_meters = sum(ox.utils_graph.get_route_edge_attributes(graph, route, 'length'))
             total_time_min = (total_dist_meters / 1000) / 40 * 60 # 40 km/h avg speed
             
+            # Save to state
             st.session_state.route_data = {
                 "route": route_coords,
                 "s_lat": s_lat, "s_lon": s_lon,
@@ -491,61 +492,24 @@ if s_lat and e_lat:
                 "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
                 "time_est": round(total_time_min, 1)
             }
-            
-            # Save to state
-            st.session_state.route_data = {
-                "route": route_coords,
-                "s_lat": s_lat, "s_lon": s_lon,
-                "e_lat": e_lat, "e_lon": e_lon,
-                "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
-            }
-    else:
+        else:
             st.error("Location not found.")
 
     # 3. PERSISTENT DISPLAY
-# 3. PERSISTENT DISPLAY
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
         
-        # --- METRICS ---
         col1, col2 = st.columns(2)
         col1.metric("Route AQI", round(data['exposure'], 1))
         col2.metric("Est. Travel Time", f"{data['time_est']} min")
         
-        # --- MAP ---
+        # Build ONE clean map
         m = folium.Map(tiles="CartoDB dark_matter")
         folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
-        m.fit_bounds(data['route']) # This automatically zooms to your route
+        folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
+        folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
         
-        st_folium(m, width="100%", height=400)
-
-    # Note: If you don't have an 'else' for the route_data check, just delete it.
-        
-        # Build clean map
-        m = folium.Map(tiles="CartoDB dark_matter")
-        folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
         # Auto-fit the map to the route bounds
         m.fit_bounds(data['route'])
-        
-        st_folium(m, width="100%", height=400)
-        
-        # Build map
-        center_lat = (data['s_lat'] + data['e_lat']) / 2
-        center_lon = (data['s_lon'] + data['e_lon']) / 2
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=12, tiles="CartoDB dark_matter")
-        
-        # Add road-based route
-        folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
-        folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
-        folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
-        
-        st_folium(m, width="100%", height=400)
-        
-        # Build map
-        center_lat, center_lon = (data['s_lat'] + data['e_lat']) / 2, (data['s_lon'] + data['e_lon']) / 2
-        m = folium.Map(location=[center_lat, center_lon], zoom_start=10, tiles="CartoDB dark_matter")
-        folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
-        folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
-        folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
         
         st_folium(m, width="100%", height=400)
