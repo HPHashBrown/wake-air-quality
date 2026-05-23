@@ -378,51 +378,40 @@ def fetch_global_aqi(lat, lon, metric="pm2_5"):
         return {}
 
 # --- IN YOUR MAIN TAB 4 (GLOBAL MAP) ---
+# --- TAB 4: GLOBAL INTERACTIVE MAP ---
 with tab4:
-    st.markdown("### 🌍 Global Exploration")
-    
+    st.markdown("### 🌍 Global Atmospheric Sensor Mesh")
+    st.markdown("Click any coordinate on the map to initialize a regional atmospheric scan.")
+
     # 1. Initialize Map
     m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
-    m.add_child(folium.LatLngPopup()) # Allows clicking to see coordinates
-    
-    # 2. Render Map and capture clicks
-    map_data = st_folium(m, width=1000, height=500)
-    
+    m.add_child(folium.LatLngPopup()) 
+
+    # 2. Render and Capture Interaction
+    map_data = st_folium(m, width="100%", height=500)
+
     # 3. Dynamic Data Logic
-    if map_data['last_clicked']:
-        lat, lon = map_data['last_clicked']['lat'], map_data['last_clicked']['lng']
-        st.info(f"📍 Analyzing coordinates: {lat:.2f}, {lon:.2f}")
+    if map_data and map_data.get('last_clicked'):
+        lat = map_data['last_clicked']['lat']
+        lon = map_data['last_clicked']['lng']
         
-        # Fetch data for clicked location
-        data = fetch_global_aqi(lat, lon, pollutant)
-        if data:
-            st.metric(f"AQI at {lat:.2f}, {lon:.2f}", data.get('us_aqi', 'N/A'))
+        st.info(f"📡 Scanning atmospheric conditions at: {lat:.2f}, {lon:.2f}")
+        
+        with st.spinner("Fetching global sensor data..."):
+            # Use the global fetcher
+            data = fetch_global_aqi(lat, lon, metric_key)
+            aqi = data.get('us_aqi', None)
+            
+            if aqi:
+                # Add marker to the existing map instance
+                folium.Marker([lat, lon], popup=f"AQI: {aqi}").add_to(m)
+                
+                # Display Results
+                st.metric("Detected AQI Level", f"{aqi}")
+            else:
+                st.error("No data available for these coordinates.")
     else:
-        st.write("Click anywhere on the map to analyze local air quality.")
-            
-            # Determine the category string for filtering
-        if aqi <= 50: category = "Good (0-50)"; color = "#10b981"
-        elif aqi <= 100: category = "Moderate (51-100)"; color = "#f59e0b"
-        else: category = "Unhealthy (101+)"; color = "#ef4444"
-            
-            # Only render if the category is checked in the sidebar filter
-        if category in selected_risks:
-                folium.CircleMarker(
-                    location=coords, 
-                    radius=12, 
-                    color=color, 
-                    fill=True, 
-                    fill_color=color, 
-                    fill_opacity=0.8,
-                    popup=f"<b>{city}</b><br><b>{selected_metric}:</b> {val}<br><b>AQI:</b> {aqi}"
-                ).add_to(m)
-        
-        st_folium(m, use_container_width=True, height=600)
-    except Exception as e:
-        st.error(f"Orbital Feed Interrupted: {e}")
-
-fires = fetch_wildfire_data()
-
+        st.write("Awaiting user coordinate input.")
 
     # Update your tabs definition:
 # tab1, tab2, tab3, tab4, tab5 = st.tabs([... , "🛰️ Space Intelligence"])
