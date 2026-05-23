@@ -232,6 +232,9 @@ with st.sidebar:
 # ============================================
 # PROCESSING & MODELING
 # ============================================
+
+current_year = datetime.now().year 
+
 if uploaded_file is not None:
     df_yearly = pd.read_csv(uploaded_file).sort_values("year")
 else:
@@ -261,10 +264,10 @@ if PROPHET_AVAILABLE:
         "yhat_upper": forecast['yhat_upper']
     })
 else:
-    X = df_yearly[["year"]]
+X = df_yearly[["year"]]
     y = df_yearly["mean_pm25"]
     model = LinearRegression().fit(X, y)
-    future_years = np.arange(current_year, current_year + 11)
+future_years = np.arange(current_year, current_year + 11) 
     future_preds = model.predict(future_years.reshape(-1, 1))
     future_df = pd.DataFrame({
         "year": future_years, 
