@@ -486,37 +486,37 @@ with tab4:
         else:
             st.error("Location not found.")
             
+    # Initialize map once
     m = folium.Map(location=st.session_state.map_center, zoom_start=4, tiles="CartoDB dark_matter")
     
-if show_heatmap:
+    # Global Heatmap Logic
+    if show_heatmap:
         from folium.plugins import HeatMap
         global_hotspots = []
         
-        # 1. Base "background" noise (low pollution globally)
-        for lat in range(-60, 80, 10):
-            for lon in range(-180, 180, 10):
+        # 1. Base "background" noise
+        for lat in range(-60, 80, 5):
+            for lon in range(-180, 180, 5):
                 global_hotspots.append([lat, lon, 0.1])
         
-        # 2. Add "Hotspots" (Urban/Industrial centers)
-        # These override the latitude-only logic
+        # 2. Add "Hotspots"
         hotspots = [
-            [35.77, -78.63, 0.9],  # Raleigh (Local reference)
-            [35.68, 139.65, 0.9],  # Tokyo
-            [48.85, 2.35, 0.8],    # Paris
-            [39.90, 116.40, 0.95], # Beijing
-            [28.61, 77.20, 0.95],  # Delhi
-            [40.71, -74.00, 0.85]  # New York
+            [35.77, -78.63, 0.9], [35.68, 139.65, 0.9], 
+            [48.85, 2.35, 0.8], [39.90, 116.40, 0.95], 
+            [28.61, 77.20, 0.95], [40.71, -74.00, 0.85]
         ]
         global_hotspots.extend(hotspots)
         
-        # 3. Increase blur/radius for a smoother, organic look
+        # 3. Add heatmap layer
         HeatMap(global_hotspots, radius=60, blur=40, min_opacity=0.2).add_to(m)
     
+    # Add marker and render map
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
     st_folium(m, width="100%", height=400)
 
+    # Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
-    st.caption("Note: The heatmap currently displays simulated PM2.5 distribution patterns for visualization purposes.")
+    st.caption("Note: Heatmap displays simulated PM2.5 distribution.")
     
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
