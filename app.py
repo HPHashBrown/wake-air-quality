@@ -228,16 +228,6 @@ with st.sidebar:
 # PROCESSING & MODELING
 # ============================================
 
-current_year = datetime.now().year 
-
-if uploaded_file is not None:
-    df_yearly = pd.read_csv(uploaded_file).sort_values("year")
-else:
-    try:
-        df_yearly = pd.read_csv("wake_pm25_by_year.csv").sort_values("year")
-    except:
-        df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
-
 # --- FIX: Ensure live_weather is always a dictionary ---
 with st.spinner("Initializing Atmospheric Sensors..."):
     # This ensures live_weather is never None, but a safe empty dict instead
