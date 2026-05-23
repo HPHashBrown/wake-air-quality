@@ -324,15 +324,64 @@ with tab1:
 
 # --- TAB 2: ANALYTICS ---
 with tab2:
+    st.markdown("### 🛠️ Impact & Mitigation Simulator")
+    
+    # --- 1. HEALTH LITERACY & COGNITIVE ENGINE ---
+    # Ensure we handle the potential 'N/A' from the API safely
+    raw_pm25 = current_data.get('pm2_5', 0)
+    pm25_val = float(raw_pm25) if raw_pm25 != 'N/A' else 0.0
+    
+    # Cognitive Risk Logic
+    risk_score = (pm25_val / 12) * 1.5
+    
+    col_a, col_b = st.columns([1, 2])
+    col_a.metric("Cognitive Risk Index", f"{round(risk_score, 1)}/10")
+    
+    # Clinical Translator logic
+    if pm25_val < 12:
+        status = "Baseline Homeostasis"
+        briefing = "Air quality is optimal. Minimal systemic inflammation detected. Cognitive function is not under environmental stress."
+    elif 12 <= pm25_val < 35:
+        status = "Mild Oxidative Stress"
+        briefing = "Moderate particulate load. Your body is mobilizing antioxidants to counteract minor systemic inflammation. You may experience subtle focus fatigue."
+    else:
+        status = "Neuro-Inflammatory Warning"
+        briefing = "High PM2.5 load. Particulates are likely triggering a systemic inflammatory response. This can impact neural processing speed and executive function. Limit intense cognitive tasks and exertion."
+    
+    col_b.write(f"**Status:** {status}")
+    col_b.info(briefing)
+
+    st.markdown("---")
+
+    # --- 2. EXISTING EMISSION MITIGATION SIMULATOR ---
     g1, g2 = st.columns(2)
     with g1:
         st.markdown("**Current Threat Level (AQI)**")
-        gauge = go.Figure(go.Indicator(mode="gauge+number", value=current_aqi, gauge={'axis': {'range': [0, 300], 'tickwidth': 1, 'tickcolor': "white"}, 'bar': {'color': "#00f2fe"}, 'bgcolor': "rgba(255,255,255,0.05)", 'steps': [{'range': [0, 50], 'color': "rgba(16, 185, 129, 0.3)"}, {'range': [50, 100], 'color': "rgba(245, 158, 11, 0.3)"}, {'range': [100, 300], 'color': "rgba(239, 68, 68, 0.3)"}]}))
+        # Ensure current_aqi exists or default to 0
+        current_aqi = current_data.get('us_aqi', 0)
+        if current_aqi == 'N/A': current_aqi = 0
+        
+        gauge = go.Figure(go.Indicator(
+            mode="gauge+number", 
+            value=float(current_aqi), 
+            gauge={
+                'axis': {'range': [0, 300], 'tickwidth': 1, 'tickcolor': "white"}, 
+                'bar': {'color': "#00f2fe"}, 
+                'bgcolor': "rgba(255,255,255,0.05)", 
+                'steps': [
+                    {'range': [0, 50], 'color': "rgba(16, 185, 129, 0.3)"}, 
+                    {'range': [50, 100], 'color': "rgba(245, 158, 11, 0.3)"}, 
+                    {'range': [100, 300], 'color': "rgba(239, 68, 68, 0.3)"}
+                ]
+            }
+        ))
         gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
         st.plotly_chart(gauge, use_container_width=True)
+        
     with g2:
         st.markdown("**Emission Mitigation Simulator**")
         reduction = st.slider("Simulated Reduction (%)", 0, 50, 0)
+        # Using the forecast model from your previous setup
         sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
         st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
 
