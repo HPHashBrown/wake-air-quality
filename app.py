@@ -378,7 +378,7 @@ with tab3:
 
     
 # --- TAB 4: MAP / SEARCH ---
-    st.markdown("### 🔍 Global Sensor Search")
+st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
     if city_input:
@@ -389,12 +389,12 @@ with tab3:
         else:
             st.error("Location not found.")
 
-    # THESE LINES MUST BE AT THE SAME INDENTATION LEVEL AS 'if city_input:'
+    # Map initialization
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     m.add_child(folium.LatLngPopup())
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
 
-    map_data = st_folium(m, width="100%", height=400)
+    map_data = st_folium(m, width="100%", height=400, key="map_view")
     
     if map_data and map_data.get('last_clicked'):
         new_lat = map_data['last_clicked']['lat']
@@ -405,14 +405,13 @@ with tab3:
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     try:
-        data = fetch_global_aqi(curr_lat, curr_lon, metric_key)
+        data = fetch_global_aqi(curr_lat, curr_lon, st.session_state.selected_pollutant_key)
         aqi = data.get('us_aqi', 'N/A')
         c1, c2 = st.columns(2)
         c1.metric("US AQI Index", f"{aqi}")
         c2.metric("Coordinate Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
     except:
         st.error("Unable to retrieve sensor data.")
-
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
