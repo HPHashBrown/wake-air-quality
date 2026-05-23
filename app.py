@@ -263,7 +263,7 @@ if PROPHET_AVAILABLE:
         "yhat_lower": forecast['yhat_lower'],
         "yhat_upper": forecast['yhat_upper']
     })
-else:
+    else:
 X = df_yearly[["year"]]
     y = df_yearly["mean_pm25"]
     model = LinearRegression().fit(X, y)
