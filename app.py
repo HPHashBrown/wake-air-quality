@@ -24,6 +24,16 @@ if 'map_center' not in st.session_state:
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
 
+@st.cache_data(ttl=3600)
+def fetch_global_aqi(lat, lon, metric):
+    # This URL must use the 'metric' variable to update the request
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
+    try: 
+        response = requests.get(url).json()
+        return response.get("current", {})
+    except: 
+        return {}
+
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
 metric_key = "pm2_5" 
 selected_metric = "PM2.5" 
@@ -404,19 +414,28 @@ with tab4:
         st.rerun()
     
     # Everything below here MUST have exactly 4 spaces of indentation
+# ... inside your Tab 4 block ...
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     
+    # Use the selection from the Sidebar via session_state
+    active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
+    active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
+    
     try:
-        data = fetch_global_aqi(curr_lat, curr_lon, st.session_state.get('selected_pollutant_key', 'pm2_5'))
-        aqi = data.get('us_aqi', 'N/A')
+        # Pass the dynamic key to the fetch function
+        data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
         
-        if aqi != 'N/A':
-            c1, c2 = st.columns(2)
-            c1.metric("US AQI Index", f"{aqi}")
-            c2.metric("Coordinate Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
-        else:
-            st.warning("Sensor data currently unavailable for this coordinate.")
+        # Get the value for the selected pollutant dynamically
+        pollutant_value = data.get(active_pollutant_key, 'N/A')
+        aqi_val = data.get('us_aqi', 'N/A')
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("US AQI", f"{aqi_val}")
+        # Dynamically label the metric with the selected pollutant name
+        c2.metric(f"{active_pollutant_name}", f"{pollutant_value}")
+        c3.metric("Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
+        
     except Exception as e:
         st.error(f"Error retrieving sensor data: {e}")
 # --- TAB 5: SPACE INTEL ---
