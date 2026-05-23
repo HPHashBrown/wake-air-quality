@@ -363,4 +363,4 @@ with tab5:
         st.warning(f"Detected {len(fires)} active fire hotspots in the Eastern US.")
         st.dataframe(fires[['latitude', 'longitude', 'acq_time', 'bright_ti4']])
     else:
-        st.success("No active fire hotspots detected
+        st.success("No active fire hotspots detected.")
