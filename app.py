@@ -498,76 +498,54 @@ with tab5:
         st.success("No active fire hotspots detected.")
 
 
-# --- TAB 6: CLEAN-AIR COMMUTE ---
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
-    
     from geopy.distance import geodesic
-    
     col1, col2 = st.columns(2)
     start_addr = col1.text_input("Starting Address", "100 Main St, Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination Address", "500 Main St, Rolesville, NC", key="end_addr")
-    
-    # ... [Keep your get_map_graph function here] ...
 
-if st.button("Generate Healthiest Path"):
+    if st.button("Generate Healthiest Path"):
         try:
-            # Using geopy for more reliable address resolution
             from geopy.geocoders import Nominatim
             geolocator = Nominatim(user_agent="wake_air_quality_app")
-            
             s_loc = geolocator.geocode(start_addr)
             e_loc = geolocator.geocode(end_addr)
-            
             if not s_loc or not e_loc:
-                st.error("Could not find one of the addresses. Please be more specific (e.g., include city and zip).")
+                st.error("Could not find addresses. Please be more specific.")
             else:
                 s_lat, s_lon = s_loc.latitude, s_loc.longitude
                 e_lat, e_lon = e_loc.latitude, e_loc.longitude
-                
                 dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
-                
                 if dist_km > 50:
-                    st.error("Distance too large for local analysis. Please keep routes under 50km.")
+                    st.error("Distance too large (max 50km).")
                 else:
                     graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
-                    
                     if graph:
                         start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
                         end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
-                        
                         try:
                             route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
                             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
-                            
                             total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
-                            
                             st.session_state.route_data = {
-                                "route": route_coords,
-                                "s_lat": s_lat, "s_lon": s_lon,
+                                "route": route_coords, "s_lat": s_lat, "s_lon": s_lon,
                                 "e_lat": e_lat, "e_lon": e_lon,
                                 "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
                                 "time_est": round(total_time_min, 1)
                             }
-                        except nx.NetworkXNoPath:
-                            st.error("No driveable path found. Try locations closer to main roads.")
-                    else:
-                        st.error("OSM Servers are busy. Please try again.")
+                        except Exception:
+                            st.error("No path found.")
         except Exception as e:
             st.error(f"Address error: {e}")
 
-# --- PERSISTENT DISPLAY & CLINICAL BRIEFING ---
-    # Make sure this line is aligned with the 'if st.button' block above
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
-        
-        # Metrics
         col1, col2 = st.columns(2)
         aqi_val = round(data.get('exposure', 0), 1)
         col1.metric("Route AQI", aqi_val)
         col2.metric("Est. Travel Time", f"{data.get('time_est', 'N/A')} min")
         
-        # Map
         m = folium.Map(tiles="CartoDB dark_matter")
         folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
         folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
@@ -575,15 +553,11 @@ if st.button("Generate Healthiest Path"):
         m.fit_bounds(data['route'])
         st_folium(m, width="100%", height=400)
         
-        # AI Clinical Briefing
         st.markdown("---")
         st.markdown("### 🩺 Daily Clinical Briefing")
-        
         pm25_est = round(aqi_val * 0.4, 2)
-        
         with st.spinner("Analyzing physiological impact..."):
             briefing = get_ai_health_briefing(pm25_est, aqi_val)
             st.info(briefing)
-            
             st.caption("Biological Context:")
-            st.write("Exposure to fine particulates (PM2.5) can trigger systemic oxidative stress, as these particles are small enough to cross the alveolar-capillary barrier and enter the bloodstream.")
+            st.write("Exposure to fine particulates (PM2.5) can trigger systemic oxidative stress, as these particles cross the alveolar-capillary barrier.")
