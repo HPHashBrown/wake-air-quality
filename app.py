@@ -298,17 +298,44 @@ with tab2:
 
 # --- TAB 3: HEALTH ---
 with tab3:
-    st.markdown("### 🩺 Biological Impact Protocols")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("#### The Regional Vector")
-        st.write("Urban expansion across North Carolina impacts air quality. Monitoring particulate matter is critical.")
-    with c2:
-        st.markdown("#### Medical Glossary")
-        with st.expander("🔬 What is PM2.5?"):
-            st.write("Particulate matter 2.5 micrometers or smaller, capable of entering the bloodstream.")
-        with st.expander("🛡️ What is a Healthy Level?"):
-            st.write("The EPA considers annual mean concentrations below 12.0 µg/m³ as sustainable for the general public.")
+with tab3:
+    st.markdown("### 🩺Health Literacy")
+    
+    col1, col2 = st.columns([1, 1.5])
+    
+    with col1:
+        st.info("### The Scale of the Invisible")
+        st.write("A human hair is 50μm. PM2.5 is <2.5μm. It is roughly **1/30th the width of a hair**.")
+        # Visualizing the scale helps understand why filters fail.
+        
+        
+    with col2:
+        st.warning("### The Systemic Journey")
+        st.write("1. **Deep Lung Penetration:** Reaches the alveoli.")
+        st.write("2. **Bloodstream Entry:** Enters systemic circulation.")
+        st.write("3. **Chronic Inflammation:** Triggers long-term oxidative stress.")
+        
+
+    st.markdown("---")
+    
+    # --- DYNAMIC SAFE EXPOSURE CALCULATOR ---
+    st.markdown("### ⏳ Your Daily 'Safe Exposure' Budget")
+    
+    if current_aqi > 0:
+        # Budget logic: If AQI is 100, you have ~8 hours of 'safe' outdoor activity before impact.
+        # This is a heuristic model: 800 / AQI = Safe hours remaining
+        safe_hours = max(0, 800 / (current_aqi * 1.5)) 
+        
+        st.metric("Estimated Safe Hours Left Today", f"{safe_hours:.1f} Hours")
+        
+        if safe_hours > 6:
+            st.success("✅ **Air Quality is Clear.** No restrictions on your outdoor exposure.")
+        elif safe_hours > 3:
+            st.warning("⚠️ **Caution.** Limit intense outdoor exercise. Your inflammatory budget is depleting.")
+        else:
+            st.error("🚫 **Alert.** Your inflammatory budget is low. Indoor air protocol recommended.")
+    else:
+        st.write("Fetching sensor data to calculate your budget...")
 
 # --- TAB 4: MAP / SEARCH ---
 with tab4:
