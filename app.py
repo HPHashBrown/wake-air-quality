@@ -366,23 +366,39 @@ with tab3:
 with tab4:
     st.markdown("### 🛰️ North Carolina Sensor Mesh")
         
-    try:
-        m = folium.Map(location=[35.7596, -79.0193], zoom_start=7, tiles="CartoDB dark_matter")
+    # --- GLOBAL DATA FETCHING ---
+# Now takes dynamic lat/lon
+@st.cache_data(ttl=3600)
+def fetch_global_aqi(lat, lon, metric="pm2_5"):
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
+    try: 
+        response = requests.get(url).json()
+        return response.get("current", {})
+    except: 
+        return {}
 
+# --- IN YOUR MAIN TAB 4 (GLOBAL MAP) ---
+with tab4:
+    st.markdown("### 🌍 Global Exploration")
+    
+    # 1. Initialize Map
+    m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
+    m.add_child(folium.LatLngPopup()) # Allows clicking to see coordinates
+    
+    # 2. Render Map and capture clicks
+    map_data = st_folium(m, width=1000, height=500)
+    
+    # 3. Dynamic Data Logic
+    if map_data['last_clicked']:
+        lat, lon = map_data['last_clicked']['lat'], map_data['last_clicked']['lng']
+        st.info(f"📍 Analyzing coordinates: {lat:.2f}, {lon:.2f}")
         
-        nc_cities = {
-            "Raleigh": [35.7796, -78.6382], "Charlotte": [35.2271, -80.8431],
-            "Greensboro": [36.0726, -79.7920], "Wilmington": [34.2104, -77.8868],
-            "Asheville": [35.5951, -82.5515], "Fayetteville": [35.0527, -78.8782],
-            "Greenville": [35.6127, -77.3663], "Durham": [35.9940, -78.8986],
-            "Winston-Salem": [36.0999, -80.2442]
-        }
-        
-        for city, coords in nc_cities.items():
-            # Pass the dynamically selected metric_key
-            data = fetch_current_aqi(coords[0], coords[1], metric_key)
-            aqi = data.get('us_aqi', 0)
-            val = data.get(metric_key, 0)
+        # Fetch data for clicked location
+        data = fetch_global_aqi(lat, lon, pollutant)
+        if data:
+            st.metric(f"AQI at {lat:.2f}, {lon:.2f}", data.get('us_aqi', 'N/A'))
+    else:
+        st.write("Click anywhere on the map to analyze local air quality.")
             
             # Determine the category string for filtering
             if aqi <= 50: category = "Good (0-50)"; color = "#10b981"
