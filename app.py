@@ -556,7 +556,8 @@ if st.button("Generate Healthiest Path"):
         except Exception as e:
             st.error(f"Address error: {e}")
 
-    # --- PERSISTENT DISPLAY & CLINICAL BRIEFING ---
+# --- PERSISTENT DISPLAY & CLINICAL BRIEFING ---
+    # Make sure this line is aligned with the 'if st.button' block above
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
         
@@ -578,7 +579,6 @@ if st.button("Generate Healthiest Path"):
         st.markdown("---")
         st.markdown("### 🩺 Daily Clinical Briefing")
         
-        # We estimate PM2.5 based on AQI for the prompt
         pm25_est = round(aqi_val * 0.4, 2)
         
         with st.spinner("Analyzing physiological impact..."):
