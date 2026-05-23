@@ -451,28 +451,39 @@ with tab5:
         st.success("No active fire hotspots detected.")
 
 # --- TAB 6: CLEAN-AIR COMMUTE ---
+# --- TAB 6: CLEAN-AIR COMMUTE ---
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
-    st.write("Route planning based on real-time atmospheric exposure.")
     
-    col_a, col_b = st.columns(2)
-    start_loc = col_a.text_input("Start (Lat, Lon)", "35.77, -78.63")
-    end_loc = col_b.text_input("Destination (Lat, Lon)", "35.80, -78.60")
+    # User Inputs (Addresses/Towns/Cities)
+    col1, col2 = st.columns(2)
+    start_addr = col1.text_input("Starting Location", "Raleigh, NC")
+    end_addr = col2.text_input("Destination", "Rolesville, NC")
     
-    if st.button("Calculate Healthiest Route"):
-        try:
-            s_lat, s_lon = map(float, start_loc.split(','))
-            e_lat, e_lon = map(float, end_loc.split(','))
+    if st.button("Generate Healthiest Path"):
+        # Helper to convert address to lat/lon
+        s_lat, s_lon, _ = get_city_coords(start_addr)
+        e_lat, e_lon, _ = get_city_coords(end_addr)
+        
+        if s_lat and e_lat:
+            # 1. Calculate Air Quality
+            exposure = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
+            st.metric("Estimated Route AQI", round(exposure, 1))
             
-            exposure_index = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
+            # 2. Render Path Map
+            m = folium.Map(location=[(s_lat+e_lat)/2, (s_lon+e_lon)/2], zoom_start=10, tiles="CartoDB dark_matter")
             
-            st.metric("Estimated Route Exposure (AQI)", round(exposure_index, 1))
+            # Draw Vector (Line)
+            folium.PolyLine([(s_lat, s_lon), (e_lat, e_lon)], color="#4facfe", weight=5, opacity=0.8).add_to(m)
             
-            if exposure_index < 50:
-                st.success("✅ Path recommended: Low particulate exposure detected.")
-            elif exposure_index < 100:
-                st.warning("⚠️ Path acceptable, but contains moderate pollution.")
-            else:
-                st.error("🚫 Alert: High exposure route. Consider a different path or transit.")
-        except:
-            st.error("Please enter coordinates in 'Lat, Lon' format.")
+            # Add Markers
+            folium.Marker([s_lat, s_lon], icon=folium.Icon(color='green', icon='info-sign')).add_to(m)
+            folium.Marker([e_lat, e_lon], icon=folium.Icon(color='red', icon='info-sign')).add_to(m)
+            
+            st_folium(m, width="100%", height=400)
+            
+            # Recommendation
+            if exposure < 50: st.success("✅ Clean air detected along this vector.")
+            else: st.warning("⚠️ Elevated particulates found. Consider an alternative transit vector.")
+        else:
+            st.error("Could not resolve one of the locations. Please check your spelling.")
