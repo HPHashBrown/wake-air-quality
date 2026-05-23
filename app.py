@@ -477,7 +477,10 @@ with tab6:
             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
             
             # Distance/Time calculation (Indented 12 spaces)
-            total_dist_meters = sum(ox.routing.get_route_edge_attributes(graph, route, 'length'))
+# THE FAIL-SAFE METHOD:
+# Calculate length using NetworkX directly
+total_dist_meters = sum(nx.get_edge_attributes(graph, 'length').get((u, v), 0) 
+                        for u, v in zip(route[:-1], route[1:]))
             total_time_min = (total_dist_meters / 1000) / 40 * 60
             
             st.session_state.route_data = {
