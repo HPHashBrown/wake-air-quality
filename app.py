@@ -21,6 +21,7 @@ import google.generativeai as genai
 
 # 1. Update Initialization
 # --- GEMINI INITIALIZATION ---
+# --- GEMINI INITIALIZATION ---
 try:
     genai.configure(api_key=st.secrets["GEM_KEY"])
     gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
