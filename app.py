@@ -20,7 +20,7 @@ count = st_autorefresh(interval=300000, key="datarefresh")
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [35.7796, -78.6382] # Default to Raleigh
 
-current_data = st.session_state.current_data
+current_data = st.session_state.get('current_data', {})
     
 
 # Initialize session state for the timer if it doesn't exist
