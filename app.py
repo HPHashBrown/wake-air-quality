@@ -29,6 +29,8 @@ def update_pollutant():
     # before the main script reruns.
     pass
 
+OWM_API_KEY = "c76bdd1b10473dad3fd4325a10b954dc"
+
 @st.cache_data(ttl=3600)
 def fetch_global_aqi(lat, lon, metric="pm2_5"):
     # The URL needs to include the 'current' parameter for all requested pollutants
@@ -111,12 +113,20 @@ def fetch_pollutant_data(lat, lon, pollutant_key):
         return {}
 
 @st.cache_data(ttl=3600)
-def fetch_global_aqi(lat, lon, metric="pm2_5"):
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
-    try: 
+def fetch_global_aqi(lat, lon):
+    # OWM Endpoint
+    url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={OWM_API_KEY}"
+    try:
         response = requests.get(url).json()
-        return response.get("current", {})
-    except: 
+        # OWM puts the pollutants inside a 'components' dictionary
+        components = response['list'][0]['components']
+        aqi_index = response['list'][0]['main']['aqi'] # 1 (Good) to 5 (Very Poor)
+        
+        # Merge them into a single dictionary
+        data = components
+        data['us_aqi'] = aqi_index * 30 # Rough estimate conversion
+        return data
+    except Exception as e:
         return {}
 
 @st.cache_data(ttl=86400)
