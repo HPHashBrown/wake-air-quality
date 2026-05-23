@@ -466,7 +466,8 @@ with tab4:
 try:
         # Use the global OWM fetcher
         data = fetch_global_aqi(curr_lat, curr_lon)
-        
+
+    st.write("DEBUG DATA:", data)
         if data:
             st.metric("US AQI Index", f"{data.get('us_aqi', 'N/A')}")
             
@@ -476,7 +477,6 @@ try:
             col2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
             col3.metric("Ozone", f"{data.get('o3', 'N/A')} µg/m³") # Note the key is 'o3'
             
-            # Optional: Add extra row for other pollutants
             col4, col5, col6 = st.columns(3)
             col4.metric("NO₂", f"{data.get('no2', 'N/A')} µg/m³")
             col5.metric("CO", f"{data.get('co', 'N/A')} µg/m³")
