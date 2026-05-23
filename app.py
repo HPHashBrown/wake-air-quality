@@ -388,41 +388,17 @@ with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     
     # 1. Search Bar
-    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_search")
-    
-    if city_input:
-        lat, lon, name = get_city_coords(city_input)
-        if lat:
-            st.session_state.map_center = [lat, lon]
-            st.success(f"📍 Navigation locked to: {name}")
-            st.rerun() # Forces the map to redraw with new coordinates immediately
-        else:
-            st.error("Location not found.")
-
-    # 2. Render Map
-    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
-    m.add_child(folium.LatLngPopup())
-    folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
-
-    # 3. Capture Click Interactions
-    map_data = st_folium(m, width="100%", height=400)
-    
-    if map_data['last_clicked']:
-        new_lat = map_data['last_clicked']['lat']
-        new_lon = map_data['last_clicked']['lng']
-        st.session_state.map_center = [new_lat, new_lon]
-        st.rerun() # Refresh so the marker follows the click
-    
-    # 4. Fetch and Display Data
-    st.markdown("### 📊 Atmospheric Report")
-    lat, lon = st.session_state.map_center
-    data = fetch_global_aqi(lat, lon, metric_key)
-    aqi = data.get('us_aqi', 'N/A')
-    
-    col1, col2 = st.columns(2)
-    col1.metric("US AQI Index", f"{aqi}")
-    col2.metric("Coordinate Node", f"{lat:.2f}, {lon:.2f}")
-
+    @st.cache_data(ttl=86400)
+def get_city_coords(city_name):
+    url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
+    try:
+        response = requests.get(url).json()
+        if "results" in response:
+            data = response["results"][0]
+            return data["latitude"], data["longitude"], data["name"]
+        return None, None, None
+    except Exception as e:
+        return None, None, None
     # Update your tabs definition:
 # tab1, tab2, tab3, tab4, tab5 = st.tabs([... , "🛰️ Space Intelligence"])
 
