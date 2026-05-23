@@ -19,19 +19,36 @@ import google.generativeai as genai
 
 
 # Setup Gemini
-genai.configure(api_key=st.secrets["GEM_KEY"])
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 1. Initialization with check
+try:
+    genai.configure(api_key=st.secrets["GEM_KEY"])
+    # We use 'gemini-1.5-flash' which is the standard for fast, free-tier tasks
+    model = genai.GenerativeModel('gemini-1.5-flash')
+except Exception as e:
+    st.error(f"Error initializing Gemini: {e}")
+    model = None
 
+# 2. Updated function with safety check
 def get_ai_health_briefing(pm25_val, aqi_val):
+    if model is None:
+        return "AI Health briefing is currently unavailable (Model not initialized)."
+        
     prompt = f"""
     Act as a clinical health educator. The current PM2.5 level is {pm25_val} µg/m³ and the AQI is {aqi_val}.
-    Write a 3-sentence "Daily Health Briefing" for a general audience. Remember to say that all medical advice given from you may not be 100% correct and to contact health professionals if needed.
+    Write a 3-sentence "Daily Health Briefing" for a general audience.
     1. Explain the biological impact (e.g., respiratory inflammation, cellular stress).
     2. Suggest one specific preventative measure based on these levels.
     3. Keep it empathetic and professional.
     """
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        response = model.generate_content(prompt)
+        # Check if response actually has text
+        if response and response.text:
+            return response.text
+        else:
+            return "The AI could not generate a response. Please check your API quota."
+    except Exception as e:
+        return f"Error communicating with AI: {str(e)}"
 
 import osmnx as ox
 # Set a longer timeout for the API request
