@@ -14,7 +14,7 @@ from streamlit_autorefresh import st_autorefresh
 # INITIALIZATION & STATE
 # ============================================
 st.set_page_config(page_title="Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
-st_autorefresh(interval=300000, key="datarefresh")
+st_autorefresh(interval=600000, key="datarefresh")
 
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [35.7796, -78.6382]
