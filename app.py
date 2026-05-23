@@ -401,7 +401,7 @@ with tab4:
         st.write("Click anywhere on the map to analyze local air quality.")
             
             # Determine the category string for filtering
-            if aqi <= 50: category = "Good (0-50)"; color = "#10b981"
+        if aqi <= 50: category = "Good (0-50)"; color = "#10b981"
             elif aqi <= 100: category = "Moderate (51-100)"; color = "#f59e0b"
             else: category = "Unhealthy (101+)"; color = "#ef4444"
             
