@@ -455,7 +455,7 @@ with tab5:
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
-    # Initialize the session state for the map if it doesn't exist
+    # Initialize...
     if 'route_map' not in st.session_state:
         st.session_state.route_map = None
 
@@ -464,27 +464,9 @@ with tab6:
     end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
     
     if st.button("Generate Healthiest Path"):
-        s_lat, s_lon, _ = get_city_coords(start_addr)
-        e_lat, e_lon, _ = get_city_coords(end_addr)
-        
-        if s_lat and e_lat:
-            # 1. Calculate AQI
-            exposure = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
-            st.metric("Estimated Route AQI", round(exposure, 1))
-            
-            # 2. CREATE the map and save it to session state
-            m = folium.Map(location=[(s_lat+e_lat)/2, (s_lon+e_lon)/2], zoom_start=10, tiles="CartoDB dark_matter")
-            folium.PolyLine([(s_lat, s_lon), (e_lat, e_lon)], color="#4facfe", weight=5, opacity=0.8).add_to(m)
-            folium.Marker([s_lat, s_lon], icon=folium.Icon(color='green')).add_to(m)
-            folium.Marker([e_lat, e_lon], icon=folium.Icon(color='red')).add_to(m)
-            
-            st.session_state.route_map = m 
-        else:
-            st.error("Location not found.")
+        # ... (your logic)
+        st.session_state.route_map = m 
 
-# 3. DISPLAY the map from session state (if it exists)
+    # MOVE THIS INSIDE THE TAB6 BLOCK
     if st.session_state.route_map:
-        # Create a stable container
-        map_placeholder = st.empty()
-        with map_placeholder:
-            st_folium(st.session_state.route_map, width="100%", height=400)
+        st_folium(st.session_state.route_map, width="100%", height=400)
