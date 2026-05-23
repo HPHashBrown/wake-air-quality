@@ -14,6 +14,10 @@ from streamlit_autorefresh import st_autorefresh
 # Refresh every 5 minutes (300,000 ms)
 count = st_autorefresh(interval=300000, key="datarefresh")
 
+# Initialize session state for the map center
+if 'map_center' not in st.session_state:
+    st.session_state.map_center = [35.7796, -78.6382] # Default to Raleigh
+
 # Initialize session state for the timer if it doesn't exist
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
@@ -380,38 +384,44 @@ def fetch_global_aqi(lat, lon, metric="pm2_5"):
 # --- IN YOUR MAIN TAB 4 (GLOBAL MAP) ---
 # --- TAB 4: GLOBAL INTERACTIVE MAP ---
 with tab4:
-    st.markdown("### 🌍 Global Atmospheric Sensor Mesh")
-    st.markdown("Click any coordinate on the map to initialize a regional atmospheric scan.")
+   with tab4:
+    st.markdown("### 🔍 Global Sensor Search")
+    
+    # 1. Search Bar
+    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_search")
+    
+    if city_input:
+        lat, lon, name = get_city_coords(city_input)
+        if lat:
+            st.session_state.map_center = [lat, lon]
+            st.success(f"📍 Navigation locked to: {name}")
+            st.rerun() # Forces the map to redraw with new coordinates immediately
+        else:
+            st.error("Location not found.")
 
-    # 1. Initialize Map
-    m = folium.Map(location=[20, 0], zoom_start=2, tiles="CartoDB dark_matter")
-    m.add_child(folium.LatLngPopup()) 
+    # 2. Render Map
+    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+    m.add_child(folium.LatLngPopup())
+    folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
 
-    # 2. Render and Capture Interaction
-    map_data = st_folium(m, width="100%", height=500)
-
-    # 3. Dynamic Data Logic
-    if map_data and map_data.get('last_clicked'):
-        lat = map_data['last_clicked']['lat']
-        lon = map_data['last_clicked']['lng']
-        
-        st.info(f"📡 Scanning atmospheric conditions at: {lat:.2f}, {lon:.2f}")
-        
-        with st.spinner("Fetching global sensor data..."):
-            # Use the global fetcher
-            data = fetch_global_aqi(lat, lon, metric_key)
-            aqi = data.get('us_aqi', None)
-            
-            if aqi:
-                # Add marker to the existing map instance
-                folium.Marker([lat, lon], popup=f"AQI: {aqi}").add_to(m)
-                
-                # Display Results
-                st.metric("Detected AQI Level", f"{aqi}")
-            else:
-                st.error("No data available for these coordinates.")
-    else:
-        st.write("Awaiting user coordinate input.")
+    # 3. Capture Click Interactions
+    map_data = st_folium(m, width="100%", height=400)
+    
+    if map_data['last_clicked']:
+        new_lat = map_data['last_clicked']['lat']
+        new_lon = map_data['last_clicked']['lng']
+        st.session_state.map_center = [new_lat, new_lon]
+        st.rerun() # Refresh so the marker follows the click
+    
+    # 4. Fetch and Display Data
+    st.markdown("### 📊 Atmospheric Report")
+    lat, lon = st.session_state.map_center
+    data = fetch_global_aqi(lat, lon, metric_key)
+    aqi = data.get('us_aqi', 'N/A')
+    
+    col1, col2 = st.columns(2)
+    col1.metric("US AQI Index", f"{aqi}")
+    col2.metric("Coordinate Node", f"{lat:.2f}, {lon:.2f}")
 
     # Update your tabs definition:
 # tab1, tab2, tab3, tab4, tab5 = st.tabs([... , "🛰️ Space Intelligence"])
