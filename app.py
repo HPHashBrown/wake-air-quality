@@ -13,29 +13,32 @@ from streamlit_autorefresh import st_autorefresh
 # ============================================
 # INITIALIZATION & STATE
 # ============================================
-# Refresh every 5 minutes (300,000 ms)
-count = st_autorefresh(interval=300000, key="datarefresh")
+st.set_page_config(page_title="Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
+st_autorefresh(interval=300000, key="datarefresh")
 
-# Initialize session state for the map center
 if 'map_center' not in st.session_state:
-    st.session_state.map_center = [35.7796, -78.6382] # Default to Raleigh
-
-current_data = st.session_state.get('current_data', {})
-    
-
-# Initialize session state for the timer if it doesn't exist
+    st.session_state.map_center = [35.7796, -78.6382]
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
 
+# Define the function ONCE
 @st.cache_data(ttl=3600)
-def fetch_global_aqi(lat, lon, metric):
-    # This URL must use the 'metric' variable to update the request
+def fetch_global_aqi(lat, lon, metric="pm2_5"):
     url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
     try: 
         response = requests.get(url).json()
         return response.get("current", {})
     except: 
         return {}
+
+# Safe Initialization
+if 'current_data' not in st.session_state:
+    st.session_state.current_data = fetch_global_aqi(35.7796, -78.6382)
+
+current_data = st.session_state.get('current_data', {})
+# SAFELY convert to float, default to 0 if it's 'N/A' or missing
+raw_aqi = current_data.get('us_aqi', 0)
+current_aqi = float(raw_aqi) if str(raw_aqi).replace('.','',1).isdigit() else 0
 
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
 metric_key = "pm2_5" 
