@@ -11,7 +11,7 @@ from fpdf import FPDF
 from streamlit_autorefresh import st_autorefresh
 import osmnx as ox
 import networkx as nx
-import google.generativeai as genai
+from google import genai
 
 
 # ============================================
@@ -24,16 +24,18 @@ import google.generativeai as genai
 # --- GEMINI INITIALIZATION ---
 # Change your initialization to this:
 try:
-    genai.configure(api_key=st.secrets["GEM_KEY"])
-    # Some older versions of the SDK require the 'models/' prefix
-    gemini_model = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
+    # The new SDK automatically picks up the API key from the environment 
+    # or you can pass it explicitly if needed.
+    client = genai.Client(api_key=st.secrets["GEM_KEY"])
+    
+    # You no longer need 'GenerativeModel' as a separate class assignment
+    # You just call it through the client
 except Exception as e:
-    st.error(f"Error initializing Gemini: {e}")
-    gemini_model = None
+    st.error(f"Error initializing Client: {e}")
+    client = None
 
-# Now, ensure your function uses the model correctly
 def get_ai_health_briefing(pm25_val, aqi_val):
-    if gemini_model is None:
+    if client is None:
         return "AI Health briefing is currently unavailable."
         
     prompt = f"""
@@ -44,7 +46,11 @@ def get_ai_health_briefing(pm25_val, aqi_val):
     3. Keep it empathetic and professional.
     """
     try:
-        response = gemini_model.generate_content(prompt)
+        # Use the new models.generate_content method
+        response = client.models.generate_content(
+            model="gemini-3.5-flash",  # Or "gemini-2.0-flash" if you prefer
+            contents=prompt
+        )
         return response.text
     except Exception as e:
         return f"Error communicating with AI: {str(e)}"
