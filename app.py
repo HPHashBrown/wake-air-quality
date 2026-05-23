@@ -463,10 +463,28 @@ with tab6:
     start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
     
-    if st.button("Generate Healthiest Path"):
-        # ... (your logic)
-        st.session_state.route_map = m 
-
-    # MOVE THIS INSIDE THE TAB6 BLOCK
-    if st.session_state.route_map:
-        st_folium(st.session_state.route_map, width="100%", height=400)
+if st.button("Generate Healthiest Path"):
+        s_lat, s_lon, _ = get_city_coords(start_addr)
+        e_lat, e_lon, _ = get_city_coords(end_addr)
+        
+        if s_lat and e_lat:
+            # Calculate AQI
+            exposure = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
+            st.metric("Estimated Route AQI", round(exposure, 1))
+            
+            # --- FIX: Center the map on the MIDPOINT between your two addresses ---
+            center_lat = (s_lat + e_lat) / 2
+            center_lon = (s_lon + e_lon) / 2
+            
+            m = folium.Map(location=[center_lat, center_lon], zoom_start=10, tiles="CartoDB dark_matter")
+            
+            # Add markers at the SPECIFIC addresses found
+            folium.Marker([s_lat, s_lon], tooltip="Start", icon=folium.Icon(color='green')).add_to(m)
+            folium.Marker([e_lat, e_lon], tooltip="End", icon=folium.Icon(color='red')).add_to(m)
+            
+            # Draw the vector path
+            folium.PolyLine([(s_lat, s_lon), (e_lat, e_lon)], color="#4facfe", weight=5, opacity=0.8).add_to(m)
+            
+            st.session_state.route_map = m 
+        else:
+            st.error("Could not find one of those locations. Check your spelling.")
