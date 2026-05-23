@@ -488,18 +488,29 @@ with tab4:
             
     m = folium.Map(location=st.session_state.map_center, zoom_start=4, tiles="CartoDB dark_matter")
     
-    if show_heatmap:
+if show_heatmap:
         from folium.plugins import HeatMap
-        # INCREASED DENSITY: Use a smaller step (5) to cover "every inch"
-        # Increased radius and blur to create a seamless gradient surface
         global_hotspots = []
-        for lat in range(-60, 80, 5): 
-            for lon in range(-180, 180, 5):
-                intensity = (abs(lat) / 100) + 0.2 
-                global_hotspots.append([lat, lon, intensity])
         
-        # radius=50 and blur=30 makes it look like a continuous atmospheric layer
-        HeatMap(global_hotspots, radius=50, blur=30, min_opacity=0.2).add_to(m)
+        # 1. Base "background" noise (low pollution globally)
+        for lat in range(-60, 80, 10):
+            for lon in range(-180, 180, 10):
+                global_hotspots.append([lat, lon, 0.1])
+        
+        # 2. Add "Hotspots" (Urban/Industrial centers)
+        # These override the latitude-only logic
+        hotspots = [
+            [35.77, -78.63, 0.9],  # Raleigh (Local reference)
+            [35.68, 139.65, 0.9],  # Tokyo
+            [48.85, 2.35, 0.8],    # Paris
+            [39.90, 116.40, 0.95], # Beijing
+            [28.61, 77.20, 0.95],  # Delhi
+            [40.71, -74.00, 0.85]  # New York
+        ]
+        global_hotspots.extend(hotspots)
+        
+        # 3. Increase blur/radius for a smoother, organic look
+        HeatMap(global_hotspots, radius=60, blur=40, min_opacity=0.2).add_to(m)
     
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
     st_folium(m, width="100%", height=400)
