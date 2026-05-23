@@ -463,17 +463,24 @@ with tab4:
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     
-    try:
-        # Pass the key to the fetch function
-        selected_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-        data = fetch_global_aqi(curr_lat, curr_lon, metric=selected_key)
+try:
+        # Use the global OWM fetcher
+        data = fetch_global_aqi(curr_lat, curr_lon)
         
         if data:
             st.metric("US AQI Index", f"{data.get('us_aqi', 'N/A')}")
+            
             col1, col2, col3 = st.columns(3)
+            # OWM keys are: pm2_5, pm10, o3, no2, co, so2
             col1.metric("PM2.5", f"{data.get('pm2_5', 'N/A')} µg/m³")
             col2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
-            col3.metric("Ozone", f"{data.get('ozone', 'N/A')} µg/m³")
+            col3.metric("Ozone", f"{data.get('o3', 'N/A')} µg/m³") # Note the key is 'o3'
+            
+            # Optional: Add extra row for other pollutants
+            col4, col5, col6 = st.columns(3)
+            col4.metric("NO₂", f"{data.get('no2', 'N/A')} µg/m³")
+            col5.metric("CO", f"{data.get('co', 'N/A')} µg/m³")
+            col6.metric("SO₂", f"{data.get('so2', 'N/A')} µg/m³")
         else:
             st.warning("Sensor data unavailable for this coordinate.")
     except Exception as e:
