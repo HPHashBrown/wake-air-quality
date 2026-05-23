@@ -486,7 +486,7 @@ with tab6:
     total_time_min = (total_dist_meters / 1000) / 40 * 60 # 40 km/h avg speed
             
             # Save to state
-            st.session_state.route_data = {
+        st.session_state.route_data = {
                 "route": route_coords,
                 "s_lat": s_lat, "s_lon": s_lon,
                 "e_lat": e_lat, "e_lon": e_lon,
