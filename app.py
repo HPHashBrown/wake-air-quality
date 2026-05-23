@@ -30,9 +30,9 @@ def update_pollutant():
     pass
 
 @st.cache_data(ttl=3600)
-def fetch_global_aqi(lat, lon, metric):
-    # This URL must use the 'metric' variable to update the request
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
+def fetch_global_aqi(lat, lon):
+    # Request multiple pollutants at once
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide,sulphur_dioxide"
     try: 
         response = requests.get(url).json()
         return response.get("current", {})
@@ -447,25 +447,32 @@ with tab4:
 # ... inside your Tab 4 block ...
 # ... (After your map_data = st_folium line) ...
     
-    st.markdown("### 📊 Atmospheric Report")
+st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     
-    # NEW: Only fetch if we have valid coordinates
-    if curr_lat and curr_lon:
-        try:
-            # Use a unique key for the report data so it doesn't conflict
-            pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-            data = fetch_global_aqi(curr_lat, curr_lon, pollutant_key)
+    try:
+        data = fetch_global_aqi(curr_lat, curr_lon)
+        
+        if data:
+            st.metric("US AQI Index", f"{data.get('us_aqi', 'N/A')}")
             
-            if data and 'us_aqi' in data:
-                aqi = data['us_aqi']
-                c1, c2 = st.columns(2)
-                c1.metric("US AQI Index", f"{aqi}")
-                c2.metric("Coordinate Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
-            else:
-                st.warning("No data available for this coordinate.")
-        except Exception as e:
-            st.error(f"Data fetch failed: {e}")
+            # Create a grid for the specific pollutants
+            col1, col2, col3 = st.columns(3)
+            col1.metric("PM2.5", f"{data.get('pm2_5', 'N/A')} µg/m³")
+            col2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
+            col3.metric("Ozone", f"{data.get('ozone', 'N/A')} µg/m³")
+            
+            col4, col5, col6 = st.columns(3)
+            col4.metric("NO₂", f"{data.get('nitrogen_dioxide', 'N/A')} µg/m³")
+            col5.metric("CO", f"{data.get('carbon_monoxide', 'N/A')} µg/m³")
+            col6.metric("SO₂", f"{data.get('sulphur_dioxide', 'N/A')} µg/m³")
+            
+            st.caption(f"Coordinates: {curr_lat:.2f}, {curr_lon:.2f}")
+        else:
+            st.warning("Sensor data currently unavailable for this coordinate.")
+            
+    except Exception as e:
+        st.error(f"Error retrieving sensor data: {e}")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
