@@ -64,7 +64,22 @@ df_yearly = pd.DataFrame({
 
 current_year = 2026
 
+def get_healthiest_route(start_lat, start_lon, end_lat, end_lon):
+    # Sample 3 points: Start, Midpoint, End
+    mid_lat = (start_lat + end_lat) / 2
+    mid_lon = (start_lon + end_lon) / 2
     
+    points = [(start_lat, start_lon), (mid_lat, mid_lon), (end_lat, end_lon)]
+    
+    total_aqi = 0
+    for lat, lon in points:
+        data = fetch_global_aqi(lat, lon)
+        total_aqi += data.get('us_aqi', 50) # Default to 50 if data missing
+        
+    avg_aqi = total_aqi / 3
+    return avg_aqi
+
+
 def get_nasa_climate_data(lat, lon):
     target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
     url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start={target_date}&end={target_date}&format=JSON"
@@ -276,7 +291,7 @@ else:
 st.markdown('<p class="title-gradient">Project Wake AQI</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence", "🚲 The Clean-Air Commute"])
 
 # --- TAB 1: OVERVIEW ---
 
@@ -434,3 +449,30 @@ with tab5:
         st.dataframe(fires[['latitude', 'longitude', 'acq_time', 'bright_ti4']])
     else:
         st.success("No active fire hotspots detected.")
+
+# --- TAB 6: CLEAN-AIR COMMUTE ---
+with tab6:
+    st.markdown("### 🚲 The Clean-Air Commute")
+    st.write("Route planning based on real-time atmospheric exposure.")
+    
+    col_a, col_b = st.columns(2)
+    start_loc = col_a.text_input("Start (Lat, Lon)", "35.77, -78.63")
+    end_loc = col_b.text_input("Destination (Lat, Lon)", "35.80, -78.60")
+    
+    if st.button("Calculate Healthiest Route"):
+        try:
+            s_lat, s_lon = map(float, start_loc.split(','))
+            e_lat, e_lon = map(float, end_loc.split(','))
+            
+            exposure_index = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
+            
+            st.metric("Estimated Route Exposure (AQI)", round(exposure_index, 1))
+            
+            if exposure_index < 50:
+                st.success("✅ Path recommended: Low particulate exposure detected.")
+            elif exposure_index < 100:
+                st.warning("⚠️ Path acceptable, but contains moderate pollution.")
+            else:
+                st.error("🚫 Alert: High exposure route. Consider a different path or transit.")
+        except:
+            st.error("Please enter coordinates in 'Lat, Lon' format.")
