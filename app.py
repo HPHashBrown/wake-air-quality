@@ -467,14 +467,30 @@ with tab6:
         s_lat, s_lon, _ = get_city_coords(start_addr)
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
-        if s_lat and e_lat:
-            # We fetch the street network graph
+if s_lat and e_lat:
+            # Increase the search distance (dist=20000 = 20km) to ensure roads are connected
             center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
-            graph = ox.graph_from_point((center_lat, center_lon), dist=10000, network_type='drive')
+            graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
+            
+            # Use 'nearest_nodes' to ensure we start/end on a valid road
             start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
             end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
+            
+            # Find path
             route = nx.shortest_path(graph, start_node, end_node, weight='length')
             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+            
+            # Calculate total distance for the time estimate
+            total_dist_meters = sum(ox.utils_graph.get_route_edge_attributes(graph, route, 'length'))
+            total_time_min = (total_dist_meters / 1000) / 40 * 60 # 40 km/h avg speed
+            
+            st.session_state.route_data = {
+                "route": route_coords,
+                "s_lat": s_lat, "s_lon": s_lon,
+                "e_lat": e_lat, "e_lon": e_lon,
+                "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
+                "time_est": round(total_time_min, 1)
+            }
             
             # Save to state
             st.session_state.route_data = {
@@ -487,9 +503,19 @@ with tab6:
             st.error("Location not found.")
 
     # 3. PERSISTENT DISPLAY
-    if 'route_data' in st.session_state:
+if 'route_data' in st.session_state:
         data = st.session_state.route_data
-        st.metric("Estimated Route AQI", round(data['exposure'], 1))
+        col1, col2 = st.columns(2)
+        col1.metric("Route AQI", round(data['exposure'], 1))
+        col2.metric("Est. Travel Time", f"{data['time_est']} min")
+        
+        # Build clean map
+        m = folium.Map(tiles="CartoDB dark_matter")
+        folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
+        # Auto-fit the map to the route bounds
+        m.fit_bounds(data['route'])
+        
+        st_folium(m, width="100%", height=400)
         
         # Build map
         center_lat = (data['s_lat'] + data['e_lat']) / 2
