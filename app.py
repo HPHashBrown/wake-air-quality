@@ -505,30 +505,13 @@ with tab6:
     from geopy.distance import geodesic
     
     col1, col2 = st.columns(2)
-    # Now these inputs support full addresses like "100 Main St, Raleigh, NC"
     start_addr = col1.text_input("Starting Address", "100 Main St, Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination Address", "500 Main St, Rolesville, NC", key="end_addr")
     
-    @st.cache_data(show_spinner=True)
-    def get_map_graph(lat1, lon1, lat2, lon2):
-        center_lat, center_lon = (lat1 + lat2) / 2, (lon1 + lon2) / 2
-        # Building the graph around the center point of the two addresses
-        graph = None
-        for attempt in range(3):
-            try:
-                graph = ox.graph_from_point((center_lat, center_lon), dist=5000, network_type='drive')
-                break
-            except Exception:
-                continue
-        if graph:
-            hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
-            graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
-            graph = ox.add_edge_travel_times(graph)
-        return graph
+    # ... [Keep your get_map_graph function here] ...
 
     if st.button("Generate Healthiest Path"):
         try:
-            # Use OSMnx built-in geocoder for high-precision address support
             s_lat, s_lon = ox.geocoder.geocode(start_addr)
             e_lat, e_lon = ox.geocoder.geocode(end_addr)
             
@@ -547,7 +530,6 @@ with tab6:
                         route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
                         route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
                         
-                        total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
                         total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
                         
                         st.session_state.route_data = {
@@ -558,35 +540,38 @@ with tab6:
                             "time_est": round(total_time_min, 1)
                         }
                     except nx.NetworkXNoPath:
-                        st.error("No driveable path found. Try locations closer to main roads.")
-                else:
-                    st.error("OSM Servers are busy. Please try again.")
+                        st.error("No driveable path found.")
         except Exception:
-            st.error("Address not recognized. Please include City and State (e.g., 'Raleigh, NC').")
+            st.error("Address not recognized.")
 
-    # Persistent Display
+    # --- PERSISTENT DISPLAY & CLINICAL BRIEFING ---
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
+        
+        # Metrics
         col1, col2 = st.columns(2)
-        col1.metric("Route AQI", round(data.get('exposure', 0), 1))
+        aqi_val = round(data.get('exposure', 0), 1)
+        col1.metric("Route AQI", aqi_val)
         col2.metric("Est. Travel Time", f"{data.get('time_est', 'N/A')} min")
         
+        # Map
         m = folium.Map(tiles="CartoDB dark_matter")
         folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
         folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
         folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
         m.fit_bounds(data['route'])
         st_folium(m, width="100%", height=400)
-
-with tab7:
-    st.markdown("### 🩺 Daily Clinical Briefing")
-    if 'route_data' in st.session_state:
-        # Assuming you have pm25 and aqi data stored in route_data
-        pm25 = st.session_state.route_data.get('pm25', 0)
-        aqi = st.session_state.route_data.get('exposure', 0)
         
-        with st.spinner("Generating clinical health insights..."):
-            briefing = get_ai_health_briefing(pm25, aqi)
+        # AI Clinical Briefing
+        st.markdown("---")
+        st.markdown("### 🩺 Daily Clinical Briefing")
+        
+        # We estimate PM2.5 based on AQI for the prompt
+        pm25_est = round(aqi_val * 0.4, 2)
+        
+        with st.spinner("Analyzing physiological impact..."):
+            briefing = get_ai_health_briefing(pm25_est, aqi_val)
             st.info(briefing)
-    else:
-        st.write("Generate a route in the 'Clean-Air Commute' tab to see your health briefing.")
+            
+            st.caption("Biological Context:")
+            st.write("Exposure to fine particulates (PM2.5) can trigger systemic oxidative stress, as these particles are small enough to cross the alveolar-capillary barrier and enter the bloodstream.")
