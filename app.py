@@ -204,12 +204,9 @@ with st.sidebar:
             if target_email: st.success("Protocol Active.")
             else: st.error("Error: Valid Email Required.")
 
-    st.markdown("---")
-    st.markdown("### 📂 Data Ingest")
-    uploaded_file = st.file_uploader("Upload custom CSV", type=['csv'])
     
     st.markdown("---")
-    selected_name = st.selectbox("Select Pollutant", options=list(POLLUTANT_MAP.keys()))
+    selected_name = st.selectbox("🧬 Select Pollutant", options=list(POLLUTANT_MAP.keys()))
     st.session_state['selected_pollutant_key'] = POLLUTANT_MAP[selected_name]
     st.session_state['selected_pollutant_name'] = selected_name
 
