@@ -378,8 +378,8 @@ with tab3:
 
     
 # --- TAB 4: MAP / SEARCH ---
+# --- TAB 4: MAP / SEARCH ---
 with tab4:
-    # Everything here must have exactly 4 spaces of indentation
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
@@ -391,7 +391,6 @@ with tab4:
         else:
             st.error("Location not found.")
 
-    # These lines must also have exactly 4 spaces
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     m.add_child(folium.LatLngPopup())
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
@@ -404,31 +403,22 @@ with tab4:
         st.session_state.map_center = [new_lat, new_lon]
         st.rerun()
     
-st.markdown("### 📊 Atmospheric Report")
+    # Everything below here MUST have exactly 4 spaces of indentation
+    st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     
-    # 1. Ensure we have a valid key
-    selected_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-    
-    st.write(f"Debug: Requesting {selected_key} at {curr_lat:.2f}, {curr_lon:.2f}") # REMOVE THIS AFTER TESTING
-    
     try:
-        # 2. Fetch the data
-        data = fetch_global_aqi(curr_lat, curr_lon, selected_key)
+        data = fetch_global_aqi(curr_lat, curr_lon, st.session_state.get('selected_pollutant_key', 'pm2_5'))
+        aqi = data.get('us_aqi', 'N/A')
         
-        # 3. Inspect what data is actually returned
-        if not data:
-            st.warning("API returned no data.")
-        elif 'us_aqi' not in data:
-            st.warning(f"Data found, but 'us_aqi' is missing. Data received: {data}")
-        else:
-            aqi = data['us_aqi']
+        if aqi != 'N/A':
             c1, c2 = st.columns(2)
             c1.metric("US AQI Index", f"{aqi}")
             c2.metric("Coordinate Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
-            
+        else:
+            st.warning("Sensor data currently unavailable for this coordinate.")
     except Exception as e:
-        st.error(f"Critical Error: {e}")
+        st.error(f"Error retrieving sensor data: {e}")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
