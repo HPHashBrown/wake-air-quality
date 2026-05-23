@@ -389,10 +389,9 @@ with tab3:
         else:
             st.error("🚫 **Alert.** Your inflammatory budget is low. Indoor air protocol recommended.")
 
-# --- TAB 4: MAP / SEARCH ---
-with tab4:
+
 # --- TAB 4: MAP / SEARCH (REPLACEMENT) ---
-with tab4:
+    with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     if city_input:
