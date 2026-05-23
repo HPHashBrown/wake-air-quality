@@ -406,7 +406,7 @@ with tab4:
         else: category = "Unhealthy (101+)"; color = "#ef4444"
             
             # Only render if the category is checked in the sidebar filter
-            if category in selected_risks:
+        if category in selected_risks:
                 folium.CircleMarker(
                     location=coords, 
                     radius=12, 
