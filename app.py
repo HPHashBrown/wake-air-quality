@@ -9,6 +9,8 @@ from streamlit_folium import st_folium
 from sklearn.linear_model import LinearRegression
 from fpdf import FPDF
 from streamlit_autorefresh import st_autorefresh
+import osmnx as ox
+import networkx as nx
 
 # ============================================
 # INITIALIZATION & STATE
@@ -461,14 +463,30 @@ with tab6:
     end_addr = col2.text_input("Destination", "Rolesville, NC")
     
     # 2. TRIGGER GENERATION
-    if st.button("Generate Healthiest Path"):
+if st.button("Generate Healthiest Path"):
         s_lat, s_lon, _ = get_city_coords(start_addr)
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            # Save inputs and generated data to state
+            # 1. Fetch the street network graph for the area
+            # We fetch a buffer around the center of your start/end points
+            center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
+            graph = ox.graph_from_point((center_lat, center_lon), dist=10000, network_type='drive')
+            
+            # 2. Find the nearest nodes on the road network
+            start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
+            end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
+            
+            # 3. Compute the shortest path based on travel time
+            route = nx.shortest_path(graph, start_node, end_node, weight='length')
+            
+            # 4. Get the full coordinates of the route
+            route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+            
+            # 5. Save to session state
             st.session_state.route_data = {
-                "s_lat": s_lat, "s_lon": s_lon, 
+                "route": route_coords,
+                "s_lat": s_lat, "s_lon": s_lon,
                 "e_lat": e_lat, "e_lon": e_lon,
                 "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
             }
@@ -483,7 +501,7 @@ with tab6:
         # Build map
         center_lat, center_lon = (data['s_lat'] + data['e_lat']) / 2, (data['s_lon'] + data['e_lon']) / 2
         m = folium.Map(location=[center_lat, center_lon], zoom_start=10, tiles="CartoDB dark_matter")
-        folium.PolyLine([(data['s_lat'], data['s_lon']), (data['e_lat'], data['e_lon'])], color="#4facfe", weight=5).add_to(m)
+        folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
         folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
         folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
         
