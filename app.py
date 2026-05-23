@@ -18,13 +18,13 @@ import google.generativeai as genai
 # ============================================
 
 
-# 1. Rename to 'gemini_model' to avoid conflicts
+# 1. Update Initialization
 try:
     genai.configure(api_key=st.secrets["GEM_KEY"])
-    # We use a distinct variable name: gemini_model
-    gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+    # We use a generative model instance directly
+    gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 except Exception as e:
-    st.error(f"Error initializing Gemini: {e}")
+    st.error(f"Error: {e}")
     gemini_model = None
 
 # 2. Update the function to use 'gemini_model'
