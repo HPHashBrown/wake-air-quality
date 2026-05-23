@@ -455,34 +455,36 @@ with tab5:
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
+    # 1. SETUP INPUTS
     col1, col2 = st.columns(2)
-    start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
-    end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
+    start_addr = col1.text_input("Starting Location", "Raleigh, NC")
+    end_addr = col2.text_input("Destination", "Rolesville, NC")
     
-    # Use a container to hold the map and the metric so they don't disappear
-    map_container = st.empty() 
-    
+    # 2. TRIGGER GENERATION
     if st.button("Generate Healthiest Path"):
         s_lat, s_lon, _ = get_city_coords(start_addr)
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            # 1. Calculate AQI
-            exposure = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
-            
-            # 2. Update the UI
-            st.metric("Estimated Route AQI", round(exposure, 1))
-            
-            # 3. Create Map
-            center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
-            m = folium.Map(location=[center_lat, center_lon], zoom_start=10, tiles="CartoDB dark_matter")
-            
-            folium.PolyLine([(s_lat, s_lon), (e_lat, e_lon)], color="#4facfe", weight=5, opacity=0.8).add_to(m)
-            folium.Marker([s_lat, s_lon], icon=folium.Icon(color='green')).add_to(m)
-            folium.Marker([e_lat, e_lon], icon=folium.Icon(color='red')).add_to(m)
-            
-            # 4. Display map specifically within the container
-            with map_container:
-                st_folium(m, width="100%", height=400)
+            # Save inputs and generated data to state
+            st.session_state.route_data = {
+                "s_lat": s_lat, "s_lon": s_lon, 
+                "e_lat": e_lat, "e_lon": e_lon,
+                "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
+            }
         else:
             st.error("Location not found.")
+
+    # 3. PERSISTENT DISPLAY (Outside the button click block)
+    if 'route_data' in st.session_state:
+        data = st.session_state.route_data
+        st.metric("Estimated Route AQI", round(data['exposure'], 1))
+        
+        # Build map
+        center_lat, center_lon = (data['s_lat'] + data['e_lat']) / 2, (data['s_lon'] + data['e_lon']) / 2
+        m = folium.Map(location=[center_lat, center_lon], zoom_start=10, tiles="CartoDB dark_matter")
+        folium.PolyLine([(data['s_lat'], data['s_lon']), (data['e_lat'], data['e_lon'])], color="#4facfe", weight=5).add_to(m)
+        folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
+        folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
+        
+        st_folium(m, width="100%", height=400)
