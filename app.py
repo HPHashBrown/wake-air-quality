@@ -473,7 +473,6 @@ with tab3:
             st.error("🚫 **Alert.** Your inflammatory budget is low. Indoor air protocol recommended.")
 
 
-# --- TAB 4: MAP / SEARCH (REPLACEMENT) ---
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
@@ -487,29 +486,27 @@ with tab4:
         else:
             st.error("Location not found.")
             
-    # 1. Initialize map ONCE
     m = folium.Map(location=st.session_state.map_center, zoom_start=4, tiles="CartoDB dark_matter")
     
-    # 2. Global Heatmap Logic
     if show_heatmap:
         from folium.plugins import HeatMap
-        # This simulates a global grid. In production, you would fetch 
-        # a list of [lat, lon, pm2.5_value] from a global AQI API.
+        # INCREASED DENSITY: Use a smaller step (5) to cover "every inch"
+        # Increased radius and blur to create a seamless gradient surface
         global_hotspots = []
-        for lat in range(-60, 80, 10):
-            for lon in range(-180, 180, 20):
-                # Simulated intensity based on a dummy pattern
+        for lat in range(-60, 80, 5): 
+            for lon in range(-180, 180, 5):
                 intensity = (abs(lat) / 100) + 0.2 
                 global_hotspots.append([lat, lon, intensity])
         
-        HeatMap(global_hotspots, radius=25, blur=15, min_opacity=0.3).add_to(m)
+        # radius=50 and blur=30 makes it look like a continuous atmospheric layer
+        HeatMap(global_hotspots, radius=50, blur=30, min_opacity=0.2).add_to(m)
     
-    # 3. Add marker and render map ONCE
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
     st_folium(m, width="100%", height=400)
 
-    # 4. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
+    st.caption("Note: The heatmap currently displays simulated PM2.5 distribution patterns for visualization purposes.")
+    
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
     active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
@@ -523,7 +520,6 @@ with tab4:
             col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
         else:
             st.error("Could not retrieve data for this node.")
-
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
