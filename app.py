@@ -445,29 +445,27 @@ with tab4:
     
     # Everything below here MUST have exactly 4 spaces of indentation
 # ... inside your Tab 4 block ...
+# ... (After your map_data = st_folium line) ...
+    
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     
-    # Use the selection from the Sidebar via session_state
-    active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-    active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
-    
-    try:
-        # Pass the dynamic key to the fetch function
-        data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
-        
-        # Get the value for the selected pollutant dynamically
-        pollutant_value = data.get(active_pollutant_key, 'N/A')
-        aqi_val = data.get('us_aqi', 'N/A')
-        
-        c1, c2, c3 = st.columns(3)
-        c1.metric("US AQI", f"{aqi_val}")
-        # Dynamically label the metric with the selected pollutant name
-        c2.metric(f"{active_pollutant_name}", f"{pollutant_value}")
-        c3.metric("Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
-        
-    except Exception as e:
-        st.error(f"Error retrieving sensor data: {e}")
+    # NEW: Only fetch if we have valid coordinates
+    if curr_lat and curr_lon:
+        try:
+            # Use a unique key for the report data so it doesn't conflict
+            pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
+            data = fetch_global_aqi(curr_lat, curr_lon, pollutant_key)
+            
+            if data and 'us_aqi' in data:
+                aqi = data['us_aqi']
+                c1, c2 = st.columns(2)
+                c1.metric("US AQI Index", f"{aqi}")
+                c2.metric("Coordinate Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
+            else:
+                st.warning("No data available for this coordinate.")
+        except Exception as e:
+            st.error(f"Data fetch failed: {e}")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
