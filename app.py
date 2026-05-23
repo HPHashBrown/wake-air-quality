@@ -60,6 +60,7 @@ except ImportError:
 df_yearly = pd.DataFrame({
     "year": [2018, 2019, 2020, 2021, 2022, 2023], 
     "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]
+})
 
     
 def get_nasa_climate_data(lat, lon):
