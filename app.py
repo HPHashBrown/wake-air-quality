@@ -85,8 +85,13 @@ def fetch_wildfire_data():
 def fetch_live_weather(lat, lon):
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
     try:
-        return requests.get(url).json().get("current", None)
-    except: return None
+        response = requests.get(url)
+        print(f"DEBUG: Status Code {response.status_code}") # ADD THIS
+        print(f"DEBUG: Response {response.text}")           # ADD THIS
+        return response.json().get("current", None)
+    except Exception as e:
+        print(f"DEBUG: Error {e}")                         # ADD THIS
+        return None
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
