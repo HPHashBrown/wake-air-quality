@@ -12,11 +12,20 @@ from streamlit_autorefresh import st_autorefresh
 import osmnx as ox
 import networkx as nx
 from google import genai
+from folium.plugins import HeatMap
 
 
 # ============================================
 # INITIALIZATION & STATE
 # ============================================
+
+def create_base_map(lat, lon, zoom=12):
+    return folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB dark_matter")
+
+def add_heatmap_to_map(m, hotspots):
+    from folium.plugins import HeatMap
+    HeatMap(hotspots, radius=20, blur=15).add_to(m)
+    return m
 
 
 # 1. Update Initialization
@@ -468,6 +477,10 @@ with tab3:
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
+    
+    # Checkbox to toggle the Heatmap overlay
+    show_heatmap = st.checkbox("Show Regional Pollution Heatmap", value=True)
+    
     if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
@@ -475,6 +488,20 @@ with tab4:
             st.success(f"📍 Navigation locked to: {name}")
         else:
             st.error("Location not found.")
+            
+    # Initialize map
+    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+    
+    # --- INTEGRATED HEATMAP LOGIC ---
+    if show_heatmap:
+        # Example: list of [lat, lon, intensity]
+        # In a real app, you would fetch these points dynamically based on the city
+        regional_hotspots = [[st.session_state.map_center[0], st.session_state.map_center[1], 0.7]]
+        from folium.plugins import HeatMap
+        HeatMap(regional_hotspots, radius=30, blur=20).add_to(m)
+    
+    folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
+    st_folium(m, width="100%", height=400)
             
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
