@@ -535,3 +535,16 @@ with tab6:
         m.fit_bounds(data['route'])
         
         st_folium(m, width="100%", height=400)
+
+# Graph logic with retry
+            graph = None
+            for i in range(3): # Try 3 times
+                try:
+                    graph = ox.graph_from_point((center_lat, center_lon), dist=3000, network_type='drive')
+                    break
+                except:
+                    continue
+            
+            if graph is None:
+                st.error("OSM Servers are busy. Please try again in a minute.")
+                st.stop()
