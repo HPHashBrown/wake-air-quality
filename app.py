@@ -493,7 +493,7 @@ with tab6:
                 "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
                 "time_est": round(total_time_min, 1)
             }
-        else:
+    else:
             st.error("Location not found.")
 
     # 3. PERSISTENT DISPLAY
