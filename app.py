@@ -296,13 +296,13 @@ with tab1:
     with m1:
         st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{current_aqi}</h3></div>", unsafe_allow_html=True)
     with m2:
-        val = f"{live_weather['temperature_2m']}°C" if live_weather else "N/A"
+        val = f"{live_weather.get('temperature_2m', 'N/A')}°C"
         st.markdown(f"<div class='glass-card'><h5>Thermal State</h5><h3>{val}</h3><span>Raleigh Node</span></div>", unsafe_allow_html=True)
     with m3:
-        val = f"{live_weather['wind_speed_10m']} km/h" if live_weather else "N/A"
+        val = f"{live_weather.get('wind_speed_10m', 'N/A')} km/h"
         st.markdown(f"<div class='glass-card'><h5>Wind Velocity</h5><h3>{val}</h3><span>Dispersion Rate</span></div>", unsafe_allow_html=True)
     with m4:
-        val = f"{live_weather['wind_direction_10m']}°" if live_weather else "N/A"
+        val = f"{live_weather.get('wind_direction_10m', 'N/A')}°"
         st.markdown(f"<div class='glass-card'><h5>Vector Heading</h5><h3>{val}</h3><span>Atmospheric Drift</span></div>", unsafe_allow_html=True)
 
     fig = go.Figure()
