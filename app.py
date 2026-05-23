@@ -416,6 +416,16 @@ with tab3:
     
 # --- TAB 4: MAP / SEARCH ---
 # --- TAB 4: MAP / SEARCH ---
+
+# Tab 4 Atmospheric Report
+    # Use the session_state key directly here!
+    pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
+    pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
+    
+    try:
+        data = fetch_global_aqi(curr_lat, curr_lon, pollutant_key)
+        # ... logic to display data ...
+
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
