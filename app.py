@@ -20,11 +20,6 @@ count = st_autorefresh(interval=300000, key="datarefresh")
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [35.7796, -78.6382] # Default to Raleigh
 
-# --- FIX: Ensure data exists globally ---
-if 'current_data' not in st.session_state:
-    # Try to fetch it once on load, default to empty dict if it fails
-    st.session_state.current_data = fetch_global_aqi(35.7796, -78.6382)
-
 current_data = st.session_state.current_data
     
 
