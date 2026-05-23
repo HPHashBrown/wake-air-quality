@@ -499,7 +499,7 @@ if s_lat and e_lat:
                 "e_lat": e_lat, "e_lon": e_lon,
                 "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
             }
-        else:
+    else:
             st.error("Location not found.")
 
     # 3. PERSISTENT DISPLAY
