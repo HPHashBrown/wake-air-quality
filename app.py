@@ -421,11 +421,7 @@ with tab3:
         st.write("Fetching sensor data to calculate your budget...")
 
     
-# --- TAB 4: MAP / SEARCH ---
-# Debug line (you can remove this once it works)
-    data = fetch_global_aqi(curr_lat, curr_lon)
-    st.write("Raw API Data:", data) # THIS WILL SHOW YOU EXACTLY WHAT THE API RETURNED
-# --- TAB 4: MAP / SEARCH ---
+
 
 # Tab 4 Atmospheric Report
 
