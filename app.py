@@ -468,18 +468,24 @@ with tab6:
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            # Graph logic
+            # Graph logic with metadata enhancement
             center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
             graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
+            
+            # Enhance graph with travel metadata
+            graph = ox.add_edge_speeds(graph)
+            graph = ox.add_edge_travel_times(graph)
+            
             start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
             end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
-            route = nx.shortest_path(graph, start_node, end_node, weight='length')
+            
+            # Use travel_time as the weight for the shortest path
+            route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
             
-            # Distance/Time calculation (Indented 12 spaces to match the 'if' block)
-            total_dist_meters = sum(nx.get_edge_attributes(graph, 'length').get((u, v), 0) 
-                                    for u, v in zip(route[:-1], route[1:]))
-            total_time_min = (total_dist_meters / 1000) / 40 * 60
+            # Distance/Time calculation
+            total_dist_meters = sum(ox.get_route_edge_attributes(graph, route, 'length'))
+            total_time_min = sum(ox.get_route_edge_attributes(graph, route, 'travel_time')) / 60
             
             st.session_state.route_data = {
                 "route": route_coords,
@@ -491,7 +497,7 @@ with tab6:
         else:
             st.error("Location not found.")
 
-    # 3. PERSISTENT DISPLAY (Indented 4 spaces)
+    # 3. PERSISTENT DISPLAY
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
         
