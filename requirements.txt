@@ -14,4 +14,4 @@ geopy
 fpdf
 osmnx
 networkx
-google-generativeai
+google-generativeai>=0.8.0
