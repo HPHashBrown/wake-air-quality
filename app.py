@@ -11,10 +11,27 @@ from fpdf import FPDF
 from streamlit_autorefresh import st_autorefresh
 import osmnx as ox
 import networkx as nx
+import google.generativeai as genai
 
 # ============================================
 # INITIALIZATION & STATE
 # ============================================
+
+
+# Setup Gemini
+genai.configure(api_key="AIzaSyBN9OR6RodwAAd7KPl8HPlDG448mKpsCsg")
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+def get_ai_health_briefing(pm25_val, aqi_val):
+    prompt = f"""
+    Act as a clinical health educator. The current PM2.5 level is {pm25_val} µg/m³ and the AQI is {aqi_val}.
+    Write a 3-sentence "Daily Health Briefing" for a general audience. Remember to say that all medical advice given from you may not be 100% correct and to contact health professionals if needed.
+    1. Explain the biological impact (e.g., respiratory inflammation, cellular stress).
+    2. Suggest one specific preventative measure based on these levels.
+    3. Keep it empathetic and professional.
+    """
+    response = model.generate_content(prompt)
+    return response.text
 
 import osmnx as ox
 # Set a longer timeout for the API request
@@ -300,7 +317,7 @@ else:
 st.markdown('<p class="title-gradient">Project Wake AQI</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence", "🚲 The Clean-Air Commute"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence", "🚲The Clean-Air Commute", "📑Daily Clinical Briefing"])
 
 # --- TAB 1: OVERVIEW ---
 
@@ -539,3 +556,16 @@ with tab6:
         folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
         m.fit_bounds(data['route'])
         st_folium(m, width="100%", height=400)
+
+with tab7:
+    st.markdown("### 🩺 Daily Clinical Briefing")
+    if 'route_data' in st.session_state:
+        # Assuming you have pm25 and aqi data stored in route_data
+        pm25 = st.session_state.route_data.get('pm25', 0)
+        aqi = st.session_state.route_data.get('exposure', 0)
+        
+        with st.spinner("Generating clinical health insights..."):
+            briefing = get_ai_health_briefing(pm25, aqi)
+            st.info(briefing)
+    else:
+        st.write("Generate a route in the 'Clean-Air Commute' tab to see your health briefing.")
