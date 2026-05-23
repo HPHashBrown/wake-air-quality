@@ -3,14 +3,16 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import folium
 from streamlit_folium import st_folium
 from sklearn.linear_model import LinearRegression
 from fpdf import FPDF
-from datetime import datetime, timedelta
 from streamlit_autorefresh import st_autorefresh
 
+# ============================================
+# INITIALIZATION & STATE
+# ============================================
 # Refresh every 5 minutes (300,000 ms)
 count = st_autorefresh(interval=300000, key="datarefresh")
 
@@ -23,42 +25,9 @@ if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
 
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
-
-def get_nasa_climate_data(lat, lon):
-    # Calculate a date 30 days ago to ensure data is available
-    target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
-    
-    # URL using a guaranteed historical date
-    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start={target_date}&end={target_date}&format=JSON"
-    
-    try:
-        response = requests.get(url).json()
-        # Access the dictionary safely
-        data = response['properties']['parameter']
-        solar_values = list(data['ALLSKY_SFC_SW_DWN'].values())
-        wind_values = list(data['WS2M'].values())
-        
-        # Only return if we found actual data, not -999
-        solar = solar_values[0] if solar_values[0] != -999 else "N/A"
-        wind = wind_values[0] if wind_values[0] != -999 else "N/A"
-        
-        return {"solar_radiation": solar, "satellite_wind_speed": wind}
-    except Exception as e:
-        return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
-
-def fetch_wildfire_data():
-    # NASA FIRMS Global Fire Data (latest 24h)
-    url = "https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_placeholder/map/C6/firms/csv/USA_contiguous_and_Hawaii_24h.csv"
-    try:
-        df = pd.read_csv(url)
-        # Filter for fires roughly in the Eastern US to keep the list relevant
-        # (Latitude 30-40, Longitude -85 to -75 covers the general NC region)
-        nc_fires = df[(df['latitude'] > 30) & (df['latitude'] < 40) & 
-                      (df['longitude'] > -85) & (df['longitude'] < -75)]
-        return nc_fires
-    except:
-        return pd.DataFrame()
-
+metric_key = "pm2_5" 
+selected_metric = "PM2.5" 
+selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 
 try:
     from prophet import Prophet
@@ -66,50 +35,93 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
-
-metric_key = "pm2_5" 
-selected_metric = "PM2.5" 
-selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
-
-
+# ============================================
+# API FUNCTIONS (MOVED TO TOP TO PREVENT ERRORS)
+# ============================================
+def get_nasa_climate_data(lat, lon):
+    target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start={target_date}&end={target_date}&format=JSON"
+    try:
+        response = requests.get(url).json()
+        data = response['properties']['parameter']
+        solar_values = list(data['ALLSKY_SFC_SW_DWN'].values())
+        wind_values = list(data['WS2M'].values())
+        solar = solar_values[0] if solar_values[0] != -999 else "N/A"
+        wind = wind_values[0] if wind_values[0] != -999 else "N/A"
+        return {"solar_radiation": solar, "satellite_wind_speed": wind}
+    except Exception as e:
+        return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
 
 def fetch_wildfire_data():
-    # Use the specific FIRMS key
     url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
-    
     try:
-        # Attempt to read the data
         df = pd.read_csv(url)
-        
-        # Standardize columns (NASA sometimes changes names)
-        # We rename whatever the latitude/longitude column is called to 'latitude'/'longitude'
         if 'latitude' not in df.columns and 'lat' in df.columns:
             df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
-            
-        # Filter for NC area
         nc_fires = df[(df['latitude'] >= 34) & (df['latitude'] <= 37) & 
                       (df['longitude'] >= -84) & (df['longitude'] <= -75)]
         return nc_fires
-        
     except Exception as e:
-        # If anything goes wrong, this block catches the error 
-        # so your app doesn't crash.
         return pd.DataFrame()
 
+@st.cache_data(ttl=3600)
+def fetch_live_weather(lat, lon):
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
+    try:
+        return requests.get(url).json().get("current", None)
+    except: return None
+
+@st.cache_data(ttl=3600)
+def fetch_current_aqi(lat=35.7796, lon=-78.6382, metric_key="pm2_5"):
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric_key}"
+    try: 
+        return requests.get(url).json().get("current", {})
+    except: return {}
+
+@st.cache_data(ttl=3600)
+def fetch_global_aqi(lat, lon, metric="pm2_5"):
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
+    try: 
+        response = requests.get(url).json()
+        return response.get("current", {})
+    except: 
+        return {}
+
+@st.cache_data(ttl=86400)
+def get_city_coords(city_name):
+    url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
+    try:
+        response = requests.get(url).json()
+        if "results" in response:
+            data = response["results"][0]
+            return data["latitude"], data["longitude"], data["name"]
+        return None, None, None
+    except Exception as e:
+        return None, None, None
+
+def generate_pdf_report(df_yearly, future_df, current_aqi):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, txt="Wake County AQI Intelligence Report", ln=True, align='C')
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
+    pdf.ln(10)
+    pdf.cell(200, 10, txt=f"Current AQI Level: {current_aqi}", ln=True)
+    pdf.ln(5)
+    pdf.cell(200, 10, txt="Historical Data Summary:", ln=True)
+    pdf.cell(200, 10, txt=df_yearly.to_string(), ln=True)
+    return pdf.output(dest='S').encode('latin-1')
 
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
 # ============================================
 st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
 
-st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
-
 st.markdown("""
     <style>
-    /* Animated Global Background */
     .stApp { background-color: #0b0f19; color: #ffffff; }
     
-    /* Animated Gradient Title */
     .title-gradient {
         background: linear-gradient(-45deg, #00f2fe, #4facfe, #00f2fe, #4facfe);
         background-size: 300% 300%;
@@ -131,7 +143,6 @@ st.markdown("""
 
     .sub-font { font-size: 20px !important; color: #8b9bb4; margin-bottom: 35px; font-weight: 300; letter-spacing: 1px; }
     
-    /* Glassmorphism UI */
     .glass-card {
         background: rgba(16, 25, 43, 0.6); 
         backdrop-filter: blur(12px);
@@ -150,13 +161,12 @@ st.markdown("""
     .glass-card h3 { color: #ffffff !important; font-size: 38px; font-weight: 800; margin: 0px 0px 10px 0px; }
     .glass-card span { font-size: 13px; color: #4facfe; }
 
-    /* Sidebar Styling */
     .css-1d391kg { background-color: #0b0f19; border-right: 1px solid rgba(255, 255, 255, 0.08); }
     </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# FEATURE 4: ALERT NOTIFICATION SYSTEM (SIDEBAR)
+# SIDEBAR
 # ============================================
 with st.sidebar:
     st.markdown("### 🔔 Automated Alerting")
@@ -172,71 +182,22 @@ with st.sidebar:
     st.markdown("### 📂 Data Ingest")
     uploaded_file = st.file_uploader("Upload custom CSV", type=['csv'])
 
-with st.sidebar:
     st.markdown("---")
-    
-    # Calculate time passed since page load
     elapsed = datetime.now() - st.session_state.start_time
     seconds = int(elapsed.total_seconds())
-    
     if seconds < 60:
         time_str = f"{seconds} seconds"
     else:
-        minutes = seconds // 60
-        time_str = f"{minutes} minutes"
-        
+        time_str = f"{seconds // 60} minutes"
     st.write(f"🕒 Data updated: **{time_str} ago**")
 
-with st.sidebar:
-    st.markdown("---")
-    
-    # 1. The Manual Reset Button
     if st.button("🔄 Manual Refresh"):
-        # Reset the timer to now
         st.session_state.start_time = datetime.now()
-        
-        # Pro-Tip: If you want to force the data to re-fetch 
-        # (clearing the cache for current session), uncomment the line below:
-        # st.cache_data.clear() 
-        
-        st.rerun() # Forces the app to re-run immediately
-
-    # 2. The Timer Display
-    elapsed = datetime.now() - st.session_state.start_time
-    seconds = int(elapsed.total_seconds())
-    
-    if seconds < 60:
-        time_str = f"{seconds} seconds"
-    else:
-        minutes = seconds // 60
-        time_str = f"{minutes} minutes"
-        
-    st.write(f"🕒 Data updated: **{time_str} ago**")
-
-
-
-# ============================================
-# DATA FETCHING (API)
-# ============================================
-@st.cache_data(ttl=3600)
-def fetch_live_weather(lat, lon):
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
-    try:
-        return requests.get(url).json().get("current", None)
-    except: return None
-
-@st.cache_data(ttl=3600)
-def fetch_current_aqi(lat=35.7796, lon=-78.6382, metric_key="pm2_5"):
-    # We inject the metric_key into the API string dynamically
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric_key}"
-    try: 
-        return requests.get(url).json().get("current", {})
-    except: return {}
+        st.rerun()
 
 # ============================================
 # PROCESSING & MODELING
 # ============================================
-# Automatically use uploaded file if exists, otherwise fallback to local CSV
 if uploaded_file is not None:
     df_yearly = pd.read_csv(uploaded_file).sort_values("year")
 else:
@@ -250,24 +211,14 @@ with st.spinner("Initializing Atmospheric Sensors & Predictive AI..."):
     current_aqi_data = fetch_current_aqi()
     live_weather = fetch_live_weather(35.7796, -78.6382)
 
-# ============================================
-# FEATURE 1: ADVANCED AI FORECASTING (PROPHET)
-# ============================================
 if PROPHET_AVAILABLE:
-    # Prepare data for Prophet
     prophet_df = df_yearly.copy()
     prophet_df['ds'] = pd.to_datetime(prophet_df['year'], format='%Y')
     prophet_df = prophet_df.rename(columns={'mean_pm25': 'y'})
-    
-    # Initialize and train Meta's Prophet
     m = Prophet(yearly_seasonality=True)
     m.fit(prophet_df)
-    
-    # Predict 10 years into the future
     future = m.make_future_dataframe(periods=10, freq='YS')
     forecast = m.predict(future)
-    
-    # Extract prediction data
     future_df = pd.DataFrame({
         "year": forecast['ds'].dt.year,
         "predicted_pm25": forecast['yhat'],
@@ -275,7 +226,6 @@ if PROPHET_AVAILABLE:
         "yhat_upper": forecast['yhat_upper']
     })
 else:
-    # Fallback to standard Linear Regression if Prophet isn't installed
     X = df_yearly[["year"]]
     y = df_yearly["mean_pm25"]
     model = LinearRegression().fit(X, y)
@@ -284,38 +234,21 @@ else:
     future_df = pd.DataFrame({
         "year": future_years, 
         "predicted_pm25": future_preds,
-        "yhat_lower": future_preds - 1.5, # Mock confidence bounds
+        "yhat_lower": future_preds - 1.5, 
         "yhat_upper": future_preds + 1.5
     })
 
 current_aqi = current_aqi_data.get('us_aqi', 0)
 
-def generate_pdf_report(df_yearly, future_df, current_aqi):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, txt="Wake County AQI Intelligence Report", ln=True, align='C')
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt=f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
-    pdf.ln(10)
-    pdf.cell(200, 10, txt=f"Current AQI Level: {current_aqi}", ln=True)
-    pdf.ln(5)
-    pdf.cell(200, 10, txt="Historical Data Summary:", ln=True)
-    pdf.cell(200, 10, txt=df_yearly.to_string(), ln=True)
-    return pdf.output(dest='S').encode('latin-1')
-
 # ============================================
-# UI LAYOUT
-# ============================================
-# ============================================
-# UI LAYOUT
+# MAIN UI LAYOUT
 # ============================================
 st.markdown('<p class="title-gradient">Project Wake AQI</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence"])
 
-# --- TAB 1: OVERVIEW & ADVANCED CHART ---
+# --- TAB 1: OVERVIEW ---
 with tab1:
     m1, m2, m3, m4 = st.columns(4)
     with m1:
@@ -338,7 +271,18 @@ with tab1:
     fig.update_layout(title="PM2.5 Long-Term Atmospheric Trajectory", template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
-# --- TAB 2: ADVANCED ANALYTICS ---
+    st.markdown("---")
+    st.subheader("🩺 Public Health Advisory")
+    if current_aqi <= 50:
+        st.success("✅ **Air Quality is Good.** Air quality is considered satisfactory, and air pollution poses little or no risk.")
+    elif current_aqi <= 100:
+        st.warning("⚠️ **Air Quality is Moderate.** Air quality is acceptable; however, there may be a risk for some people.")
+    elif current_aqi <= 150:
+        st.error("🚫 **Unhealthy for Sensitive Groups.** Members of sensitive groups may experience health effects.")
+    else:
+        st.error("🚨 **Health Alert.** Some members of the general public may experience health effects.")
+
+# --- TAB 2: ANALYTICS ---
 with tab2:
     g1, g2 = st.columns(2)
     with g1:
@@ -352,7 +296,7 @@ with tab2:
         sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
         st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
 
-# --- TAB 3: HEALTH LITERACY ---
+# --- TAB 3: HEALTH ---
 with tab3:
     st.markdown("### 🩺 Biological Impact Protocols")
     c1, c2 = st.columns(2)
@@ -366,73 +310,57 @@ with tab3:
         with st.expander("🛡️ What is a Healthy Level?"):
             st.write("The EPA considers annual mean concentrations below 12.0 µg/m³ as sustainable for the general public.")
 
-# --- TAB 4: NC MAP ---
+# --- TAB 4: MAP / SEARCH ---
 with tab4:
-    st.markdown("### 🛰️ North Carolina Sensor Mesh")
-        
-    # --- GLOBAL DATA FETCHING ---
-# Now takes dynamic lat/lon
-@st.cache_data(ttl=3600)
-def fetch_global_aqi(lat, lon, metric="pm2_5"):
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
-    try: 
-        response = requests.get(url).json()
-        return response.get("current", {})
-    except: 
-        return {}
-
-# --- IN YOUR MAIN TAB 4 (GLOBAL MAP) ---
-# --- TAB 4: GLOBAL INTERACTIVE MAP ---
-@st.cache_data(ttl=86400)
-def get_city_coords(city_name):
-    # This URL must be indented 4 spaces
-    url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
+    st.markdown("### 🔍 Global Sensor Search")
+    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
-    # Everything inside the function must be indented 4 spaces
-    try:
-        response = requests.get(url).json()
-        if "results" in response:
-            data = response["results"][0]
-            return data["latitude"], data["longitude"], data["name"]
-        return None, None, None
-    except Exception as e:
-        return None, None, None
-    # Update your tabs definition:
-# tab1, tab2, tab3, tab4, tab5 = st.tabs([... , "🛰️ Space Intelligence"])
+    if city_input:
+        lat, lon, name = get_city_coords(city_input)
+        if lat:
+            st.session_state.map_center = [lat, lon]
+            st.success(f"📍 Navigation locked to: {name}")
+        else:
+            st.error("Location not found.")
 
+    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+    m.add_child(folium.LatLngPopup())
+    folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
+
+    map_data = st_folium(m, width="100%", height=400)
+    
+    if map_data and map_data.get('last_clicked'):
+        new_lat = map_data['last_clicked']['lat']
+        new_lon = map_data['last_clicked']['lng']
+        st.session_state.map_center = [new_lat, new_lon]
+        st.rerun() 
+    
+    st.markdown("### 📊 Atmospheric Report")
+    curr_lat, curr_lon = st.session_state.map_center
+    try:
+        data = fetch_global_aqi(curr_lat, curr_lon, metric_key)
+        aqi = data.get('us_aqi', 'N/A')
+        c1, c2 = st.columns(2)
+        c1.metric("US AQI Index", f"{aqi}")
+        c2.metric("Coordinate Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
+    except:
+        st.error("Unable to retrieve sensor data.")
+
+# --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
     st.write("Cross-referencing local nodes with NASA Earth Observation platforms.")
     
     nasa_data = get_nasa_climate_data(35.7796, -78.6382)
-    
     col1, col2 = st.columns(2)
     col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²", help="NASA POWER: Measures potential for ozone formation.")
     col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s", help="NASA POWER: High-altitude wind drift data.")
-    
     st.info("💡 **Why this matters:** NASA monitors surface solar radiation because high levels contribute to ground-level ozone formation, which directly impacts your AQI readings.")
 
-with tab5:
     st.markdown("### 🔥 Real-Time Wildfire Hotspots")
     fires = fetch_wildfire_data()
-    
     if not fires.empty:
         st.warning(f"Detected {len(fires)} active fire hotspots in the Eastern US.")
         st.dataframe(fires[['latitude', 'longitude', 'acq_time', 'bright_ti4']])
     else:
-        st.success("No active fire hotspots detected in the immediate NC region.")
-
-
-# --- PLACE THIS AFTER THE 4 COLUMNS IN TAB 1 ---
-    st.markdown("---")
-    st.subheader("🩺 Public Health Advisory")
-    
-    # Dynamic Alert Logic
-    if current_aqi <= 50:
-        st.success("✅ **Air Quality is Good.** Air quality is considered satisfactory, and air pollution poses little or no risk.")
-    elif current_aqi <= 100:
-        st.warning("⚠️ **Air Quality is Moderate.** Air quality is acceptable; however, there may be a risk for some people, particularly those who are unusually sensitive to air pollution.")
-    elif current_aqi <= 150:
-        st.error("🚫 **Unhealthy for Sensitive Groups.** Members of sensitive groups may experience health effects. The general public is less likely to be affected.")
-    else:
-        st.error("🚨 **Health Alert.** Some members of the general public may experience health effects; members of sensitive groups may experience more serious health effects. Reduce prolonged outdoor exertion.")
+        st.success("No active fire hotspots detected
