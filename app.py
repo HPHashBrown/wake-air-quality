@@ -112,22 +112,21 @@ def fetch_pollutant_data(lat, lon, pollutant_key):
     except: 
         return {}
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=60) # Reduced to 60 seconds to prevent caching issues
 def fetch_global_aqi(lat, lon):
-    # OWM Endpoint
     url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={OWM_API_KEY}"
     try:
-        response = requests.get(url).json()
-        # OWM puts the pollutants inside a 'components' dictionary
-        components = response['list'][0]['components']
-        aqi_index = response['list'][0]['main']['aqi'] # 1 (Good) to 5 (Very Poor)
-        
-        # Merge them into a single dictionary
-        data = components
-        data['us_aqi'] = aqi_index * 30 # Rough estimate conversion
-        return data
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            # OWM returns data in a 'list' of components
+            # We take the first item
+            components = data['list'][0]['components']
+            return components
+        else:
+            return {"error": f"API returned {response.status_code}"}
     except Exception as e:
-        return {}
+        return {"error": str(e)}
 
 @st.cache_data(ttl=86400)
 def get_city_coords(city_name):
