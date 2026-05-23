@@ -510,38 +510,50 @@ with tab6:
     
     # ... [Keep your get_map_graph function here] ...
 
-    if st.button("Generate Healthiest Path"):
+if st.button("Generate Healthiest Path"):
         try:
-            s_lat, s_lon = ox.geocoder.geocode(start_addr)
-            e_lat, e_lon = ox.geocoder.geocode(end_addr)
+            # Using geopy for more reliable address resolution
+            from geopy.geocoders import Nominatim
+            geolocator = Nominatim(user_agent="wake_air_quality_app")
             
-            dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
+            s_loc = geolocator.geocode(start_addr)
+            e_loc = geolocator.geocode(end_addr)
             
-            if dist_km > 50:
-                st.error("Distance too large for local analysis. Please keep routes under 50km.")
+            if not s_loc or not e_loc:
+                st.error("Could not find one of the addresses. Please be more specific (e.g., include city and zip).")
             else:
-                graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
+                s_lat, s_lon = s_loc.latitude, s_loc.longitude
+                e_lat, e_lon = e_loc.latitude, e_loc.longitude
                 
-                if graph:
-                    start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
-                    end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
+                dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
+                
+                if dist_km > 50:
+                    st.error("Distance too large for local analysis. Please keep routes under 50km.")
+                else:
+                    graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
                     
-                    try:
-                        route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
-                        route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+                    if graph:
+                        start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
+                        end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
                         
-                        total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
-                        
-                        st.session_state.route_data = {
-                            "route": route_coords,
-                            "s_lat": s_lat, "s_lon": s_lon,
-                            "e_lat": e_lat, "e_lon": e_lon,
-                            "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
-                            "time_est": round(total_time_min, 1)
-                        }
-                    except nx.NetworkXNoPath:
-                        st.error("No driveable path found.")
-except Exception as e:
+                        try:
+                            route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
+                            route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+                            
+                            total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
+                            
+                            st.session_state.route_data = {
+                                "route": route_coords,
+                                "s_lat": s_lat, "s_lon": s_lon,
+                                "e_lat": e_lat, "e_lon": e_lon,
+                                "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
+                                "time_est": round(total_time_min, 1)
+                            }
+                        except nx.NetworkXNoPath:
+                            st.error("No driveable path found. Try locations closer to main roads.")
+                    else:
+                        st.error("OSM Servers are busy. Please try again.")
+        except Exception as e:
             st.error(f"Address error: {e}")
 
     # --- PERSISTENT DISPLAY & CLINICAL BRIEFING ---
