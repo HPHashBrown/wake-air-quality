@@ -24,6 +24,11 @@ if 'map_center' not in st.session_state:
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
 
+def update_pollutant():
+    # This runs as soon as the widget is interacted with, 
+    # before the main script reruns.
+    pass
+
 @st.cache_data(ttl=3600)
 def fetch_global_aqi(lat, lon, metric):
     # This URL must use the 'metric' variable to update the request
