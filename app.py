@@ -454,20 +454,21 @@ with tab5:
 
 
 # --- TAB 6: CLEAN-AIR COMMUTE ---
-# --- TAB 6: CLEAN-AIR COMMUTE ---
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
+    # 1. SETUP INPUTS
     col1, col2 = st.columns(2)
     start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
     
+    # 2. TRIGGER GENERATION
     if st.button("Generate Healthiest Path"):
         s_lat, s_lon, _ = get_city_coords(start_addr)
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            # Graph logic
+            # Graph logic (Indented 12 spaces)
             center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
             graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
             start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
@@ -475,9 +476,9 @@ with tab6:
             route = nx.shortest_path(graph, start_node, end_node, weight='length')
             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
             
-            # Distance/Time calculation
-total_dist_meters = sum(ox.routing.get_route_edge_attributes(graph, route, 'length'))
-total_time_min = (total_dist_meters / 1000) / 40 * 60
+            # Distance/Time calculation (Indented 12 spaces)
+            total_dist_meters = sum(ox.routing.get_route_edge_attributes(graph, route, 'length'))
+            total_time_min = (total_dist_meters / 1000) / 40 * 60
             
             st.session_state.route_data = {
                 "route": route_coords,
@@ -489,9 +490,10 @@ total_time_min = (total_dist_meters / 1000) / 40 * 60
         else:
             st.error("Location not found.")
 
-    # PERSISTENT DISPLAY (Must be at the same indentation level as the 'if st.button')
+    # 3. PERSISTENT DISPLAY (Indented 4 spaces)
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
+        
         col1, col2 = st.columns(2)
         col1.metric("Route AQI", round(data.get('exposure', 0), 1))
         col2.metric("Est. Travel Time", f"{data.get('time_est', 'N/A')} min")
@@ -500,5 +502,7 @@ total_time_min = (total_dist_meters / 1000) / 40 * 60
         folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
         folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
         folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
+        
         m.fit_bounds(data['route'])
+        
         st_folium(m, width="100%", height=400)
