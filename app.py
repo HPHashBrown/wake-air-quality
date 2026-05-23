@@ -470,7 +470,7 @@ with tab6:
         if s_lat and e_lat:
             # Graph logic with metadata enhancement
             center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
-            graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
+            graph = ox.graph_from_point((center_lat, center_lon), dist=2000000, network_type='drive')
             
             # Enhance graph with travel metadata
             hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
