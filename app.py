@@ -31,19 +31,19 @@ def update_pollutant():
 
 @st.cache_data(ttl=3600)
 def fetch_global_aqi(lat, lon):
-    # Ensure all parameters are explicitly requested
-    base_url = "https://air-quality-api.open-meteo.com/v1/air-quality"
+    # The 'current' string MUST match the keys returned by the API
+    url = "https://air-quality-api.open-meteo.com/v1/air-quality"
     params = {
         "latitude": lat,
         "longitude": lon,
         "current": "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide,sulphur_dioxide"
     }
-    try: 
-        response = requests.get(base_url, params=params).json()
-        # Return the 'current' dictionary which contains the values
-        return response.get("current", {})
-    except Exception as e:
-        st.error(f"API Connection Error: {e}")
+    
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        data = response.json()
+        return data.get("current", {})
+    else:
         return {}
 
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
