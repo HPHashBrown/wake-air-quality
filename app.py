@@ -238,6 +238,28 @@ with st.sidebar:
         st.session_state.start_time = datetime.now()
         st.rerun()
 
+# In your Sidebar section
+with st.sidebar:
+    st.subheader("Atmospheric Lab")
+    
+    # Define options clearly
+    pollutants = {
+        "PM2.5": "pm2_5",
+        "Ozone": "ozone",
+        "Nitrogen Dioxide": "nitrogen_dioxide",
+        "Sulphur Dioxide": "sulphur_dioxide"
+    }
+    
+    # Store selection in session_state via the 'key' parameter
+    selected_name = st.selectbox(
+        "Select Pollutant", 
+        list(pollutants.keys()), 
+        key="selected_pollutant_name"
+    )
+    
+    # Automatically map the name to the API key
+    st.session_state.selected_pollutant_key = pollutants[selected_name]
+
 # Add this to your Sidebar section
 with st.sidebar:
     st.markdown("### 🧪 Atmospheric Lab")
