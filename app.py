@@ -405,27 +405,30 @@ with tab4:
         st.rerun()
     
 st.markdown("### 📊 Atmospheric Report")
-curr_lat, curr_lon = st.session_state.map_center
+    curr_lat, curr_lon = st.session_state.map_center
     
-    # Ensure the pollutant key is initialized in session state to avoid errors
+    # 1. Ensure we have a valid key
     selected_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
     
+    st.write(f"Debug: Requesting {selected_key} at {curr_lat:.2f}, {curr_lon:.2f}") # REMOVE THIS AFTER TESTING
+    
     try:
-        # Pass the key to the fetch function
+        # 2. Fetch the data
         data = fetch_global_aqi(curr_lat, curr_lon, selected_key)
         
-        # Check if data returned a value
-        aqi = data.get('us_aqi', 'N/A')
-        
-        if aqi != 'N/A':
+        # 3. Inspect what data is actually returned
+        if not data:
+            st.warning("API returned no data.")
+        elif 'us_aqi' not in data:
+            st.warning(f"Data found, but 'us_aqi' is missing. Data received: {data}")
+        else:
+            aqi = data['us_aqi']
             c1, c2 = st.columns(2)
             c1.metric("US AQI Index", f"{aqi}")
             c2.metric("Coordinate Node", f"{curr_lat:.2f}, {curr_lon:.2f}")
-        else:
-            st.warning("Sensor data currently unavailable for this coordinate.")
             
     except Exception as e:
-        st.error(f"Error retrieving sensor data: {e}")
+        st.error(f"Critical Error: {e}")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
