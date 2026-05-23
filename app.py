@@ -45,15 +45,6 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
-# Add this under your INITIALIZATION section
-POLLUTANT_MAP = {
-    "PM2.5 (Fine Particulates)": "pm2_5",
-    "PM10 (Dust/Coarse)": "pm10",
-    "Ozone (O₃)": "ozone",
-    "Nitrogen Dioxide (NO₂)": "nitrogen_dioxide",
-    "Carbon Monoxide (CO)": "carbon_monoxide",
-    "Sulphur Dioxide (SO₂)": "sulphur_dioxide"
-}
 
 # ============================================
 # API FUNCTIONS (MOVED TO TOP TO PREVENT ERRORS)
