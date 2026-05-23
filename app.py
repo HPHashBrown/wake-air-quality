@@ -24,7 +24,7 @@ if 'map_center' not in st.session_state:
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
 
-@st.cache_data(ttl=3600)
+
 def fetch_global_aqi(lat, lon, metric):
     # This URL must use the 'metric' variable to update the request
     url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
