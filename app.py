@@ -99,6 +99,22 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
+@st.cache_data(show_spinner=True)
+def get_map_graph(lat1, lon1, lat2, lon2):
+    center_lat, center_lon = (lat1 + lat2) / 2, (lon1 + lon2) / 2
+    graph = None
+    for attempt in range(3):
+        try:
+            graph = ox.graph_from_point((center_lat, center_lon), dist=5000, network_type='drive')
+            break
+        except Exception:
+            continue
+    if graph:
+        hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
+        graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
+        graph = ox.add_edge_travel_times(graph)
+    return graph
+
 
 # ============================================
 # API FUNCTIONS (MOVED TO TOP TO PREVENT ERRORS)
