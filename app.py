@@ -257,17 +257,17 @@ if PROPHET_AVAILABLE:
     m.fit(prophet_df)
     future = m.make_future_dataframe(periods=10, freq='YS')
     forecast = m.predict(future)
-future_df = pd.DataFrame({
+    future_df = pd.DataFrame({
         "year": forecast['ds'].dt.year,
         "predicted_pm25": forecast['yhat'],
         "yhat_lower": forecast['yhat_lower'],
         "yhat_upper": forecast['yhat_upper']
     })
 else:
-X = df_yearly[["year"]]
+    X = df_yearly[["year"]]
     y = df_yearly["mean_pm25"]
     model = LinearRegression().fit(X, y)
-future_years = np.arange(current_year, current_year + 11) 
+    future_years = np.arange(current_year, current_year + 11)
     future_preds = model.predict(future_years.reshape(-1, 1))
     future_df = pd.DataFrame({
         "year": future_years, 
