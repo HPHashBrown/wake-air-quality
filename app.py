@@ -461,7 +461,6 @@ with tab5:
 
 
 # --- TAB 6: CLEAN-AIR COMMUTE ---
-# --- TAB 6: CLEAN-AIR COMMUTE ---
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
@@ -469,15 +468,21 @@ with tab6:
     start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
     
-    # Use a cached function to prevent repeated API calls
+    # Cached function to handle map downloading and enhancement
     @st.cache_data(show_spinner=True)
     def get_map_graph(lat1, lon1, lat2, lon2):
         center_lat, center_lon = (lat1 + lat2) / 2, (lon1 + lon2) / 2
-        # Reduced dist to 5000 (5km) for stability
-        graph = ox.graph_from_point((center_lat, center_lon), dist=5000, network_type='drive')
-        hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
-        graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
-        graph = ox.add_edge_travel_times(graph)
+        graph = None
+        for attempt in range(3):
+            try:
+                graph = ox.graph_from_point((center_lat, center_lon), dist=5000, network_type='drive')
+                break
+            except Exception:
+                continue
+        if graph:
+            hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
+            graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
+            graph = ox.add_edge_travel_times(graph)
         return graph
 
     if st.button("Generate Healthiest Path"):
@@ -485,44 +490,34 @@ with tab6:
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            # Call the cached function instead of raw ox call
             graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
             
-            # ... rest of your route logic stays the same ...
-            # Graph logic with metadata enhancement
-            center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
-            graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
-            
-            # Enhance graph with travel metadata
-            hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
-            graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
-            graph = ox.add_edge_travel_times(graph)
-            
-            start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
-            end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
-            
-            # Use travel_time as the weight for the shortest path
-            route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
-            route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
-            
-            # Distance/Time calculation using direct graph edge access (The Fail-Safe Method)
-            total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
-            total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
-            
-            st.session_state.route_data = {
-                "route": route_coords,
-                "s_lat": s_lat, "s_lon": s_lon,
-                "e_lat": e_lat, "e_lon": e_lon,
-                "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
-                "time_est": round(total_time_min, 1)
-            }
+            if graph:
+                start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
+                end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
+                
+                route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
+                route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+                
+                # Direct edge access for distance/time
+                total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
+                total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
+                
+                st.session_state.route_data = {
+                    "route": route_coords,
+                    "s_lat": s_lat, "s_lon": s_lon,
+                    "e_lat": e_lat, "e_lon": e_lon,
+                    "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
+                    "time_est": round(total_time_min, 1)
+                }
+            else:
+                st.error("OSM Servers are busy. Please try again.")
         else:
             st.error("Location not found.")
 
     # 3. PERSISTENT DISPLAY
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
-        
         col1, col2 = st.columns(2)
         col1.metric("Route AQI", round(data.get('exposure', 0), 1))
         col2.metric("Est. Travel Time", f"{data.get('time_est', 'N/A')} min")
@@ -531,20 +526,5 @@ with tab6:
         folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
         folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
         folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
-        
         m.fit_bounds(data['route'])
-        
         st_folium(m, width="100%", height=400)
-
-# Graph logic with retry
-            graph = None
-            for i in range(3): # Try 3 times
-                try:
-                    graph = ox.graph_from_point((center_lat, center_lon), dist=3000, network_type='drive')
-                    break
-                except:
-                    continue
-            
-            if graph is None:
-                st.error("OSM Servers are busy. Please try again in a minute.")
-                st.stop()
