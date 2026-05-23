@@ -242,7 +242,6 @@ else:
 # Replace the current_aqi_data call in your PROCESSING section:
 with st.spinner("Initializing Atmospheric Sensors..."):
     # Use the selected_key from your Sidebar
-    current_pollutant_data = fetch_pollutant_data(35.7796, -78.6382, selected_key)
     live_weather = fetch_live_weather(35.7796, -78.6382)
 
 if PROPHET_AVAILABLE:
