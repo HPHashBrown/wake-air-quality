@@ -35,6 +35,16 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
+# Add this under your INITIALIZATION section
+POLLUTANT_MAP = {
+    "PM2.5 (Fine Particulates)": "pm2_5",
+    "PM10 (Dust/Coarse)": "pm10",
+    "Ozone (O₃)": "ozone",
+    "Nitrogen Dioxide (NO₂)": "nitrogen_dioxide",
+    "Carbon Monoxide (CO)": "carbon_monoxide",
+    "Sulphur Dioxide (SO₂)": "sulphur_dioxide"
+}
+
 # ============================================
 # API FUNCTIONS (MOVED TO TOP TO PREVENT ERRORS)
 # ============================================
@@ -72,11 +82,13 @@ def fetch_live_weather(lat, lon):
     except: return None
 
 @st.cache_data(ttl=3600)
-def fetch_current_aqi(lat=35.7796, lon=-78.6382, metric_key="pm2_5"):
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric_key}"
+def fetch_pollutant_data(lat, lon, pollutant_key):
+    # This URL now dynamically pulls the specific pollutant selected
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{pollutant_key}"
     try: 
         return requests.get(url).json().get("current", {})
-    except: return {}
+    except: 
+        return {}
 
 @st.cache_data(ttl=3600)
 def fetch_global_aqi(lat, lon, metric="pm2_5"):
@@ -211,6 +223,12 @@ with st.sidebar:
         st.session_state.start_time = datetime.now()
         st.rerun()
 
+# Add this to your Sidebar section
+with st.sidebar:
+    st.markdown("### 🧪 Atmospheric Lab")
+    selected_name = st.selectbox("Select Pollutant", options=list(POLLUTANT_MAP.keys()))
+    selected_key = POLLUTANT_MAP[selected_name]
+
 # ============================================
 # PROCESSING & MODELING
 # ============================================
@@ -222,9 +240,10 @@ else:
     except:
         df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
 
-current_year = datetime.now().year
-with st.spinner("Initializing Atmospheric Sensors & Predictive AI..."):
-    current_aqi_data = fetch_current_aqi()
+# Replace the current_aqi_data call in your PROCESSING section:
+with st.spinner("Initializing Atmospheric Sensors..."):
+    # Use the selected_key from your Sidebar
+    current_pollutant_data = fetch_pollutant_data(35.7796, -78.6382, selected_key)
     live_weather = fetch_live_weather(35.7796, -78.6382)
 
 if PROPHET_AVAILABLE:
@@ -254,7 +273,8 @@ else:
         "yhat_upper": future_preds + 1.5
     })
 
-current_aqi = current_aqi_data.get('us_aqi', 0)
+current_val = current_pollutant_data.get(selected_key, 0)
+current_aqi = current_pollutant_data.get('us_aqi', 0)
 
 # ============================================
 # MAIN UI LAYOUT
