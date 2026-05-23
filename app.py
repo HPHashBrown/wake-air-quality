@@ -464,6 +464,9 @@ with tab5:
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
+    # Import inside the block or at the top of your file
+    from geopy.distance import geodesic
+    
     col1, col2 = st.columns(2)
     start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
@@ -475,6 +478,7 @@ with tab6:
         graph = None
         for attempt in range(3):
             try:
+                # 5000m (5km) is the reliable limit for real-time OSMnx graph building
                 graph = ox.graph_from_point((center_lat, center_lon), dist=5000, network_type='drive')
                 break
             except Exception:
@@ -490,32 +494,35 @@ with tab6:
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
-            
-            if graph:
-                start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
-                end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
-                
-                # SAFETY CHECK: Wrap pathfinding in a try-except block
-                try:
-                    route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
-                    route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
-                    
-                    # Direct edge access for distance/time
-                    total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
-                    total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
-                    
-                    st.session_state.route_data = {
-                        "route": route_coords,
-                        "s_lat": s_lat, "s_lon": s_lon,
-                        "e_lat": e_lat, "e_lon": e_lon,
-                        "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
-                        "time_est": round(total_time_min, 1)
-                    }
-                except nx.NetworkXNoPath:
-                    st.error("Could not find a path between these locations. Try points closer to main roads.")
+            # 1. DISTANCE LIMIT CHECK
+            dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
+            if dist_km > 50:
+                st.error(f"Distance is too large ({round(dist_km)} km). Please choose a destination within 50km for local analysis.")
             else:
-                st.error("OSM Servers are busy. Please try again.")
+                graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
+                
+                if graph:
+                    start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
+                    end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
+                    
+                    try:
+                        route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
+                        route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+                        
+                        total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
+                        total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
+                        
+                        st.session_state.route_data = {
+                            "route": route_coords,
+                            "s_lat": s_lat, "s_lon": s_lon,
+                            "e_lat": e_lat, "e_lon": e_lon,
+                            "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
+                            "time_est": round(total_time_min, 1)
+                        }
+                    except nx.NetworkXNoPath:
+                        st.error("No driveable path found. Try points closer to main roads.")
+                else:
+                    st.error("OSM Servers are busy or area is not mapped. Try a different location.")
         else:
             st.error("Location not found.")
 
