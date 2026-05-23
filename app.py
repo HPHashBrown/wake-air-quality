@@ -98,6 +98,8 @@ def fetch_wildfire_data():
 # ============================================
 st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
 
+st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
+
 st.markdown("""
     <style>
     /* Animated Global Background */
