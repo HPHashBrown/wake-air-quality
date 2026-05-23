@@ -405,7 +405,7 @@ with tab4:
         st.rerun()
     
 st.markdown("### 📊 Atmospheric Report")
-    curr_lat, curr_lon = st.session_state.map_center
+curr_lat, curr_lon = st.session_state.map_center
     
     # Ensure the pollutant key is initialized in session state to avoid errors
     selected_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
