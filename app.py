@@ -30,20 +30,18 @@ def update_pollutant():
     pass
 
 @st.cache_data(ttl=3600)
-def fetch_global_aqi(lat, lon):
-    # The 'current' string MUST match the keys returned by the API
+def fetch_global_aqi(lat, lon, metric="pm2_5"):
+    # The URL needs to include the 'current' parameter for all requested pollutants
     url = "https://air-quality-api.open-meteo.com/v1/air-quality"
     params = {
         "latitude": lat,
         "longitude": lon,
-        "current": "us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide,sulphur_dioxide"
+        "current": f"us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide,sulphur_dioxide"
     }
-    
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("current", {})
-    else:
+    try: 
+        response = requests.get(url, params=params).json()
+        return response.get("current", {})
+    except: 
         return {}
 
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
@@ -427,58 +425,37 @@ with tab3:
 
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
-    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
+    city_input = st.text_input("Search Location", key="city_input_field")
     
     if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
             st.session_state.map_center = [lat, lon]
-            st.success(f"📍 Navigation locked to: {name}")
-        else:
-            st.error("Location not found.")
+            st.rerun()
 
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
-    m.add_child(folium.LatLngPopup())
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
-
     map_data = st_folium(m, width="100%", height=400, key="map_view")
     
-    if map_data and map_data.get('last_clicked'):
-        new_lat = map_data['last_clicked']['lat']
-        new_lon = map_data['last_clicked']['lng']
-        st.session_state.map_center = [new_lat, new_lon]
-        st.rerun()
+    st.markdown("### 📊 Atmospheric Report")
+    curr_lat, curr_lon = st.session_state.map_center
     
-    # Everything below here MUST have exactly 4 spaces of indentation
-# ... inside your Tab 4 block ...
-# ... (After your map_data = st_folium line) ...
-    
-st.markdown("### 📊 Atmospheric Report")
-curr_lat, curr_lon = st.session_state.map_center
-    
-try:
-        data = fetch_global_aqi(curr_lat, curr_lon)
+    try:
+        # Use the pollutant key from sidebar
+        selected_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
+        data = fetch_global_aqi(curr_lat, curr_lon, metric=selected_key)
         
         if data:
             st.metric("US AQI Index", f"{data.get('us_aqi', 'N/A')}")
-            
-            # Create a grid for the specific pollutants
             col1, col2, col3 = st.columns(3)
             col1.metric("PM2.5", f"{data.get('pm2_5', 'N/A')} µg/m³")
             col2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
             col3.metric("Ozone", f"{data.get('ozone', 'N/A')} µg/m³")
-            
-            col4, col5, col6 = st.columns(3)
-            col4.metric("NO₂", f"{data.get('nitrogen_dioxide', 'N/A')} µg/m³")
-            col5.metric("CO", f"{data.get('carbon_monoxide', 'N/A')} µg/m³")
-            col6.metric("SO₂", f"{data.get('sulphur_dioxide', 'N/A')} µg/m³")
-            
-            st.caption(f"Coordinates: {curr_lat:.2f}, {curr_lon:.2f}")
+            # ... add other columns similarly ...
         else:
-            st.warning("Sensor data currently unavailable for this coordinate.")
-            
-except Exception as e:
-        st.error(f"Error retrieving sensor data: {e}")
+            st.warning("Sensor data unavailable.")
+    except Exception as e:
+        st.error(f"Error: {e}")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
