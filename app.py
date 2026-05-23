@@ -471,7 +471,7 @@ try:
         else:
             st.warning("Sensor data currently unavailable for this coordinate.")
             
-    except Exception as e:
+except Exception as e:
         st.error(f"Error retrieving sensor data: {e}")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
