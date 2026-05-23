@@ -430,18 +430,31 @@ with tab4:
     if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
-            st.session_state.map_center = [lat, lon]
-            st.rerun()
+            # Only rerun if the coordinates are actually different
+            if [lat, lon] != st.session_state.map_center:
+                st.session_state.map_center = [lat, lon]
+                st.success(f"📍 Navigation locked to: {name}")
+                st.rerun()
 
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
+    
     map_data = st_folium(m, width="100%", height=400, key="map_view")
+    
+    if map_data and map_data.get('last_clicked'):
+        new_lat = map_data['last_clicked']['lat']
+        new_lon = map_data['last_clicked']['lng']
+        
+        # SAFETY CHECK: Only rerun if the click is actually a new location
+        if [new_lat, new_lon] != st.session_state.map_center:
+            st.session_state.map_center = [new_lat, new_lon]
+            st.rerun()
     
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     
     try:
-        # Use the pollutant key from sidebar
+        # Pass the key to the fetch function
         selected_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
         data = fetch_global_aqi(curr_lat, curr_lon, metric=selected_key)
         
@@ -451,9 +464,8 @@ with tab4:
             col1.metric("PM2.5", f"{data.get('pm2_5', 'N/A')} µg/m³")
             col2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
             col3.metric("Ozone", f"{data.get('ozone', 'N/A')} µg/m³")
-            # ... add other columns similarly ...
         else:
-            st.warning("Sensor data unavailable.")
+            st.warning("Sensor data unavailable for this coordinate.")
     except Exception as e:
         st.error(f"Error: {e}")
 # --- TAB 5: SPACE INTEL ---
