@@ -14,3 +14,4 @@ geopy
 fpdf
 osmnx
 networkx
+google-generativeai
