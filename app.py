@@ -503,11 +503,23 @@ if s_lat and e_lat:
             st.error("Location not found.")
 
     # 3. PERSISTENT DISPLAY
-if 'route_data' in st.session_state:
+# 3. PERSISTENT DISPLAY
+    if 'route_data' in st.session_state:
         data = st.session_state.route_data
+        
+        # --- METRICS ---
         col1, col2 = st.columns(2)
         col1.metric("Route AQI", round(data['exposure'], 1))
         col2.metric("Est. Travel Time", f"{data['time_est']} min")
+        
+        # --- MAP ---
+        m = folium.Map(tiles="CartoDB dark_matter")
+        folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
+        m.fit_bounds(data['route']) # This automatically zooms to your route
+        
+        st_folium(m, width="100%", height=400)
+
+    # Note: If you don't have an 'else' for the route_data check, just delete it.
         
         # Build clean map
         m = folium.Map(tiles="CartoDB dark_matter")
