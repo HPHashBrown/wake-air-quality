@@ -541,8 +541,8 @@ with tab6:
                         }
                     except nx.NetworkXNoPath:
                         st.error("No driveable path found.")
-        except Exception:
-            st.error("Address not recognized.")
+except Exception as e:
+            st.error(f"Address error: {e}")
 
     # --- PERSISTENT DISPLAY & CLINICAL BRIEFING ---
     if 'route_data' in st.session_state:
