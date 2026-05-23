@@ -378,9 +378,9 @@ with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
-    if city_input:
-                lat, lon, name = get_city_coords(city_input)
-                if lat:
+if city_input:
+        lat, lon, name = get_city_coords(city_input)
+        if lat:
             st.session_state.map_center = [lat, lon]
             st.success(f"📍 Navigation locked to: {name}")
         else:
