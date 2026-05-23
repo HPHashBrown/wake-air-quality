@@ -271,7 +271,6 @@ else:
         "yhat_upper": future_preds + 1.5
     })
 
-current_val = current_pollutant_data.get(selected_key, 0)
 current_aqi = current_pollutant_data.get('us_aqi', 0)
 
 # ============================================
