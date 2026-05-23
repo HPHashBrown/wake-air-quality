@@ -13,27 +13,16 @@ from streamlit_autorefresh import st_autorefresh
 # ============================================
 # INITIALIZATION & STATE
 # ============================================
-# Refresh every 5 minutes (300,000 ms)
 count = st_autorefresh(interval=300000, key="datarefresh")
 
-# Initialize session state for the map center
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [35.7796, -78.6382] # Default to Raleigh
 
-# Initialize session state for the timer if it doesn't exist
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
 
-def update_pollutant():
-    # This runs as soon as the widget is interacted with, 
-    # before the main script reruns.
-    pass
-
 OWM_API_KEY = "c76bdd1b10473dad3fd4325a10b954dc"
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
-metric_key = "pm2_5" 
-selected_metric = "PM2.5" 
-selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 
 try:
     from prophet import Prophet
@@ -41,7 +30,6 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
 
-# Add this under your INITIALIZATION section
 POLLUTANT_MAP = {
     "PM2.5 (Fine Particulates)": "pm2_5",
     "PM10 (Dust/Coarse)": "pm10",
@@ -54,31 +42,33 @@ POLLUTANT_MAP = {
 # ============================================
 # API FUNCTIONS
 # ============================================
-def get_nasa_climate_data(lat, lon):
-    target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
-    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start={target_date}&end={target_date}&format=JSON"
-    try:
-        response = requests.get(url).json()
-        data = response['properties']['parameter']
-        solar_values = list(data['ALLSKY_SFC_SW_DWN'].values())
-        wind_values = list(data['WS2M'].values())
-        solar = solar_values[0] if solar_values[0] != -999 else "N/A"
-        wind = wind_values[0] if wind_values[0] != -999 else "N/A"
-        return {"solar_radiation": solar, "satellite_wind_speed": wind}
-    except Exception as e:
-        return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
 
-def fetch_wildfire_data():
-    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
+@st.cache_data(ttl=60)
+def fetch_global_aqi(lat, lon):
+    """The Primary Global Sensor Engine using OpenWeatherMap"""
+    url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={OWM_API_KEY}"
     try:
-        df = pd.read_csv(url)
-        if 'latitude' not in df.columns and 'lat' in df.columns:
-            df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
-        nc_fires = df[(df['latitude'] >= 34) & (df['latitude'] <= 37) & 
-                      (df['longitude'] >= -84) & (df['longitude'] <= -75)]
-        return nc_fires
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if 'list' in data and len(data['list']) > 0:
+                main_info = data['list'][0]
+                components = main_info.get('components', {})
+                # Normalize OWM AQI (1-5 scale) to a visual 0-200 scale
+                components['us_aqi'] = main_info.get('main', {}).get('aqi', 0) * 30
+                return components
+        return {"error": f"Sensor Offline (Code: {response.status_code})"}
     except Exception as e:
-        return pd.DataFrame()
+        return {"error": str(e)}
+
+@st.cache_data(ttl=3600)
+def fetch_pollutant_data(lat, lon, pollutant_key):
+    """Fallback Local Engine for Raleigh Dashboard"""
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{pollutant_key}"
+    try: 
+        return requests.get(url).json().get("current", {})
+    except: 
+        return {}
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
@@ -87,106 +77,60 @@ def fetch_live_weather(lat, lon):
         return requests.get(url).json().get("current", None)
     except: return None
 
-@st.cache_data(ttl=3600)
-def fetch_pollutant_data(lat, lon, pollutant_key):
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{pollutant_key}"
-    try: 
-        return requests.get(url).json().get("current", {})
-    except: 
-        return {}
-
-@st.cache_data(ttl=60)
-def fetch_global_aqi(lat, lon):
-    url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={OWM_API_KEY}"
+def get_nasa_climate_data(lat, lon):
+    target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
+    url = f"https://power.larc.nasa.gov/api/temporal/daily/point?parameters=ALLSKY_SFC_SW_DWN,WS2M&community=RE&longitude={lon}&latitude={lat}&start={target_date}&end={target_date}&format=JSON"
     try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            main_info = data['list'][0]
-            components = main_info['components']
-            # Map OWM AQI (1-5) to a standard 0-200 scale for your UI
-            components['us_aqi'] = main_info['main']['aqi'] * 30 
-            return components
-        else:
-            return {"error": f"API returned {response.status_code}"}
-    except Exception as e:
-        return {"error": str(e)}
+        response = requests.get(url).json()
+        data = response['properties']['parameter']
+        solar = list(data['ALLSKY_SFC_SW_DWN'].values())[0]
+        wind = list(data['WS2M'].values())[0]
+        return {"solar_radiation": solar if solar != -999 else "N/A", "satellite_wind_speed": wind if wind != -999 else "N/A"}
+    except:
+        return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
+
+def fetch_wildfire_data():
+    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
+    try:
+        df = pd.read_csv(url)
+        if 'lat' in df.columns: df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
+        return df[(df['latitude'] >= 34) & (df['latitude'] <= 37) & (df['longitude'] >= -84) & (df['longitude'] <= -75)]
+    except: return pd.DataFrame()
 
 @st.cache_data(ttl=86400)
 def get_city_coords(city_name):
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
     try:
-        response = requests.get(url).json()
-        if "results" in response:
-            data = response["results"][0]
-            return data["latitude"], data["longitude"], data["name"]
+        res = requests.get(url).json()
+        if "results" in res:
+            d = res["results"][0]
+            return d["latitude"], d["longitude"], d["name"]
         return None, None, None
-    except Exception as e:
-        return None, None, None
-
-def generate_pdf_report(df_yearly, future_df, current_aqi):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, txt="Wake County AQI Intelligence Report", ln=True, align='C')
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt=f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
-    pdf.ln(10)
-    pdf.cell(200, 10, txt=f"Current AQI Level: {current_aqi}", ln=True)
-    pdf.ln(5)
-    pdf.cell(200, 10, txt="Historical Data Summary:", ln=True)
-    pdf.cell(200, 10, txt=df_yearly.to_string(), ln=True)
-    return pdf.output(dest='S').encode('latin-1')
+    except: return None, None, None
 
 # ============================================
-# PAGE CONFIG & HIGH-TECH THEMING
+# PAGE CONFIG & STYLING
 # ============================================
-st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #0b0f19; color: #ffffff; }
-    
     .title-gradient {
         background: linear-gradient(-45deg, #00f2fe, #4facfe, #00f2fe, #4facfe);
         background-size: 300% 300%;
         animation: gradient-shift 8s ease infinite;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 54px !important;
-        font-weight: 900;
-        margin-bottom: 0px;
-        text-transform: uppercase;
-        letter-spacing: 2px;
+        font-size: 54px !important; font-weight: 900; text-transform: uppercase;
     }
-    
-    @keyframes gradient-shift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    .sub-font { font-size: 20px !important; color: #8b9bb4; margin-bottom: 35px; font-weight: 300; letter-spacing: 1px; }
-    
+    @keyframes gradient-shift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     .glass-card {
-        background: rgba(16, 25, 43, 0.6); 
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: 16px; 
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 25px; 
-        color: #ffffff !important;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-        transition: all 0.3s ease-in-out;
-        text-align: center;
-        margin-bottom: 15px;
+        background: rgba(16, 25, 43, 0.6); backdrop-filter: blur(12px); border-radius: 16px; 
+        border: 1px solid rgba(255, 255, 255, 0.08); padding: 25px; text-align: center; margin-bottom: 15px;
     }
-    .glass-card:hover { transform: translateY(-8px); border: 1px solid rgba(79, 172, 254, 0.4); box-shadow: 0 12px 40px 0 rgba(79, 172, 254, 0.2); }
-    .glass-card h5 { color: #8b9bb4 !important; font-size: 16px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
-    .glass-card h3 { color: #ffffff !important; font-size: 38px; font-weight: 800; margin: 0px 0px 10px 0px; }
-    .glass-card span { font-size: 13px; color: #4facfe; }
-
-    .css-1d391kg { background-color: #0b0f19; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-card h5 { color: #8b9bb4 !important; font-size: 14px; text-transform: uppercase; }
+    .glass-card h3 { font-size: 38px; font-weight: 800; margin: 10px 0; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -194,233 +138,101 @@ st.markdown("""
 # SIDEBAR
 # ============================================
 with st.sidebar:
-    st.markdown("### 🔔 Automated Alerting")
-    with st.form("alert_form"):
-        target_email = st.text_input("Operator Email", placeholder="operator@nc.gov")
-        alert_threshold = st.slider("US AQI Trigger Threshold", min_value=50, max_value=300, value=100, step=10)
-        submit_alert = st.form_submit_button("Initialize Protocol")
-        if submit_alert:
-            if target_email: st.success("Protocol Active.")
-            else: st.error("Error: Valid Email Required.")
-
-    st.markdown("---")
-    st.markdown("### 📂 Data Ingest")
-    uploaded_file = st.file_uploader("Upload custom CSV", type=['csv'])
-
+    st.markdown("### 🧪 Atmospheric Lab")
+    selected_name = st.selectbox("Pollutant Focus", options=list(POLLUTANT_MAP.keys()))
+    selected_key = POLLUTANT_MAP[selected_name]
+    
     st.markdown("---")
     elapsed = datetime.now() - st.session_state.start_time
-    seconds = int(elapsed.total_seconds())
-    if seconds < 60:
-        time_str = f"{seconds} seconds"
-    else:
-        time_str = f"{seconds // 60} minutes"
-    st.write(f"🕒 Data updated: **{time_str} ago**")
-
-    if st.button("🔄 Manual Refresh"):
+    st.write(f"🕒 Node Uptime: **{int(elapsed.total_seconds() // 60)}m**")
+    if st.button("🔄 System Reset"):
         st.session_state.start_time = datetime.now()
         st.rerun()
 
-with st.sidebar:
-    st.markdown("### 🧪 Atmospheric Lab")
-    selected_name = st.selectbox("Select Pollutant", options=list(POLLUTANT_MAP.keys()))
-    selected_key = POLLUTANT_MAP[selected_name]
-    st.session_state.selected_pollutant_key = selected_key
-
 # ============================================
-# PROCESSING & MODELING
+# DATA CORE
 # ============================================
-current_year = datetime.now().year 
+df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
+X = df_yearly[["year"]]
+y = df_yearly["mean_pm25"]
+model = LinearRegression().fit(X, y)
+future_years = np.arange(2024, 2035)
+future_preds = model.predict(future_years.reshape(-1, 1))
+future_df = pd.DataFrame({"year": future_years, "predicted_pm25": future_preds, "yhat_lower": future_preds - 1.5, "yhat_upper": future_preds + 1.5})
 
-if uploaded_file is not None:
-    df_yearly = pd.read_csv(uploaded_file).sort_values("year")
-else:
-    try:
-        df_yearly = pd.read_csv("wake_pm25_by_year.csv").sort_values("year")
-    except:
-        df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
-
-with st.spinner("Initializing Atmospheric Sensors..."):
-    current_pollutant_data = fetch_pollutant_data(35.7796, -78.6382, selected_key)
-    live_weather = fetch_live_weather(35.7796, -78.6382)
-
-if PROPHET_AVAILABLE:
-    prophet_df = df_yearly.copy()
-    prophet_df['ds'] = pd.to_datetime(prophet_df['year'], format='%Y')
-    prophet_df = prophet_df.rename(columns={'mean_pm25': 'y'})
-    m = Prophet(yearly_seasonality=True)
-    m.fit(prophet_df)
-    future = m.make_future_dataframe(periods=10, freq='YS')
-    forecast = m.predict(future)
-    future_df = pd.DataFrame({
-        "year": forecast['ds'].dt.year,
-        "predicted_pm25": forecast['yhat'],
-        "yhat_lower": forecast['yhat_lower'],
-        "yhat_upper": forecast['yhat_upper']
-    })
-else:
-    X = df_yearly[["year"]]
-    y = df_yearly["mean_pm25"]
-    model = LinearRegression().fit(X, y)
-    future_years = np.arange(current_year, current_year + 11)
-    future_preds = model.predict(future_years.reshape(-1, 1))
-    future_df = pd.DataFrame({
-        "year": future_years, 
-        "predicted_pm25": future_preds,
-        "yhat_lower": future_preds - 1.5, 
-        "yhat_upper": future_preds + 1.5
-    })
-
-current_val = current_pollutant_data.get(selected_key, 0)
+# Raleigh Default Logic
+current_pollutant_data = fetch_pollutant_data(35.7796, -78.6382, selected_key)
+live_weather = fetch_live_weather(35.7796, -78.6382)
 current_aqi = current_pollutant_data.get('us_aqi', 0)
 
 # ============================================
-# MAIN UI LAYOUT
+# MAIN UI
 # ============================================
 st.markdown('<p class="title-gradient">Project Wake AQI</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-font">Statewide Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry", "🧠 Prediction", "🩺 Health", "🛰️ Vector Map", "🌌 NASA Space"])
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Predictive Scenario Core", "🩺 Health Literacy", "🛰️ Statewide Vector Map", "🌌NASA Space Intelligence"])
-
-# --- TAB 1: OVERVIEW ---
 with tab1:
     m1, m2, m3, m4 = st.columns(4)
-    with m1:
-        st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{current_aqi}</h3></div>", unsafe_allow_html=True)
-    with m2:
-        val = f"{live_weather['temperature_2m']}°C" if live_weather else "N/A"
-        st.markdown(f"<div class='glass-card'><h5>Thermal State</h5><h3>{val}</h3><span>Raleigh Node</span></div>", unsafe_allow_html=True)
-    with m3:
-        val = f"{live_weather['wind_speed_10m']} km/h" if live_weather else "N/A"
-        st.markdown(f"<div class='glass-card'><h5>Wind Velocity</h5><h3>{val}</h3><span>Dispersion Rate</span></div>", unsafe_allow_html=True)
-    with m4:
-        val = f"{live_weather['wind_direction_10m']}°" if live_weather else "N/A"
-        st.markdown(f"<div class='glass-card'><h5>Vector Heading</h5><h3>{val}</h3><span>Atmospheric Drift</span></div>", unsafe_allow_html=True)
+    m1.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{current_aqi}</h3></div>", unsafe_allow_html=True)
+    m2.markdown(f"<div class='glass-card'><h5>Temp</h5><h3>{live_weather['temperature_2m'] if live_weather else 'N/A'}°C</h3></div>", unsafe_allow_html=True)
+    m3.markdown(f"<div class='glass-card'><h5>Wind</h5><h3>{live_weather['wind_speed_10m'] if live_weather else 'N/A'} km/h</h3></div>", unsafe_allow_html=True)
+    m4.markdown(f"<div class='glass-card'><h5>Drift</h5><h3>{live_weather['wind_direction_10m'] if live_weather else 'N/A'}°</h3></div>", unsafe_allow_html=True)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded Telemetry", line=dict(color="#00f2fe", width=4), marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#00f2fe"))))
-    forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
-    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Algorithmic Forecast", line=dict(color="#f87171", width=4, dash="dot"), marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#f87171"))))
-    fig.add_trace(go.Scatter(x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), fill='toself', fillcolor='rgba(248, 113, 113, 0.15)', line=dict(color='rgba(255,255,255,0)'), hoverinfo="skip", showlegend=True, name="AI Confidence Interval"))
-    fig.update_layout(title="PM2.5 Long-Term Atmospheric Trajectory", template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", hovermode="x unified")
+    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], name="Telemetry", line=dict(color="#00f2fe")))
+    fig.add_trace(go.Scatter(x=future_df["year"], y=future_df["predicted_pm25"], name="Forecast", line=dict(color="#f87171", dash="dot")))
+    fig.update_layout(template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("---")
-    st.subheader("🩺 Public Health Advisory")
-    if current_aqi <= 50:
-        st.success("✅ **Air Quality is Good.** Air quality is considered satisfactory, and air pollution poses little or no risk.")
-    elif current_aqi <= 100:
-        st.warning("⚠️ **Air Quality is Moderate.** Air quality is acceptable; however, there may be a risk for some people.")
-    elif current_aqi <= 150:
-        st.error("🚫 **Unhealthy for Sensitive Groups.** Members of sensitive groups may experience health effects.")
-    else:
-        st.error("🚨 **Health Alert.** Some members of the general public may experience health effects.")
-
-# --- TAB 2: ANALYTICS ---
-with tab2:
-    g1, g2 = st.columns(2)
-    with g1:
-        st.markdown("**Current Threat Level (AQI)**")
-        gauge = go.Figure(go.Indicator(mode="gauge+number", value=current_aqi, gauge={'axis': {'range': [0, 300], 'tickwidth': 1, 'tickcolor': "white"}, 'bar': {'color': "#00f2fe"}, 'bgcolor': "rgba(255,255,255,0.05)", 'steps': [{'range': [0, 50], 'color': "rgba(16, 185, 129, 0.3)"}, {'range': [50, 100], 'color': "rgba(245, 158, 11, 0.3)"}, {'range': [100, 300], 'color': "rgba(239, 68, 68, 0.3)"}]}))
-        gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
-        st.plotly_chart(gauge, use_container_width=True)
-    with g2:
-        st.markdown("**Emission Mitigation Simulator**")
-        reduction = st.slider("Simulated Reduction (%)", 0, 50, 0)
-        sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
-        st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
-
-# --- TAB 3: HEALTH ---
-with tab3:
-    st.markdown("### 🩺Health Literacy")
-    col1, col2 = st.columns([1, 1.5])
-    with col1:
-        st.info("### The Scale of the Invisible")
-        st.write("A human hair is 50μm. PM2.5 is <2.5μm. It is roughly **1/30th the width of a hair**.")
-    with col2:
-        st.warning("### The Systemic Journey")
-        st.write("1. **Deep Lung Penetration:** Reaches the alveoli.")
-        st.write("2. **Bloodstream Entry:** Enters systemic circulation.")
-        st.write("3. **Chronic Inflammation:** Triggers long-term oxidative stress.")
-
-    st.markdown("---")
-    st.markdown("### ⏳ Your Daily 'Safe Exposure' Budget")
-    if current_aqi > 0:
-        safe_hours = max(0, 800 / (current_aqi * 1.5)) 
-        st.metric("Estimated Safe Hours Left Today", f"{safe_hours:.1f} Hours")
-        if safe_hours > 6:
-            st.success("✅ **Air Quality is Clear.** No restrictions on your outdoor exposure.")
-        elif safe_hours > 3:
-            st.warning("⚠️ **Caution.** Limit intense outdoor exercise. Your inflammatory budget is depleting.")
-        else:
-            st.error("🚫 **Alert.** Your inflammatory budget is low. Indoor air protocol recommended.")
-    else:
-        st.write("Fetching sensor data to calculate your budget...")
-
-# --- TAB 4: ATMOSPHERIC REPORT ---
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
-    city_input = st.text_input("Search Location", key="city_input_field")
+    city_input = st.text_input("Enter City (e.g. Beijing, Moscow, Raleigh)", key="city_search")
     
     if city_input:
         lat, lon, name = get_city_coords(city_input)
-        if lat:
-            if [lat, lon] != st.session_state.map_center:
-                st.session_state.map_center = [lat, lon]
-                st.success(f"📍 Navigation locked to: {name}")
-                st.rerun()
+        if lat and [lat, lon] != st.session_state.map_center:
+            st.session_state.map_center = [lat, lon]
+            st.rerun()
 
+    # Map Render
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
-    folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
-    
+    folium.Marker(st.session_state.map_center, tooltip="Active Hub").add_to(m)
     map_data = st_folium(m, width="100%", height=400, key="map_view")
     
     if map_data and map_data.get('last_clicked'):
-        new_lat = map_data['last_clicked']['lat']
-        new_lon = map_data['last_clicked']['lng']
-        if [new_lat, new_lon] != st.session_state.map_center:
-            st.session_state.map_center = [new_lat, new_lon]
+        new_coords = [map_data['last_clicked']['lat'], map_data['last_clicked']['lng']]
+        if new_coords != st.session_state.map_center:
+            st.session_state.map_center = new_coords
             st.rerun()
     
+    # INDENTED DATA DISPLAY SECTION
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
+    data = fetch_global_aqi(curr_lat, curr_lon)
     
-    try:
-        data = fetch_global_aqi(curr_lat, curr_lon)
-        if data:
-            st.metric("US AQI Index", f"{data.get('us_aqi', 'N/A')}")
-            
-            # Show debug info to verify keys
-            # st.write("DEBUG: API Response:", data)
-            
-            col1, col2, col3 = st.columns(3)
-            col1.metric("PM2.5", f"{data.get('pm2_5', 'N/A')} µg/m³")
-            col2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
-            col3.metric("Ozone", f"{data.get('o3', 'N/A')} µg/m³")
-            
-            col4, col5, col6 = st.columns(3)
-            col4.metric("NO₂", f"{data.get('no2', 'N/A')} µg/m³")
-            col5.metric("CO", f"{data.get('co', 'N/A')} µg/m³")
-            col6.metric("SO₂", f"{data.get('so2', 'N/A')} µg/m³")
-        else:
-            st.warning("Sensor data unavailable for this coordinate.")
-    except Exception as e:
-        st.error(f"Error: {e}")
+    if "error" in data:
+        st.error(f"⚠️ {data['error']}")
+    else:
+        st.metric("Global Index Point", f"{data.get('us_aqi', 'N/A')}")
+        
+        c1, c2, c3 = st.columns(3)
+        c1.metric("PM2.5", f"{data.get('pm2_5', 'N/A')} µg/m³")
+        c2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
+        c3.metric("Ozone", f"{data.get('o3', 'N/A')} µg/m³")
+        
+        c4, c5, c6 = st.columns(3)
+        c4.metric("NO₂", f"{data.get('no2', 'N/A')} µg/m³")
+        c5.metric("CO", f"{data.get('co', 'N/A')} µg/m³")
+        c6.metric("SO₂", f"{data.get('so2', 'N/A')} µg/m³")
 
-# --- TAB 5: SPACE INTEL ---
 with tab5:
-    st.markdown("### 🌍 Satellite-Derived Context")
-    st.write("Cross-referencing local nodes with NASA Earth Observation platforms.")
-    
-    nasa_data = get_nasa_climate_data(st.session_state.map_center[0], st.session_state.map_center[1])
+    st.markdown("### 🌍 NASA Space Intelligence")
+    nasa = get_nasa_climate_data(st.session_state.map_center[0], st.session_state.map_center[1])
     col1, col2 = st.columns(2)
-    col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²", help="NASA POWER: Measures potential for ozone formation.")
-    col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s", help="NASA POWER: High-altitude wind drift data.")
-    st.info("💡 **Why this matters:** NASA monitors surface solar radiation because high levels contribute to ground-level ozone formation.")
-
-    st.markdown("### 🔥 Real-Time Wildfire Hotspots")
+    col1.metric("Solar Irradiance", f"{nasa['solar_radiation']} kW/m²")
+    col2.metric("Satellite Wind", f"{nasa['satellite_wind_speed']} m/s")
+    
     fires = fetch_wildfire_data()
     if not fires.empty:
-        st.warning(f"Detected {len(fires)} active fire hotspots in the Eastern US.")
-        st.dataframe(fires[['latitude', 'longitude', 'acq_time', 'bright_ti4']])
-    else:
-        st.success("No active fire hotspots detected.")
+        st.warning(f"Detected {len(fires)} active heat signatures in regional proximity.")
+        st.dataframe(fires[['latitude', 'longitude', 'acq_time']].head(10))
