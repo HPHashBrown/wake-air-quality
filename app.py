@@ -113,6 +113,22 @@ def generate_pdf_report(df_yearly, future_df, current_aqi):
     pdf.cell(200, 10, txt=df_yearly.to_string(), ln=True)
     return pdf.output(dest='S').encode('latin-1')
 
+def calculate_micro_climate_differential(user_lat, user_lon, control_lat, control_lon):
+    # Fetch AQI for both points
+    user_data = fetch_current_aqi(user_lat, user_lon)
+    control_data = fetch_current_aqi(control_lat, control_lon)
+    
+    user_aqi = user_data.get('us_aqi', 0)
+    control_aqi = control_data.get('us_aqi', 0)
+    
+    diff = user_aqi - control_aqi
+    
+    if diff > 15:
+        return f"🚨 Micro-climate Alert: Your location is {diff} AQI points dirtier than the nearby {control_name} node."
+    elif diff < -5:
+        return "✅ You are currently in a high-quality air pocket."
+    return "Air quality is consistent across your local area."
+
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
 # ============================================
