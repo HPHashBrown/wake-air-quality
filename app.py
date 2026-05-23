@@ -22,7 +22,8 @@ import google.generativeai as genai
 try:
     genai.configure(api_key=st.secrets["GEM_KEY"])
     # We use a generative model instance directly
-    gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+# Try changing this line:
+gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
 except Exception as e:
     st.error(f"Error: {e}")
     gemini_model = None
