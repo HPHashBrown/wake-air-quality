@@ -271,8 +271,6 @@ else:
         "yhat_upper": future_preds + 1.5
     })
 
-current_aqi = current_pollutant_data.get('us_aqi', 0)
-
 # ============================================
 # MAIN UI LAYOUT
 # ============================================
