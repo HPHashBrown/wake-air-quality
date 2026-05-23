@@ -391,7 +391,7 @@ with tab3:
 
 
 # --- TAB 4: MAP / SEARCH (REPLACEMENT) ---
-    with tab4:
+with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     if city_input:
