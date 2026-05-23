@@ -450,40 +450,38 @@ with tab5:
     else:
         st.success("No active fire hotspots detected.")
 
-# --- TAB 6: CLEAN-AIR COMMUTE ---
+
 # --- TAB 6: CLEAN-AIR COMMUTE ---
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
-    # User Inputs (Addresses/Towns/Cities)
+    # Initialize the session state for the map if it doesn't exist
+    if 'route_map' not in st.session_state:
+        st.session_state.route_map = None
+
     col1, col2 = st.columns(2)
-    start_addr = col1.text_input("Starting Location", "Raleigh, NC")
-    end_addr = col2.text_input("Destination", "Rolesville, NC")
+    start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
+    end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
     
     if st.button("Generate Healthiest Path"):
-        # Helper to convert address to lat/lon
         s_lat, s_lon, _ = get_city_coords(start_addr)
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            # 1. Calculate Air Quality
+            # 1. Calculate AQI
             exposure = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
             st.metric("Estimated Route AQI", round(exposure, 1))
             
-            # 2. Render Path Map
+            # 2. CREATE the map and save it to session state
             m = folium.Map(location=[(s_lat+e_lat)/2, (s_lon+e_lon)/2], zoom_start=10, tiles="CartoDB dark_matter")
-            
-            # Draw Vector (Line)
             folium.PolyLine([(s_lat, s_lon), (e_lat, e_lon)], color="#4facfe", weight=5, opacity=0.8).add_to(m)
+            folium.Marker([s_lat, s_lon], icon=folium.Icon(color='green')).add_to(m)
+            folium.Marker([e_lat, e_lon], icon=folium.Icon(color='red')).add_to(m)
             
-            # Add Markers
-            folium.Marker([s_lat, s_lon], icon=folium.Icon(color='green', icon='info-sign')).add_to(m)
-            folium.Marker([e_lat, e_lon], icon=folium.Icon(color='red', icon='info-sign')).add_to(m)
-            
-            st_folium(m, width="100%", height=400)
-            
-            # Recommendation
-            if exposure < 50: st.success("✅ Clean air detected along this vector.")
-            else: st.warning("⚠️ Elevated particulates found. Consider an alternative transit vector.")
+            st.session_state.route_map = m 
         else:
-            st.error("Could not resolve one of the locations. Please check your spelling.")
+            st.error("Location not found.")
+
+    # 3. DISPLAY the map from session state (if it exists)
+    if st.session_state.route_map:
+        st_folium(st.session_state.route_map, width="100%", height=400)
