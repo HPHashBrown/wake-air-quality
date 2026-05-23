@@ -473,9 +473,9 @@ with tab6:
             graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
             
             # Enhance graph with travel metadata
-hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
-graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
-graph = ox.add_edge_travel_times(graph)
+            hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
+            graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
+            graph = ox.add_edge_travel_times(graph)
             
             start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
             end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
