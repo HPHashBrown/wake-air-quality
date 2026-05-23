@@ -13,22 +13,22 @@ import osmnx as ox
 import networkx as nx
 import google.generativeai as genai
 
+
 # ============================================
 # INITIALIZATION & STATE
 # ============================================
 
 
 # 1. Update Initialization
+# --- GEMINI INITIALIZATION ---
 try:
     genai.configure(api_key=st.secrets["GEM_KEY"])
-    # We use a generative model instance directly
-# Try changing this line:
-gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash-latest")
+    gemini_model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 except Exception as e:
-    st.error(f"Error: {e}")
+    st.error(f"Error initializing Gemini: {e}")
     gemini_model = None
 
-# 2. Update the function to use 'gemini_model'
+# Now, ensure your function uses the model correctly
 def get_ai_health_briefing(pm25_val, aqi_val):
     if gemini_model is None:
         return "AI Health briefing is currently unavailable."
@@ -36,17 +36,16 @@ def get_ai_health_briefing(pm25_val, aqi_val):
     prompt = f"""
     Act as a clinical health educator. The current PM2.5 level is {pm25_val} µg/m³ and the AQI is {aqi_val}.
     Write a 3-sentence "Daily Health Briefing" for a general audience.
-    1. Explain the biological impact (e.g., respiratory inflammation, cellular stress).
+    1. Explain the biological impact on the respiratory system.
     2. Suggest one specific preventative measure based on these levels.
     3. Keep it empathetic and professional.
     """
     try:
-        # Use the renamed variable
         response = gemini_model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Error communicating with AI: {str(e)}"
-import osmnx as ox
+        
 # Set a longer timeout for the API request
 ox.settings.timeout = 300 
 # Tell OSMnx to use the public Overpass server via a more stable request method
