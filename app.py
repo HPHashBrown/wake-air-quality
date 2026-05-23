@@ -30,22 +30,6 @@ def update_pollutant():
     pass
 
 OWM_API_KEY = "c76bdd1b10473dad3fd4325a10b954dc"
-
-@st.cache_data(ttl=3600)
-def fetch_global_aqi(lat, lon, metric="pm2_5"):
-    # The URL needs to include the 'current' parameter for all requested pollutants
-    url = "https://air-quality-api.open-meteo.com/v1/air-quality"
-    params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": f"us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide,carbon_monoxide,sulphur_dioxide"
-    }
-    try: 
-        response = requests.get(url, params=params).json()
-        return response.get("current", {})
-    except: 
-        return {}
-
 FIRMS_API_KEY = "5ced48a900256b1fac376db945c3980d" 
 metric_key = "pm2_5" 
 selected_metric = "PM2.5" 
@@ -68,7 +52,7 @@ POLLUTANT_MAP = {
 }
 
 # ============================================
-# API FUNCTIONS (MOVED TO TOP TO PREVENT ERRORS)
+# API FUNCTIONS
 # ============================================
 def get_nasa_climate_data(lat, lon):
     target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
@@ -105,23 +89,23 @@ def fetch_live_weather(lat, lon):
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
-    # This URL now dynamically pulls the specific pollutant selected
     url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{pollutant_key}"
     try: 
         return requests.get(url).json().get("current", {})
     except: 
         return {}
 
-@st.cache_data(ttl=60) # Reduced to 60 seconds to prevent caching issues
+@st.cache_data(ttl=60)
 def fetch_global_aqi(lat, lon):
     url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={OWM_API_KEY}"
     try:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            # OWM returns data in a 'list' of components
-            # We take the first item
-            components = data['list'][0]['components']
+            main_info = data['list'][0]
+            components = main_info['components']
+            # Map OWM AQI (1-5) to a standard 0-200 scale for your UI
+            components['us_aqi'] = main_info['main']['aqi'] * 30 
             return components
         else:
             return {"error": f"API returned {response.status_code}"}
@@ -153,22 +137,6 @@ def generate_pdf_report(df_yearly, future_df, current_aqi):
     pdf.cell(200, 10, txt="Historical Data Summary:", ln=True)
     pdf.cell(200, 10, txt=df_yearly.to_string(), ln=True)
     return pdf.output(dest='S').encode('latin-1')
-
-def calculate_micro_climate_differential(user_lat, user_lon, control_lat, control_lon):
-    # Fetch AQI for both points
-    user_data = fetch_current_aqi(user_lat, user_lon)
-    control_data = fetch_current_aqi(control_lat, control_lon)
-    
-    user_aqi = user_data.get('us_aqi', 0)
-    control_aqi = control_data.get('us_aqi', 0)
-    
-    diff = user_aqi - control_aqi
-    
-    if diff > 15:
-        return f"🚨 Micro-climate Alert: Your location is {diff} AQI points dirtier than the nearby {control_name} node."
-    elif diff < -5:
-        return "✅ You are currently in a high-quality air pocket."
-    return "Air quality is consistent across your local area."
 
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
@@ -252,38 +220,15 @@ with st.sidebar:
         st.session_state.start_time = datetime.now()
         st.rerun()
 
-# In your Sidebar section
-with st.sidebar:
-    st.subheader("Atmospheric Lab")
-    
-    # Define options clearly
-    pollutants = {
-        "PM2.5": "pm2_5",
-        "Ozone": "ozone",
-        "Nitrogen Dioxide": "nitrogen_dioxide",
-        "Sulphur Dioxide": "sulphur_dioxide"
-    }
-    
-    # Store selection in session_state via the 'key' parameter
-    selected_name = st.selectbox(
-        "Select Pollutant", 
-        list(pollutants.keys()), 
-        key="selected_pollutant_name"
-    )
-    
-    # Automatically map the name to the API key
-    st.session_state.selected_pollutant_key = pollutants[selected_name]
-
-# Add this to your Sidebar section
 with st.sidebar:
     st.markdown("### 🧪 Atmospheric Lab")
     selected_name = st.selectbox("Select Pollutant", options=list(POLLUTANT_MAP.keys()))
     selected_key = POLLUTANT_MAP[selected_name]
+    st.session_state.selected_pollutant_key = selected_key
 
 # ============================================
 # PROCESSING & MODELING
 # ============================================
-
 current_year = datetime.now().year 
 
 if uploaded_file is not None:
@@ -294,9 +239,7 @@ else:
     except:
         df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
 
-# Replace the current_aqi_data call in your PROCESSING section:
 with st.spinner("Initializing Atmospheric Sensors..."):
-    # Use the selected_key from your Sidebar
     current_pollutant_data = fetch_pollutant_data(35.7796, -78.6382, selected_key)
     live_weather = fetch_live_weather(35.7796, -78.6382)
 
@@ -387,37 +330,23 @@ with tab2:
         st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
 
 # --- TAB 3: HEALTH ---
-
 with tab3:
     st.markdown("### 🩺Health Literacy")
-    
     col1, col2 = st.columns([1, 1.5])
-    
     with col1:
         st.info("### The Scale of the Invisible")
         st.write("A human hair is 50μm. PM2.5 is <2.5μm. It is roughly **1/30th the width of a hair**.")
-        # Visualizing the scale helps understand why filters fail.
-        
-        
     with col2:
         st.warning("### The Systemic Journey")
         st.write("1. **Deep Lung Penetration:** Reaches the alveoli.")
         st.write("2. **Bloodstream Entry:** Enters systemic circulation.")
         st.write("3. **Chronic Inflammation:** Triggers long-term oxidative stress.")
-        
 
     st.markdown("---")
-    
-    # --- DYNAMIC SAFE EXPOSURE CALCULATOR ---
     st.markdown("### ⏳ Your Daily 'Safe Exposure' Budget")
-    
     if current_aqi > 0:
-        # Budget logic: If AQI is 100, you have ~8 hours of 'safe' outdoor activity before impact.
-        # This is a heuristic model: 800 / AQI = Safe hours remaining
         safe_hours = max(0, 800 / (current_aqi * 1.5)) 
-        
         st.metric("Estimated Safe Hours Left Today", f"{safe_hours:.1f} Hours")
-        
         if safe_hours > 6:
             st.success("✅ **Air Quality is Clear.** No restrictions on your outdoor exposure.")
         elif safe_hours > 3:
@@ -427,11 +356,7 @@ with tab3:
     else:
         st.write("Fetching sensor data to calculate your budget...")
 
-    
-
-
-# Tab 4 Atmospheric Report
-
+# --- TAB 4: ATMOSPHERIC REPORT ---
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location", key="city_input_field")
@@ -439,7 +364,6 @@ with tab4:
     if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
-            # Only rerun if the coordinates are actually different
             if [lat, lon] != st.session_state.map_center:
                 st.session_state.map_center = [lat, lon]
                 st.success(f"📍 Navigation locked to: {name}")
@@ -453,8 +377,6 @@ with tab4:
     if map_data and map_data.get('last_clicked'):
         new_lat = map_data['last_clicked']['lat']
         new_lon = map_data['last_clicked']['lng']
-        
-        # SAFETY CHECK: Only rerun if the click is actually a new location
         if [new_lat, new_lon] != st.session_state.map_center:
             st.session_state.map_center = [new_lat, new_lon]
             st.rerun()
@@ -462,21 +384,18 @@ with tab4:
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     
-try:
-        # Use the global OWM fetcher
+    try:
         data = fetch_global_aqi(curr_lat, curr_lon)
-
-
         if data:
             st.metric("US AQI Index", f"{data.get('us_aqi', 'N/A')}")
-
-st.write("DEBUG: API Response:", data)
+            
+            # Show debug info to verify keys
+            # st.write("DEBUG: API Response:", data)
             
             col1, col2, col3 = st.columns(3)
-            # OWM keys are: pm2_5, pm10, o3, no2, co, so2
             col1.metric("PM2.5", f"{data.get('pm2_5', 'N/A')} µg/m³")
             col2.metric("PM10", f"{data.get('pm10', 'N/A')} µg/m³")
-            col3.metric("Ozone", f"{data.get('o3', 'N/A')} µg/m³") # Note the key is 'o3'
+            col3.metric("Ozone", f"{data.get('o3', 'N/A')} µg/m³")
             
             col4, col5, col6 = st.columns(3)
             col4.metric("NO₂", f"{data.get('no2', 'N/A')} µg/m³")
@@ -486,16 +405,17 @@ st.write("DEBUG: API Response:", data)
             st.warning("Sensor data unavailable for this coordinate.")
     except Exception as e:
         st.error(f"Error: {e}")
+
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Satellite-Derived Context")
     st.write("Cross-referencing local nodes with NASA Earth Observation platforms.")
     
-    nasa_data = get_nasa_climate_data(35.7796, -78.6382)
+    nasa_data = get_nasa_climate_data(st.session_state.map_center[0], st.session_state.map_center[1])
     col1, col2 = st.columns(2)
     col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²", help="NASA POWER: Measures potential for ozone formation.")
     col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s", help="NASA POWER: High-altitude wind drift data.")
-    st.info("💡 **Why this matters:** NASA monitors surface solar radiation because high levels contribute to ground-level ozone formation, which directly impacts your AQI readings.")
+    st.info("💡 **Why this matters:** NASA monitors surface solar radiation because high levels contribute to ground-level ozone formation.")
 
     st.markdown("### 🔥 Real-Time Wildfire Hotspots")
     fires = fetch_wildfire_data()
