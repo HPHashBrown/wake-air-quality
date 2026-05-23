@@ -454,20 +454,34 @@ with tab5:
 
 
 # --- TAB 6: CLEAN-AIR COMMUTE ---
+# --- TAB 6: CLEAN-AIR COMMUTE ---
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
-    # 1. SETUP INPUTS
     col1, col2 = st.columns(2)
     start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
     
-    # 2. TRIGGER GENERATION
+    # Use a cached function to prevent repeated API calls
+    @st.cache_data(show_spinner=True)
+    def get_map_graph(lat1, lon1, lat2, lon2):
+        center_lat, center_lon = (lat1 + lat2) / 2, (lon1 + lon2) / 2
+        # Reduced dist to 5000 (5km) for stability
+        graph = ox.graph_from_point((center_lat, center_lon), dist=5000, network_type='drive')
+        hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
+        graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
+        graph = ox.add_edge_travel_times(graph)
+        return graph
+
     if st.button("Generate Healthiest Path"):
         s_lat, s_lon, _ = get_city_coords(start_addr)
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
+            # Call the cached function instead of raw ox call
+            graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
+            
+            # ... rest of your route logic stays the same ...
             # Graph logic with metadata enhancement
             center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
             graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
