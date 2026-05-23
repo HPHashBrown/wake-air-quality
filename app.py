@@ -145,7 +145,7 @@ def calculate_micro_climate_differential(user_lat, user_lon, control_lat, contro
 # ============================================
 # PAGE CONFIG & HIGH-TECH THEMING
 # ============================================
-st.set_page_config(page_title="Project Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
