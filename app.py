@@ -376,10 +376,6 @@ with tab3:
     else:
         st.write("Fetching sensor data to calculate your budget...")
 
-# --- TAB 4: MAP / SEARCH ---
-with tab4:
-    st.markdown("### 🔍 Global Sensor Search")
-    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
 # --- TAB 4: MAP / SEARCH ---
     st.markdown("### 🔍 Global Sensor Search")
