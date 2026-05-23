@@ -476,7 +476,7 @@ with tab6:
             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
             
             # Distance/Time calculation
-            total_dist_meters = sum(ox.get_route_edge_attributes(graph, route, 'length'))
+total_dist_meters = sum(ox.routing.get_route_edge_attributes(graph, route, 'length'))
             total_time_min = (total_dist_meters / 1000) / 40 * 60
             
             st.session_state.route_data = {
