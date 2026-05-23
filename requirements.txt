@@ -12,3 +12,5 @@ folium
 streamlit-folium
 geopy
 fpdf
+osmnx
+networkx
