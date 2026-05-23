@@ -468,7 +468,7 @@ with tab6:
         e_lat, e_lon, _ = get_city_coords(end_addr)
         
         if s_lat and e_lat:
-            # Graph logic (Indented 12 spaces)
+            # Graph logic
             center_lat, center_lon = (s_lat + e_lat) / 2, (s_lon + e_lon) / 2
             graph = ox.graph_from_point((center_lat, center_lon), dist=20000, network_type='drive')
             start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
@@ -476,11 +476,9 @@ with tab6:
             route = nx.shortest_path(graph, start_node, end_node, weight='length')
             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
             
-            # Distance/Time calculation (Indented 12 spaces)
-# THE FAIL-SAFE METHOD:
-# Calculate length using NetworkX directly
-total_dist_meters = sum(nx.get_edge_attributes(graph, 'length').get((u, v), 0) 
-                        for u, v in zip(route[:-1], route[1:]))
+            # Distance/Time calculation (Indented 12 spaces to match the 'if' block)
+            total_dist_meters = sum(nx.get_edge_attributes(graph, 'length').get((u, v), 0) 
+                                    for u, v in zip(route[:-1], route[1:]))
             total_time_min = (total_dist_meters / 1000) / 40 * 60
             
             st.session_state.route_data = {
