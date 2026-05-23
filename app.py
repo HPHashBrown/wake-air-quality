@@ -18,20 +18,19 @@ import google.generativeai as genai
 # ============================================
 
 
-# Setup Gemini
-# 1. Initialization with check
+# 1. Rename to 'gemini_model' to avoid conflicts
 try:
     genai.configure(api_key=st.secrets["GEM_KEY"])
-    # We use 'gemini-1.5-flash' which is the standard for fast, free-tier tasks
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # We use a distinct variable name: gemini_model
+    gemini_model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"Error initializing Gemini: {e}")
-    model = None
+    gemini_model = None
 
-# 2. Updated function with safety check
+# 2. Update the function to use 'gemini_model'
 def get_ai_health_briefing(pm25_val, aqi_val):
-    if model is None:
-        return "AI Health briefing is currently unavailable (Model not initialized)."
+    if gemini_model is None:
+        return "AI Health briefing is currently unavailable."
         
     prompt = f"""
     Act as a clinical health educator. The current PM2.5 level is {pm25_val} µg/m³ and the AQI is {aqi_val}.
@@ -41,15 +40,11 @@ def get_ai_health_briefing(pm25_val, aqi_val):
     3. Keep it empathetic and professional.
     """
     try:
-        response = model.generate_content(prompt)
-        # Check if response actually has text
-        if response and response.text:
-            return response.text
-        else:
-            return "The AI could not generate a response. Please check your API quota."
+        # Use the renamed variable
+        response = gemini_model.generate_content(prompt)
+        return response.text
     except Exception as e:
         return f"Error communicating with AI: {str(e)}"
-
 import osmnx as ox
 # Set a longer timeout for the API request
 ox.settings.timeout = 300 
