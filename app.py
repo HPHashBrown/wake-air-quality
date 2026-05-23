@@ -245,10 +245,11 @@ else:
     except:
         df_yearly = pd.DataFrame({"year": [2018, 2019, 2020, 2021, 2022, 2023], "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]})
 
-# Replace the current_aqi_data call in your PROCESSING section:
+# --- FIX: Ensure live_weather is always a dictionary ---
 with st.spinner("Initializing Atmospheric Sensors..."):
-    # Use the selected_key from your Sidebar
-    live_weather = fetch_live_weather(35.7796, -78.6382)
+    # This ensures live_weather is never None, but a safe empty dict instead
+    live_weather_raw = fetch_live_weather(35.7796, -78.6382)
+    live_weather = live_weather_raw if live_weather_raw is not None else {}
 
 if PROPHET_AVAILABLE:
     prophet_df = df_yearly.copy()
