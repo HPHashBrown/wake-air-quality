@@ -464,21 +464,20 @@ with tab5:
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     
-    # Import inside the block or at the top of your file
     from geopy.distance import geodesic
     
     col1, col2 = st.columns(2)
-    start_addr = col1.text_input("Starting Location", "Raleigh, NC", key="start_addr")
-    end_addr = col2.text_input("Destination", "Rolesville, NC", key="end_addr")
+    # Now these inputs support full addresses like "100 Main St, Raleigh, NC"
+    start_addr = col1.text_input("Starting Address", "100 Main St, Raleigh, NC", key="start_addr")
+    end_addr = col2.text_input("Destination Address", "500 Main St, Rolesville, NC", key="end_addr")
     
-    # Cached function to handle map downloading and enhancement
     @st.cache_data(show_spinner=True)
     def get_map_graph(lat1, lon1, lat2, lon2):
         center_lat, center_lon = (lat1 + lat2) / 2, (lon1 + lon2) / 2
+        # Building the graph around the center point of the two addresses
         graph = None
         for attempt in range(3):
             try:
-                # 5000m (5km) is the reliable limit for real-time OSMnx graph building
                 graph = ox.graph_from_point((center_lat, center_lon), dist=5000, network_type='drive')
                 break
             except Exception:
@@ -490,14 +489,15 @@ with tab6:
         return graph
 
     if st.button("Generate Healthiest Path"):
-        s_lat, s_lon, _ = get_city_coords(start_addr)
-        e_lat, e_lon, _ = get_city_coords(end_addr)
-        
-        if s_lat and e_lat:
-            # 1. DISTANCE LIMIT CHECK
+        try:
+            # Use OSMnx built-in geocoder for high-precision address support
+            s_lat, s_lon = ox.geocoder.geocode(start_addr)
+            e_lat, e_lon = ox.geocoder.geocode(end_addr)
+            
             dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
+            
             if dist_km > 50:
-                st.error(f"Distance is too large ({round(dist_km)} km). Please choose a destination within 50km for local analysis.")
+                st.error("Distance too large for local analysis. Please keep routes under 50km.")
             else:
                 graph = get_map_graph(s_lat, s_lon, e_lat, e_lon)
                 
@@ -520,13 +520,13 @@ with tab6:
                             "time_est": round(total_time_min, 1)
                         }
                     except nx.NetworkXNoPath:
-                        st.error("No driveable path found. Try points closer to main roads.")
+                        st.error("No driveable path found. Try locations closer to main roads.")
                 else:
-                    st.error("OSM Servers are busy or area is not mapped. Try a different location.")
-        else:
-            st.error("Location not found.")
+                    st.error("OSM Servers are busy. Please try again.")
+        except Exception:
+            st.error("Address not recognized. Please include City and State (e.g., 'Raleigh, NC').")
 
-    # 3. PERSISTENT DISPLAY
+    # Persistent Display
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
         col1, col2 = st.columns(2)
