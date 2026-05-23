@@ -389,7 +389,7 @@ with tab4:
     
     # 1. Search Bar
     @st.cache_data(ttl=86400)
-def get_city_coords(city_name):
+    def get_city_coords(city_name):
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
     try:
         response = requests.get(url).json()
