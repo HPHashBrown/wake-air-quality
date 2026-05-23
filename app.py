@@ -297,7 +297,7 @@ with tab2:
         st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
 
 # --- TAB 3: HEALTH ---
-with tab3:
+
 with tab3:
     st.markdown("### 🩺Health Literacy")
     
