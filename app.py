@@ -115,7 +115,7 @@ def fetch_pollutant_data(lat, lon, pollutant_key):
 @st.cache_data(ttl=3600)
 def fetch_global_aqi(lat, lon):
     # OWM Endpoint
-    url = f"http://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={OWM_API_KEY}"
+    url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={OWM_API_KEY}"
     try:
         response = requests.get(url).json()
         # OWM puts the pollutants inside a 'components' dictionary
