@@ -467,9 +467,11 @@ try:
         # Use the global OWM fetcher
         data = fetch_global_aqi(curr_lat, curr_lon)
 
-    st.write("DEBUG DATA:", data)
+
         if data:
             st.metric("US AQI Index", f"{data.get('us_aqi', 'N/A')}")
+
+st.write("DEBUG: API Response:", data)
             
             col1, col2, col3 = st.columns(3)
             # OWM keys are: pm2_5, pm10, o3, no2, co, so2
