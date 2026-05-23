@@ -484,9 +484,9 @@ with tab6:
             route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
             
-            # Distance/Time calculation
-            total_dist_meters = sum(ox.get_route_edge_attributes(graph, route, 'length'))
-            total_time_min = sum(ox.get_route_edge_attributes(graph, route, 'travel_time')) / 60
+            # Distance/Time calculation using direct graph edge access (The Fail-Safe Method)
+            total_dist_meters = sum(graph.edges[(u, v, 0)].get('length', 0) for u, v in zip(route[:-1], route[1:]))
+            total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
             
             st.session_state.route_data = {
                 "route": route_coords,
