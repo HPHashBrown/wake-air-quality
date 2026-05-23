@@ -379,7 +379,7 @@ with tab3:
     
 # --- TAB 4: MAP / SEARCH ---
 st.markdown("### 🔍 Global Sensor Search")
-    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
+city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
     if city_input:
         lat, lon, name = get_city_coords(city_input)
