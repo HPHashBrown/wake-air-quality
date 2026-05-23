@@ -474,7 +474,7 @@ with tab6:
             
             # Enhance graph with travel metadata
 hwy_speeds = {'residential': 35, 'secondary': 50, 'tertiary': 40, 'primary': 60}
-        graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
+    graph = ox.add_edge_speeds(graph, hwy_speeds=hwy_speeds)
             graph = ox.add_edge_travel_times(graph)
             
             start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
