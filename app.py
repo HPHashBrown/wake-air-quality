@@ -62,6 +62,8 @@ df_yearly = pd.DataFrame({
     "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9]
 })
 
+current_year = 2026
+
     
 def get_nasa_climate_data(lat, lon):
     target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
