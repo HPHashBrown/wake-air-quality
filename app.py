@@ -253,8 +253,8 @@ def get_nasa_climate_data(lat, lon):
 def fetch_global_wildfire_data():
     # FIRMS API v2 structure
     base_url = "https://firms.modaps.eosdis.nasa.gov/api/country/csv"
-# Change 'world' to 'USA'
-url = f"{base_url}/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
+    # Change 'world' to 'USA'
+    url = f"{base_url}/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
     
     try:
         response = requests.get(url, timeout=15)
