@@ -635,10 +635,9 @@ with tab4:
             st.error("Could not retrieve data for this node.")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
-with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
     
-    # Passive Fetch: No user button needed
+    # Passive Fetch: Automatically refresh the global fire data
     fires = fetch_global_wildfire_data()
     
     if not fires.empty:
@@ -658,6 +657,13 @@ with tab5:
         st.success(f"Monitoring {len(fires)} active hotspots globally.")
     else:
         st.info("Passive monitor active. No major anomalies detected.")
+
+    st.markdown("### 🛰️ Climate Metrics")
+    # Using your existing coordinates as a default
+    nasa_data = get_nasa_climate_data(35.7796, -78.6382)
+    col1, col2 = st.columns(2)
+    col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
+    col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
