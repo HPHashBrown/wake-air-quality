@@ -254,26 +254,22 @@ def get_nasa_climate_data(lat, lon):
 # This layer is natively supported by PyDeck and doesn't require an API key
 import pydeck as pdk
 
+# --- CLEANED UP SECTION ---
 def get_global_fire_layer():
     return pdk.Layer(
         "TileLayer",
-        "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/2026-05-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
+        f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Thermal_Anomalies_375m/default/{datetime.now().strftime('%Y-%m-%d')}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png",
         opacity=0.8
     )
-            
-    except Exception as e:
-        st.error(f"Connection error: {e}")
-        return pd.DataFrame()
-            
-    except Exception as e:
-        st.error(f"Connection failed: {e}")
-        return pd.DataFrame()
+
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
     try:
-        return requests.get(url).json().get("current", None)
-    except: return None
+        return requests.get(url, timeout=10).json().get("current", None)
+    except Exception: 
+        return None
+# --- END CLEANED UP SECTION ---
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
