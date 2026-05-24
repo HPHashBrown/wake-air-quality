@@ -451,6 +451,13 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
+    # 1. Ensure columns exist before plotting (Crucial step)
+    # If they are missing, the charts will crash.
+    required_columns = ["pressure_hpa", "humidity", "aerosol_depth"]
+    for col in required_columns:
+        if col not in df_yearly.columns:
+            df_yearly[col] = 0  # Add missing columns as 0 to prevent crashes
+
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{current_aqi}</h3></div>", unsafe_allow_html=True)
@@ -475,35 +482,26 @@ with tab1:
     st.markdown("---")
     st.subheader("🩺 Public Health Advisory")
     if current_aqi <= 50:
-        st.success("✅ **Air Quality is Good.** Air quality is considered satisfactory, and air pollution poses little or no risk.")
+        st.success("✅ **Air Quality is Good.**")
     elif current_aqi <= 100:
-        st.warning("⚠️ **Air Quality is Moderate.** Air quality is acceptable; however, there may be a risk for some people.")
+        st.warning("⚠️ **Air Quality is Moderate.**")
     elif current_aqi <= 150:
-        st.error("🚫 **Unhealthy for Sensitive Groups.** Members of sensitive groups may experience health effects.")
+        st.error("🚫 **Unhealthy for Sensitive Groups.**")
     else:
-        st.error("🚨 **Health Alert.** Some members of the general public may experience health effects.")
+        st.error("🚨 **Health Alert.**")
 
-    resilience_val = calculate_resilience_score(
-        current_aqi, 
-        live_weather.get('wind_speed_10m', 0), 
-        live_weather.get('relative_humidity_2m', 50)
-    )
-    
+    resilience_val = calculate_resilience_score(current_aqi, live_weather.get('wind_speed_10m', 0), live_weather.get('relative_humidity_2m', 50))
     st.markdown("---")
     col_r1, col_r2 = st.columns([1, 3])
     with col_r1:
         st.metric("Resilience Score", f"{resilience_val}/100")
     with col_r2:
         if resilience_val > 80:
-            st.success("The environment is highly resilient. Atmospheric conditions are dispersing pollutants effectively.")
+            st.success("The environment is highly resilient.")
         elif resilience_val > 50:
-            st.warning("Moderate resilience. Local conditions are stable; keep an eye on changing trends.")
+            st.warning("Moderate resilience.")
         else:
-            st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
-
-
-    st.write("DEBUG: DataFrame columns are:", df_yearly.columns.tolist())
-st.write("DEBUG: DataFrame head is:", df_yearly.head())
+            st.error("Low resilience detected.")
 
     st.markdown("---")
     with st.expander("📊 View Advanced Atmospheric Telemetry"):
@@ -513,15 +511,12 @@ st.write("DEBUG: DataFrame head is:", df_yearly.head())
         with col1:
             st.write("Atmospheric Pressure (hPa)")
             st.line_chart(df_yearly, x="year", y="pressure_hpa") 
-            
         with col2:
             st.write("Relative Humidity (%)")
             st.line_chart(df_yearly, x="year", y="humidity")
-            
         with col3:
             st.write("Aerosol Optical Depth")
             st.line_chart(df_yearly, x="year", y="aerosol_depth")
-            
         st.caption("Data source: Historical telemetry nodes.")
         
 # --- TAB 2: ANALYTICS ---
