@@ -605,14 +605,25 @@ with tab3:
     col_a, col_b = st.columns([1, 1])
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
-        with st.expander("PM2.5 (Fine Particulates)"):
-            st.write("Particles <2.5μm. . These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
+with st.expander("PM2.5 (Fine Particulates)"):
+            st.write("Particles <2.5μm. .")
+            st.write("**Safe Limit:** < 12.0 μg/m³ (Annual mean) / < 35 μg/m³ (24-hour limit).")
+            st.write("Levels above 35 μg/m³ are considered unhealthy for sensitive groups.")
+
         with st.expander("PM10 (Coarse Particulates)"):
-            st.write("Particles <10μm. . These consist of dust, pollen, and mold. They cause significant irritation to the nose, throat, and upper airways.")
+            st.write("Particles <10μm. .")
+            st.write("**Safe Limit:** < 150 μg/m³ (24-hour limit).")
+            st.write("Exceeding this indicates high dust, smoke, or industrial particle concentrations.")
+
         with st.expander("Ozone (O3)"):
-            st.write("Ground-level ozone acts as a pulmonary irritant, effectively causing 'sunburn' to the lung lining.")
+            st.write("Ground-level ozone acts as a pulmonary irritant.")
+            st.write("**Safe Limit:** < 0.070 ppm (8-hour average).")
+            st.write("Levels above 0.070 ppm are associated with decreased lung function in healthy individuals.")
+
         with st.expander("NO2 (Nitrogen Dioxide)"):
-            st.write("A primary byproduct of combustion that inflames airways and lowers immune response.")
+            st.write("A combustion byproduct that inflames airways.")
+            st.write("**Safe Limit:** < 0.053 ppm (Annual mean) / < 0.100 ppm (1-hour limit).")
+            st.write("High levels often correlate with heavy traffic areas and combustion heating.")
 
     with col_b:
         st.markdown("#### 🧬 Systemic Physiological Load")
