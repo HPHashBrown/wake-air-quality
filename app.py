@@ -251,18 +251,25 @@ def get_nasa_climate_data(lat, lon):
 
 @st.cache_data(ttl=3600)
 def fetch_global_wildfire_data():
-    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/world/1"
+    # FIRMS API v2 structure
+    base_url = "https://firms.modaps.eosdis.nasa.gov/api/country/csv"
+    # Using 'world' as the country code
+    url = f"{base_url}/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/world/1"
+    
     try:
-        response = requests.get(url, timeout=10)
+        response = requests.get(url, timeout=15)
         if response.status_code == 200:
-            df = pd.read_csv(pd.io.common.StringIO(response.text))
-            st.write(f"DEBUG: Found {len(df)} rows of data.") # This helps identify the issue
+            # Use StringIO to turn the raw text into a file-like object for pandas
+            import io
+            df = pd.read_csv(io.StringIO(response.text))
+            if 'lat' in df.columns:
+                df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
             return df
         else:
-            st.error(f"API returned status code: {response.status_code}")
+            st.error(f"NASA API Error: Received status {response.status_code}. Please check your API Key permissions.")
             return pd.DataFrame()
     except Exception as e:
-        st.error(f"Connection Error: {e}")
+        st.error(f"Connection failed: {e}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
