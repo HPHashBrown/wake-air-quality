@@ -480,7 +480,7 @@ resilience_val = calculate_resilience_score(
         live_weather.get('relative_humidity_2m', 50)
     )
     
-    st.markdown("---")
+st.markdown("---")
     col_r1, col_r2 = st.columns([1, 3])
     with col_r1:
         st.metric("Resilience Score", f"{resilience_val}/100")
