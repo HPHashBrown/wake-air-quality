@@ -632,7 +632,27 @@ with tab3:
 
     st.markdown("---")
     
-    # 2. Contextual Intelligence
+    # 2. Mitigation Strategies
+    st.markdown("### 🌱 Mitigation: Ways to Reduce Pollution")
+    col_small, col_big = st.columns(2)
+    with col_small:
+        st.subheader("🤏 Small Scale (Daily Impact)")
+        st.write("- Use public transit or bike for short trips.\n- Switch to LED bulbs to reduce energy demand.\n- Choose 'Green' cleaning products (low-VOC).\n- Avoid burning wood or trash.\n- Plant native vegetation to filter air particles.")
+    with col_big:
+        st.subheader("🏢 Large Scale (Systemic Impact)")
+        st.write("- Transition to high-efficiency HVAC/Heat Pumps.\n- Support clean energy grid infrastructure.\n- Advocate for 'Green Space' zoning in cities.\n- Purchase from sustainable manufacturers.\n- Install residential solar panels.")
+
+    # 3. Community Involvement
+    with st.expander("🌍 Get Involved: Foundations & Policy"):
+        st.write("Support organizations driving global air quality standards:")
+        st.markdown("- [Clean Air Task Force](https://www.catf.us/)")
+        st.markdown("- [Environmental Defense Fund](https://www.edf.org/)")
+        st.markdown("- [American Lung Association](https://www.lung.org/)")
+        st.markdown("- [The Climate Reality Project](https://www.climaterealityproject.org/)")
+
+    st.markdown("---")
+
+    # 4. Contextual Intelligence
     st.markdown("#### 📊 Contextual Intelligence")
     historical_avg = df_yearly["mean_pm25"].mean()
     diff_from_avg = current_aqi - historical_avg
@@ -640,10 +660,9 @@ with tab3:
     
     st.markdown("---")
 
-    # 3. Personalized Activity Risk Calculator
+    # 5. Personalized Activity Risk Calculator
     st.markdown("### 🏃 Personalized Exposure Risk")
     activity = st.selectbox("Current Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="act_level")
-    
     if activity == "Heavy Exercise" and current_aqi > 100:
         st.error("🚨 CRITICAL RISK: High-intensity exercise during these levels drastically increases deep-lung particle deposition.")
     elif activity == "Heavy Exercise" and current_aqi > 50:
@@ -653,11 +672,10 @@ with tab3:
 
     st.markdown("---")
     
-    # 4. Indoor Strategy Calculator
+    # 6. Indoor Strategy Calculator
     st.markdown("### 🏠 Indoor Air Strategy")
     room_sqft = st.number_input("Room Square Footage", value=200, key="sqft_input")
     filter_type = st.selectbox("Air Purifier Efficiency", ["Standard", "HEPA (High Efficiency)", "Industrial/Commercial"])
-    
     if st.button("Calculate Filtration Time"):
         rate = 50 if filter_type == "Standard" else 150
         time_to_clean = room_sqft / rate
@@ -665,18 +683,20 @@ with tab3:
 
     st.markdown("---")
     
-    # 5. Safe Exposure Budget
+    # 7. Safe Exposure Budget
     st.markdown("### ⏳ Daily 'Safe Exposure' Budget")
     if current_aqi > 0:
         safe_hours = max(0, 800 / (float(current_aqi) * 1.5)) 
         st.metric("Estimated Safe Hours Left Today", f"{safe_hours:.1f} Hours")
-        
         if safe_hours > 6:
             st.success("✅ **Air Quality is Clear.** No restrictions on your outdoor exposure.")
         elif safe_hours > 3:
             st.warning("⚠️ **Caution.** Your inflammatory budget is depleting. Limit outdoor exercise.")
         else:
             st.error("🚫 **Alert.** Your inflammatory budget is low. Switch to indoor air protocol immediately.")
+
+with tab4:
+    # Your tab4 content goes here
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
