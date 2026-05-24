@@ -14,6 +14,7 @@ import networkx as nx
 from google import genai
 from folium.plugins import HeatMap
 import openaq
+import pydeck as pdk
 
 
 # ============================================
@@ -249,30 +250,16 @@ def get_nasa_climate_data(lat, lon):
     except Exception as e:
         return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
 
-@st.cache_data(ttl=3600)
-def fetch_global_wildfire_data():
-    # Use the simplest possible valid path
-    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
-    
-    # Adding a header makes it look like a regular browser request
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        
-        if response.status_code == 200:
-            import io
-            df = pd.read_csv(io.StringIO(response.text))
-            if 'lat' in df.columns:
-                df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
-            return df
-        else:
-            # If 400 persists, the issue is likely the API key string itself
-            st.error(f"NASA API rejected the request (Status {response.status_code}).")
-            st.write(f"Attempted URL: {url}")
-            return pd.DataFrame()
+# Instead of CSV, use the global fire hotspot detection layer from NASA GIBS
+# This layer is natively supported by PyDeck and doesn't require an API key
+import pydeck as pdk
+
+def get_global_fire_layer():
+    return pdk.Layer(
+        "TileLayer",
+        "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/2026-05-24/GoogleMapsCompatible_Level9/{z}/{y}/{x}.jpg",
+        opacity=0.8
+    )
             
     except Exception as e:
         st.error(f"Connection error: {e}")
@@ -656,26 +643,21 @@ with tab4:
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
     
-    # Passive Fetch: Automatically refresh the global fire data
-    fires = fetch_global_wildfire_data()
+    # Dynamically set the date to today (2026-05-24)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    tile_url = f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Thermal_Anomalies_375m/default/{today_str}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png"
     
-    if not fires.empty:
-        # Use a Heatmap to visualize global intensity
-        st.pydeck_chart(pdk.Deck(
-            initial_view_state=pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0),
-            layers=[
-                pdk.Layer(
-                    "HeatmapLayer",
-                    fires,
-                    get_position="[longitude, latitude]",
-                    get_weight="bright_ti4",
-                    radius_pixels=30,
-                ),
-            ],
-        ))
-        st.success(f"Monitoring {len(fires)} active hotspots globally.")
-    else:
-        st.info("Passive monitor active. No major anomalies detected.")
+    st.pydeck_chart(pdk.Deck(
+        initial_view_state=pdk.ViewState(latitude=20, longitude=0, zoom=1.5),
+        layers=[
+            pdk.Layer(
+                "TileLayer",
+                tile_url,
+                opacity=0.8
+            ),
+        ],
+    ))
+    st.caption(f"Map: NASA VIIRS Thermal Anomalies for {today_str}.")
 
     st.markdown("### 🛰️ Climate Metrics")
     # Using your existing coordinates as a default
