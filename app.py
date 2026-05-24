@@ -33,9 +33,9 @@ def add_heatmap_to_map(m, hotspots):
 df_yearly = pd.DataFrame({
     "year": [2018, 2019, 2020, 2021, 2022, 2023], 
     "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9],
-    "pressure_hpa": [1013, 1012, 1014, 1011, 1015, 1013],
-    "humidity": [65, 70, 68, 72, 65, 66],
-    "aerosol_depth": [0.1, 0.12, 0.09, 0.11, 0.08, 0.07]
+    "pressure_hpa": [1012, 1015, 1010, 1013, 1018, 1011],  # Added variation
+    "humidity": [65, 72, 60, 68, 62, 70],                 # Added variation
+    "aerosol_depth": [0.12, 0.15, 0.10, 0.13, 0.09, 0.11] # Added variation
 })
 
 # 1. Update Initialization
@@ -451,12 +451,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["ðŸ“Š Telemetry & Forecasting", "ð
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-    # 1. Ensure columns exist before plotting (Crucial step)
-    # If they are missing, the charts will crash.
-    required_columns = ["pressure_hpa", "humidity", "aerosol_depth"]
-    for col in required_columns:
-        if col not in df_yearly.columns:
-            df_yearly[col] = 0  # Add missing columns as 0 to prevent crashes
 
     m1, m2, m3, m4 = st.columns(4)
     with m1:
