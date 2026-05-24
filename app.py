@@ -249,16 +249,17 @@ def get_nasa_climate_data(lat, lon):
     except Exception as e:
         return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
 
-def fetch_wildfire_data():
-    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
+# REMOVE the old fetch_wildfire_data and replace with this:
+@st.cache_data(ttl=3600)
+def fetch_global_wildfire_data():
+    # 'world' endpoint for all fires
+    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/world/1"
     try:
         df = pd.read_csv(url)
         if 'latitude' not in df.columns and 'lat' in df.columns:
             df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
-        nc_fires = df[(df['latitude'] >= 34) & (df['latitude'] <= 37) & 
-                      (df['longitude'] >= -84) & (df['longitude'] <= -75)]
-        return nc_fires
-    except Exception as e:
+        return df
+    except:
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
@@ -634,20 +635,29 @@ with tab4:
             st.error("Could not retrieve data for this node.")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
-    st.markdown("### 🌍 Satellite-Derived Context")
-    nasa_data = get_nasa_climate_data(35.7796, -78.6382)
-    col1, col2 = st.columns(2)
-    col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²", help="NASA POWER: Measures potential for ozone formation.")
-    col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s", help="NASA POWER: High-altitude wind drift data.")
-    st.markdown("### 🔥 Real-Time Wildfire Hotspots")
-    fires = fetch_wildfire_data()
+with tab5:
+    st.markdown("### 🌍 Global Satellite Intelligence")
+    
+    # Passive Fetch: No user button needed
+    fires = fetch_global_wildfire_data()
+    
     if not fires.empty:
-        st.warning(f"Detected {len(fires)} active fire hotspots in the Eastern US.")
-        st.dataframe(fires[['latitude', 'longitude', 'acq_time', 'bright_ti4']])
+        # Use a Heatmap to visualize global intensity
+        st.pydeck_chart(pdk.Deck(
+            initial_view_state=pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0),
+            layers=[
+                pdk.Layer(
+                    "HeatmapLayer",
+                    fires,
+                    get_position="[longitude, latitude]",
+                    get_weight="bright_ti4",
+                    radius_pixels=30,
+                ),
+            ],
+        ))
+        st.success(f"Monitoring {len(fires)} active hotspots globally.")
     else:
-        st.success("No active fire hotspots detected.")
-
-
+        st.info("Passive monitor active. No major anomalies detected.")
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
