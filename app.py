@@ -454,19 +454,45 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
+    # 1. Location Search Input
+    st.markdown("### 🌍 Regional Atmospheric Analysis")
+    col_search, col_btn = st.columns([4, 1])
+    with col_search:
+        city_input = st.text_input("Enter City/Country for live telemetry", "Raleigh", key="tab1_city")
+    with col_btn:
+        st.write("##") # Spacer to align with input box
+        if st.button("Search"):
+            lat, lon, name = get_city_coords(city_input)
+            if lat:
+                st.session_state.map_center = [lat, lon]
+                # Update session state with new data
+                st.session_state.current_data = fetch_global_aqi(lat, lon)
+                st.session_state.current_weather = fetch_live_weather(lat, lon)
+                st.rerun()
+            else:
+                st.error("Location not found.")
+
+    # 2. Retrieve Data (Default to Raleigh if no search performed)
+    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
+    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
+    current_aqi = float(data.get('us_aqi', 0))
+
+    # 3. Metrics Display
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{current_aqi}</h3></div>", unsafe_allow_html=True)
     with m2:
-        val = f"{live_weather.get('temperature_2m', 'N/A')}°C"
-        st.markdown(f"<div class='glass-card'><h5>Thermal State</h5><h3>{val}</h3><span>Raleigh Node</span></div>", unsafe_allow_html=True)
+        val = f"{weather.get('temperature_2m', 'N/A')}°C"
+        st.markdown(f"<div class='glass-card'><h5>Thermal State</h5><h3>{val}</h3><span>Active Node</span></div>", unsafe_allow_html=True)
     with m3:
-        val = f"{live_weather.get('wind_speed_10m', 'N/A')} km/h"
+        val = f"{weather.get('wind_speed_10m', 'N/A')} km/h"
         st.markdown(f"<div class='glass-card'><h5>Wind Velocity</h5><h3>{val}</h3><span>Dispersion Rate</span></div>", unsafe_allow_html=True)
     with m4:
-        val = f"{live_weather.get('wind_direction_10m', 'N/A')}°"
+        val = f"{weather.get('wind_direction_10m', 'N/A')}°"
         st.markdown(f"<div class='glass-card'><h5>Vector Heading</h5><h3>{val}</h3><span>Atmospheric Drift</span></div>", unsafe_allow_html=True)
 
+    # 4. Long-term Trajectory Graph
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded Telemetry", line=dict(color="#00f2fe", width=4), marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#00f2fe"))))
     forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
@@ -475,6 +501,7 @@ with tab1:
     fig.update_layout(title="PM2.5 Long-Term Atmospheric Trajectory", template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
 
+    # 5. Health Advisory
     st.markdown("---")
     st.subheader("🩺 Public Health Advisory")
     if current_aqi <= 50:
@@ -486,7 +513,8 @@ with tab1:
     else:
         st.error("🚨 **Health Alert.**")
 
-    resilience_val = calculate_resilience_score(current_aqi, live_weather.get('wind_speed_10m', 0), live_weather.get('relative_humidity_2m', 50))
+    # 6. Resilience Score
+    resilience_val = calculate_resilience_score(current_aqi, weather.get('wind_speed_10m', 0), weather.get('relative_humidity_2m', 50))
     st.markdown("---")
     col_r1, col_r2 = st.columns([1, 3])
     with col_r1:
@@ -499,8 +527,8 @@ with tab1:
         else:
             st.error("Low resilience detected.")
 
+    # 7. Advanced Telemetry Expander
     st.markdown("---")
-    # This block is now correctly indented inside with tab1:
     plot_df = pd.DataFrame({
         "year": [2018, 2019, 2020, 2021, 2022, 2023],
         "pressure_hpa": [1012, 1015, 1010, 1013, 1018, 1011],
