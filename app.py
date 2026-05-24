@@ -29,15 +29,14 @@ def add_heatmap_to_map(m, hotspots):
     return m
 
 
+# Ensure this is defined exactly once at the top of your script
 df_yearly = pd.DataFrame({
     "year": [2018, 2019, 2020, 2021, 2022, 2023], 
     "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9],
-    # ADD THESE COLUMNS so your charts have data to plot!
     "pressure_hpa": [1013, 1012, 1014, 1011, 1015, 1013],
     "humidity": [65, 70, 68, 72, 65, 66],
     "aerosol_depth": [0.1, 0.12, 0.09, 0.11, 0.08, 0.07]
 })
-
 
 # 1. Update Initialization
 # --- GEMINI INITIALIZATION ---
@@ -502,25 +501,22 @@ with tab1:
         else:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
 
-    st.markdown("---")
+st.markdown("---")
     st.subheader("📈 Environmental Telemetry Metrics")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        # Pressure Trend: High pressure = stable air, Low pressure = stormy/mixed
         st.write("Atmospheric Pressure")
-        st.line_chart(data=df_yearly, y="pressure_hpa") 
+        st.line_chart(df_yearly, x="year", y="pressure_hpa") 
         
     with col2:
-        # Humidity Correlation: Impacts particulate "weight"
         st.write("Relative Humidity (%)")
-        st.line_chart(data=df_yearly, y="humidity")
+        st.line_chart(df_yearly, x="year", y="humidity")
         
     with col3:
-        # Visibility/Aerosol depth
         st.write("Aerosol Optical Depth")
-        st.line_chart(data=df_yearly, y="aerosol_depth")
+        st.line_chart(df_yearly, x="year", y="aerosol_depth")
         
 # --- TAB 2: ANALYTICS ---
 with tab2:
