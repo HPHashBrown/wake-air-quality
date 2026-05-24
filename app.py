@@ -84,22 +84,33 @@ def get_real_pm25_data(lat, lon):
     try:
         client = OpenAQ(api_key=st.secrets["OPENAQ_API_KEY"])
         
-        # The modern SDK expects coordinates as a tuple (lat, lon)
-        # We also need to specify the parameter for PM2.5 (usually ID 1 or string 'pm25')
-        data = client.measurements.list(
+        # 1. Find locations near the coordinate
+        # The 'locations.list' method DOES accept 'coordinates' and 'radius'
+        locations = client.locations.list(
             coordinates=(lat, lon),
             radius=50000,
-            parameters=[1] 
+            limit=10 # Get a few nearby stations
         )
         
-        # Depending on the SDK version, the result is an object containing 'results'
-        results = data.results if hasattr(data, 'results') else data
+        # 2. Extract IDs of the sensors found
+        # (Assuming the SDK returns objects with an 'id' attribute)
+        sensor_ids = [loc.id for loc in locations.results]
         
-        return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in results]
+        if not sensor_ids:
+            return []
+
+        # 3. Fetch measurements for those specific sensor IDs
+        # We use 'measurements.list' with 'sensors_id' instead
+        data = client.measurements.list(
+            sensors_id=sensor_ids[0], # Fetch from the first sensor found
+            limit=100
+        )
+        
+        return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in data.results]
+        
     except Exception as e:
         st.error(f"Error fetching real-time data: {e}")
         return []
-
 # Define the function ONCE
 @st.cache_data(ttl=3600)
 def fetch_global_aqi(lat, lon, metric="pm2_5"):
