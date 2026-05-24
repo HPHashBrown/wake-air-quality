@@ -64,6 +64,24 @@ def get_ai_health_briefing(pm25_val, aqi_val):
         return response.text
     except Exception as e:
         return f"Error communicating with AI: {str(e)}"
+
+def calculate_resilience_score(aqi, wind_speed, humidity):
+    """
+    Calculates a 0-100 score:
+    - Higher is better (more resilient/cleaner/stable)
+    - AQI is the primary detractor
+    - Wind is a bonus (dispersion)
+    - Humidity is a stabilizer (low impact)
+    """
+    # Normalize AQI: 0 is perfect, 300 is hazardous
+    aqi_impact = max(0, 100 - (aqi / 3)) 
+    
+    # Wind bonus: Up to 15 points if wind is strong (helps dispersion)
+    wind_bonus = min(15, wind_speed * 1.5)
+    
+    # Resilience score
+    score = aqi_impact + wind_bonus
+    return min(100, max(0, round(score)))
         
 # Set a longer timeout for the API request
 ox.settings.timeout = 300 
@@ -455,6 +473,24 @@ with tab1:
         st.error("🚫 **Unhealthy for Sensitive Groups.** Members of sensitive groups may experience health effects.")
     else:
         st.error("🚨 **Health Alert.** Some members of the general public may experience health effects.")
+
+resilience_val = calculate_resilience_score(
+        current_aqi, 
+        live_weather.get('wind_speed_10m', 0), 
+        live_weather.get('relative_humidity_2m', 50)
+    )
+    
+    st.markdown("---")
+    col_r1, col_r2 = st.columns([1, 3])
+    with col_r1:
+        st.metric("Resilience Score", f"{resilience_val}/100")
+    with col_r2:
+        if resilience_val > 80:
+            st.success("The environment is highly resilient. Atmospheric conditions are dispersing pollutants effectively.")
+        elif resilience_val > 50:
+            st.warning("Moderate resilience. Local conditions are stable; keep an eye on changing trends.")
+        else:
+            st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
 
 # --- TAB 2: ANALYTICS ---
 with tab2:
