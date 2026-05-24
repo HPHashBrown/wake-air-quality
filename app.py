@@ -249,17 +249,20 @@ def get_nasa_climate_data(lat, lon):
     except Exception as e:
         return {"solar_radiation": "N/A", "satellite_wind_speed": "N/A"}
 
-# REMOVE the old fetch_wildfire_data and replace with this:
 @st.cache_data(ttl=3600)
 def fetch_global_wildfire_data():
-    # 'world' endpoint for all fires
     url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/world/1"
     try:
-        df = pd.read_csv(url)
-        if 'latitude' not in df.columns and 'lat' in df.columns:
-            df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
-        return df
-    except:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            df = pd.read_csv(pd.io.common.StringIO(response.text))
+            st.write(f"DEBUG: Found {len(df)} rows of data.") # This helps identify the issue
+            return df
+        else:
+            st.error(f"API returned status code: {response.status_code}")
+            return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Connection Error: {e}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=3600)
