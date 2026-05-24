@@ -545,15 +545,16 @@ with tab4:
     # 1. Initialize map once
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     
-    # 2. Real-time Heatmap Logic
+# Inside Tab 4
     if show_heatmap:
         from folium.plugins import HeatMap
         with st.spinner("Retrieving real-time sensor data..."):
-            # Call your new function!
             real_data = get_real_pm25_data(st.session_state.map_center[0], st.session_state.map_center[1])
             
+            # Debugging line to see if it's working
+            st.write(f"Data points found: {len(real_data)}")
+            
             if real_data:
-                # Plots real sensor points as an accurate heatmap
                 HeatMap(real_data, radius=25, blur=15, min_opacity=0.3).add_to(m)
             else:
                 st.warning("No real-time PM2.5 sensors found in this radius.")
