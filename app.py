@@ -88,7 +88,7 @@ def get_real_pm25_data(lat, lon):
         # The 'locations.list' method DOES accept 'coordinates' and 'radius'
         locations = client.locations.list(
             coordinates=(lat, lon),
-            radius=50000,
+            radius=25000,
             limit=10 # Get a few nearby stations
         )
         
