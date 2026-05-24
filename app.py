@@ -502,7 +502,7 @@ with tab1:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
 
 st.markdown("---")
-    st.subheader("📈 Environmental Telemetry Metrics")
+st.subheader("📈 Environmental Telemetry Metrics")
     
     col1, col2, col3 = st.columns(3)
     
