@@ -98,7 +98,7 @@ ox.settings.timeout = 300
 # Tell OSMnx to use the public Overpass server via a more stable request method
 ox.settings.use_cache = True
 
-st.set_page_config(page_title="Wake AQI", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Project AIR", page_icon="🌐", layout="wide", initial_sidebar_state="expanded")
 st_autorefresh(interval=600000, key="datarefresh")
 
 if 'map_center' not in st.session_state:
