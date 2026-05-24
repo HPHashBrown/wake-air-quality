@@ -30,6 +30,15 @@ def add_heatmap_to_map(m, hotspots):
 
 st.write(df_yearly.columns)
 
+df_yearly = pd.DataFrame({
+    "year": [2018, 2019, 2020, 2021, 2022, 2023], 
+    "mean_pm25": [10.2, 9.8, 8.5, 9.2, 8.1, 7.9],
+    # ADD THESE COLUMNS so your charts have data to plot!
+    "pressure_hpa": [1013, 1012, 1014, 1011, 1015, 1013],
+    "humidity": [65, 70, 68, 72, 65, 66],
+    "aerosol_depth": [0.1, 0.12, 0.09, 0.11, 0.08, 0.07]
+})
+
 
 # 1. Update Initialization
 # --- GEMINI INITIALIZATION ---
@@ -494,10 +503,6 @@ with tab1:
         else:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
 
-with tab1:
-    # ... (Keep your current top 4 metrics and main Plotly graph) ...
-
-    # NEW: Advanced Atmospheric Data Grid
     st.markdown("---")
     st.subheader("📈 Environmental Telemetry Metrics")
     
