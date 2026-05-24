@@ -91,6 +91,9 @@ def get_real_pm25_data(lat, lon):
             radius=25000,
             limit=10 # Get a few nearby stations
         )
+
+        real_data = get_real_pm25_data(st.session_state.map_center[0], st.session_state.map_center[1])
+        st.write(f"Data points found: {len(real_data)}") # <--- ADD THIS
         
         # 2. Extract IDs of the sensors found
         # (Assuming the SDK returns objects with an 'id' attribute)
