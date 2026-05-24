@@ -451,7 +451,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-
     m1, m2, m3, m4 = st.columns(4)
     with m1:
         st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{current_aqi}</h3></div>", unsafe_allow_html=True)
@@ -497,8 +496,8 @@ with tab1:
         else:
             st.error("Low resilience detected.")
 
-st.markdown("---")
-    # Define a clean copy specifically for plotting
+    st.markdown("---")
+    # This block is now correctly indented inside with tab1:
     plot_df = pd.DataFrame({
         "year": [2018, 2019, 2020, 2021, 2022, 2023],
         "pressure_hpa": [1012, 1015, 1010, 1013, 1018, 1011],
@@ -509,7 +508,6 @@ st.markdown("---")
     with st.expander("📊 View Advanced Atmospheric Telemetry"):
         st.subheader("High-Density Environmental Metrics")
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             st.write("Atmospheric Pressure (hPa)")
             st.line_chart(plot_df, x="year", y="pressure_hpa") 
@@ -519,7 +517,6 @@ st.markdown("---")
         with col3:
             st.write("Aerosol Optical Depth")
             st.line_chart(plot_df, x="year", y="aerosol_depth")
-            
         st.caption("Data source: Historical telemetry nodes.")
         
 # --- TAB 2: ANALYTICS ---
