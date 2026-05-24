@@ -695,11 +695,6 @@ with tab3:
             st.error("🚫 **Alert.** Your inflammatory budget is low. Switch to indoor air protocol immediately.")
 
 with tab4:
-    # Your tab4 content goes here
-
-with tab4:
-    # Your tab4 content goes here
-with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
     
