@@ -501,7 +501,7 @@ with tab1:
         else:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
 
-st.markdown("---")
+    st.markdown("---")
     with st.expander("📊 View Advanced Atmospheric Telemetry"):
         st.subheader("High-Density Environmental Metrics")
         col1, col2, col3 = st.columns(3)
