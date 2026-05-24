@@ -570,29 +570,59 @@ with tab2:
         sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
         st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
 
-# --- TAB 3: HEALTH ---
 with tab3:
-    st.markdown("### 🩺Health Literacy")
-    col1, col2 = st.columns([1, 1.5])
-    with col1:
-        st.info("### The Scale of the Invisible")
-        st.write("A human hair is 50μm. PM2.5 is <2.5μm. It is roughly **1/30th the width of a hair**.")
-    with col2:
-        st.warning("### The Systemic Journey")
-        st.write("1. **Deep Lung Penetration:** Reaches the alveoli.")
-        st.write("2. **Bloodstream Entry:** Enters systemic circulation.")
-        st.write("3. **Chronic Inflammation:** Triggers long-term oxidative stress.")
+    st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
+    
+    # 1. Pollutant Deep Dive
+    col_a, col_b = st.columns([1, 1])
+    with col_a:
+        st.markdown("#### 🔬 Pollutant Breakdown")
+        with st.expander("PM2.5 (Fine Particulates)"):
+            st.write("Particles <2.5μm. These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
+        with st.expander("Ozone (O3)"):
+            st.write("Ground-level ozone acts as a pulmonary irritant, effectively causing 'sunburn' to the lung lining.")
+        with st.expander("NO2 (Nitrogen Dioxide)"):
+            st.write("A primary byproduct of combustion that inflames airways and lowers immune response.")
+
+    with col_b:
+        st.markdown("#### 🧬 Systemic Physiological Load")
+        # Estimate load based on current AQI
+        body_load = min(100, (current_aqi / 300) * 100)
+        st.write(f"**Cumulative Systemic Load: {int(body_load)}%**")
+        st.progress(body_load / 100)
+        st.caption("This index estimates the strain on your body's anti-inflammatory defenses based on real-time AQI.")
+
     st.markdown("---")
-    st.markdown("### ⏳ Your Daily 'Safe Exposure' Budget")
+    
+    # 2. Personalized Activity Risk Calculator
+    st.markdown("### 🏃 Personalized Exposure Risk")
+    activity = st.selectbox("Current Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="act_level")
+    
+    # Logic for risk assessment
+    if activity == "Heavy Exercise" and current_aqi > 100:
+        st.error("🚨 CRITICAL RISK: High-intensity exercise during these levels drastically increases deep-lung particle deposition.")
+    elif activity == "Heavy Exercise" and current_aqi > 50:
+        st.warning("⚠️ CAUTION: Increased respiration rate will elevate your pollutant intake. Consider reducing intensity.")
+    else:
+        st.success("✅ Air quality risk is manageable for your current activity level.")
+
+    st.markdown("---")
+    
+    # 3. Safe Exposure Budget (Existing logic enhanced)
+    st.markdown("### ⏳ Daily 'Safe Exposure' Budget")
     if current_aqi > 0:
         safe_hours = max(0, 800 / (float(current_aqi) * 1.5)) 
         st.metric("Estimated Safe Hours Left Today", f"{safe_hours:.1f} Hours")
+        
         if safe_hours > 6:
             st.success("✅ **Air Quality is Clear.** No restrictions on your outdoor exposure.")
         elif safe_hours > 3:
-            st.warning("⚠️ **Caution.** Limit intense outdoor exercise. Your inflammatory budget is depleting.")
+            st.warning("⚠️ **Caution.** Your inflammatory budget is depleting. Limit outdoor exercise.")
         else:
-            st.error("🚫 **Alert.** Your inflammatory budget is low. Indoor air protocol recommended.")
+            st.error("🚫 **Alert.** Your inflammatory budget is low. Switch to indoor air protocol immediately.")
+
+    # Educational visual aid
+    st.caption("Reference: Biological impact visualization.")
 
 
 with tab4:
