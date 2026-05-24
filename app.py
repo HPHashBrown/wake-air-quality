@@ -83,15 +83,19 @@ from openaq import OpenAQ
 def get_real_pm25_data(lat, lon):
     try:
         client = OpenAQ(api_key=st.secrets["OPENAQ_API_KEY"])
-        # Querying sensors within a 50km radius
+        
+        # The modern SDK expects coordinates as a tuple (lat, lon)
+        # We also need to specify the parameter for PM2.5 (usually ID 1 or string 'pm25')
         data = client.measurements.list(
-            coordinates=f"{lat},{lon}",
+            coordinates=(lat, lon),
             radius=50000,
-            parameter_ids=[1] # 1 is the OpenAQ ID for PM2.5
+            parameters=[1] 
         )
-        # Return list of [lat, lon, intensity]
-        # We cap intensity at 100 for better visualization
-        return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in data]
+        
+        # Depending on the SDK version, the result is an object containing 'results'
+        results = data.results if hasattr(data, 'results') else data
+        
+        return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in results]
     except Exception as e:
         st.error(f"Error fetching real-time data: {e}")
         return []
