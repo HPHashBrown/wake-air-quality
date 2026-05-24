@@ -491,6 +491,31 @@ with tab1:
             st.warning("Moderate resilience. Local conditions are stable; keep an eye on changing trends.")
         else:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
+
+with tab1:
+    # ... (Keep your current top 4 metrics and main Plotly graph) ...
+
+    # NEW: Advanced Atmospheric Data Grid
+    st.markdown("---")
+    st.subheader("📈 Environmental Telemetry Metrics")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        # Pressure Trend: High pressure = stable air, Low pressure = stormy/mixed
+        st.write("Atmospheric Pressure")
+        st.line_chart(data=df_yearly, y="pressure_hpa") 
+        
+    with col2:
+        # Humidity Correlation: Impacts particulate "weight"
+        st.write("Relative Humidity (%)")
+        st.line_chart(data=df_yearly, y="humidity")
+        
+    with col3:
+        # Visibility/Aerosol depth
+        st.write("Aerosol Optical Depth")
+        st.line_chart(data=df_yearly, y="aerosol_depth")
+        
 # --- TAB 2: ANALYTICS ---
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
