@@ -573,12 +573,13 @@ with tab2:
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
     
-    # 1. Pollutant Deep Dive
-    col_a, col_b = st.columns([1, 1])
+col_a, col_b = st.columns([1, 1])
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
         with st.expander("PM2.5 (Fine Particulates)"):
             st.write("Particles <2.5μm. . These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
+        with st.expander("PM10 (Coarse Particulates)"):
+            st.write("Particles <10μm. . These consist of dust, pollen, and mold. While larger, they cause significant irritation to the nose, throat, and upper airways.")
         with st.expander("Ozone (O3)"):
             st.write("Ground-level ozone acts as a pulmonary irritant, effectively causing 'sunburn' to the lung lining.")
         with st.expander("NO2 (Nitrogen Dioxide)"):
