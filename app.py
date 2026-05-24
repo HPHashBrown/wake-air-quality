@@ -474,7 +474,7 @@ with tab1:
     else:
         st.error("🚨 **Health Alert.** Some members of the general public may experience health effects.")
 
-resilience_val = calculate_resilience_score(
+    resilience_val = calculate_resilience_score(
         current_aqi, 
         live_weather.get('wind_speed_10m', 0), 
         live_weather.get('relative_humidity_2m', 50)
@@ -491,7 +491,6 @@ resilience_val = calculate_resilience_score(
             st.warning("Moderate resilience. Local conditions are stable; keep an eye on changing trends.")
         else:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
-
 # --- TAB 2: ANALYTICS ---
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
