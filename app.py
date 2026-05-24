@@ -606,12 +606,11 @@ with tab3:
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
         with st.expander("PM2.5 (Fine Particulates)"):
-            st.write("Particles <2.5μm.") 
-
+            st.write("Particles <2.5μm. These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
             st.write("**Safe Limit:** < 12.0 μg/m³ (Annual mean) / < 35 μg/m³ (24-hour limit).")
             st.write("Levels above 35 μg/m³ are considered unhealthy for sensitive groups.")
         with st.expander("PM10 (Coarse Particulates)"):
-            st.write("Particles <10μm. .")
+            st.write("Particles <10μm. These consist of dust, pollen, and mold. They cause significant irritation to the nose, throat, and upper airways.")
             st.write("**Safe Limit:** < 150 μg/m³ (24-hour limit).")
             st.write("Exceeding this indicates high dust, smoke, or industrial particle concentrations.")
         with st.expander("Ozone (O3)"):
@@ -694,6 +693,9 @@ with tab3:
             st.warning("⚠️ **Caution.** Your inflammatory budget is depleting. Limit outdoor exercise.")
         else:
             st.error("🚫 **Alert.** Your inflammatory budget is low. Switch to indoor air protocol immediately.")
+
+with tab4:
+    # Your tab4 content goes here
 
 with tab4:
     # Your tab4 content goes here
