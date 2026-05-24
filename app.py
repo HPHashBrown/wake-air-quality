@@ -13,6 +13,7 @@ import osmnx as ox
 import networkx as nx
 from google import genai
 from folium.plugins import HeatMap
+import openaq
 
 
 # ============================================
@@ -76,6 +77,24 @@ if 'map_center' not in st.session_state:
     st.session_state.map_center = [35.7796, -78.6382]
 if 'start_time' not in st.session_state:
     st.session_state.start_time = datetime.now()
+
+from openaq import OpenAQ
+
+def get_real_pm25_data(lat, lon):
+    try:
+        client = OpenAQ(api_key=st.secrets["OPENAQ_API_KEY"])
+        # Querying sensors within a 50km radius
+        data = client.measurements.list(
+            coordinates=f"{lat},{lon}",
+            radius=50000,
+            parameter_ids=[1] # 1 is the OpenAQ ID for PM2.5
+        )
+        # Return list of [lat, lon, intensity]
+        # We cap intensity at 100 for better visualization
+        return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in data]
+    except Exception as e:
+        st.error(f"Error fetching real-time data: {e}")
+        return []
 
 # Define the function ONCE
 @st.cache_data(ttl=3600)
@@ -486,38 +505,28 @@ with tab4:
         else:
             st.error("Location not found.")
             
-    # Initialize map once
-    m = folium.Map(location=st.session_state.map_center, zoom_start=4, tiles="CartoDB dark_matter")
+    # 1. Initialize map once
+    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     
-    # Global Heatmap Logic
+    # 2. Real-time Heatmap Logic
     if show_heatmap:
         from folium.plugins import HeatMap
-        global_hotspots = []
-        
-        # 1. Base "background" noise
-        for lat in range(-60, 80, 5):
-            for lon in range(-180, 180, 5):
-                global_hotspots.append([lat, lon, 0.1])
-        
-        # 2. Add "Hotspots"
-        hotspots = [
-            [35.77, -78.63, 0.9], [35.68, 139.65, 0.9], 
-            [48.85, 2.35, 0.8], [39.90, 116.40, 0.95], 
-            [28.61, 77.20, 0.95], [40.71, -74.00, 0.85]
-        ]
-        global_hotspots.extend(hotspots)
-        
-        # 3. Add heatmap layer
-        HeatMap(global_hotspots, radius=60, blur=40, min_opacity=0.2).add_to(m)
+        with st.spinner("Retrieving real-time sensor data..."):
+            # Call your new function!
+            real_data = get_real_pm25_data(st.session_state.map_center[0], st.session_state.map_center[1])
+            
+            if real_data:
+                # Plots real sensor points as an accurate heatmap
+                HeatMap(real_data, radius=25, blur=15, min_opacity=0.3).add_to(m)
+            else:
+                st.warning("No real-time PM2.5 sensors found in this radius.")
     
-    # Add marker and render map
+    # 3. Add marker and render map ONCE
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
     st_folium(m, width="100%", height=400)
 
-    # Atmospheric Report
+    # 4. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
-    st.caption("Note: Heatmap displays simulated PM2.5 distribution.")
-    
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
     active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
