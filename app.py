@@ -251,25 +251,16 @@ def get_nasa_climate_data(lat, lon):
 
 @st.cache_data(ttl=3600)
 def fetch_global_wildfire_data():
-    # The clean URL without the API key inside it
-    url = "https://firms.modaps.eosdis.nasa.gov/api/country/csv"
+    # Use the simplest possible valid path
+    url = f"https://firms.modaps.eosdis.nasa.gov/api/country/csv/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
     
-    # Send the key and the region parameters as a dictionary
-    # This prevents the server from misinterpreting the URL structure
-    params = {
-        'api_key': FIRMS_API_KEY,
-        'area': 'USA',
-        'sensor': 'VIIRS_SNPP_NRT',
-        'day_range': '1'
+    # Adding a header makes it look like a regular browser request
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
     
     try:
-        # Construct the final URL via requests.get parameters
-        # This builds: .../csv/KEY/SENSOR/AREA/DAY_RANGE
-        # We manually build the path because FIRMS is picky about the order
-        final_url = f"{url}/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
-        
-        response = requests.get(final_url, timeout=15)
+        response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
             import io
@@ -278,9 +269,14 @@ def fetch_global_wildfire_data():
                 df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
             return df
         else:
-            # If it still fails, the key might be completely inactive
-            st.error(f"NASA API Error: {response.status_code}. Key: {FIRMS_API_KEY[:5]}...")
+            # If 400 persists, the issue is likely the API key string itself
+            st.error(f"NASA API rejected the request (Status {response.status_code}).")
+            st.write(f"Attempted URL: {url}")
             return pd.DataFrame()
+            
+    except Exception as e:
+        st.error(f"Connection error: {e}")
+        return pd.DataFrame()
             
     except Exception as e:
         st.error(f"Connection failed: {e}")
