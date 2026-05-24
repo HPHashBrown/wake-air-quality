@@ -542,35 +542,34 @@ with tab4:
         else:
             st.error("Location not found.")
             
-    # 1. Initialize map once
+    # Initialize map
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     
-if show_heatmap:
+    # Heatmap Logic
+    if show_heatmap:
         from folium.plugins import HeatMap
-        with st.spinner("Retrieving atmospheric data..."):
+        with st.spinner("Retrieving real-time atmospheric data..."):
             real_data = get_real_pm25_data(st.session_state.map_center[0], st.session_state.map_center[1])
             
             if real_data:
                 HeatMap(real_data, radius=25, blur=15, min_opacity=0.3).add_to(m)
             else:
-                # FALLBACK: Create a 5x5 grid of points based on current map center
-                # This ensures the map is never "blank"
+                # Fallback: Interpolated grid if no sensors found
                 fallback_data = []
                 lat_c, lon_c = st.session_state.map_center
+                # Create a small grid around the center
                 for lat in np.linspace(lat_c-0.2, lat_c+0.2, 5):
                     for lon in np.linspace(lon_c-0.2, lon_c+0.2, 5):
-                        # Use current AQI to set the "intensity" of the fallback
                         intensity = current_aqi / 100 
                         fallback_data.append([lat, lon, intensity])
-                
                 HeatMap(fallback_data, radius=50, blur=30, min_opacity=0.3).add_to(m)
-                st.info("No ground-based sensors found. Displaying interpolated atmospheric model for this region.")
-    
-    # 3. Add marker and render map ONCE
+                st.info("No ground-based sensors found. Displaying interpolated atmospheric model.")
+
+    # Marker and Render
     folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
     st_folium(m, width="100%", height=400)
 
-    # 4. Atmospheric Report
+    # Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
