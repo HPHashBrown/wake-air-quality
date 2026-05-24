@@ -15,3 +15,4 @@ fpdf
 osmnx
 networkx
 google-genai
+openaq
