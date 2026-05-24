@@ -578,7 +578,7 @@ with tab3:
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
         with st.expander("PM2.5 (Fine Particulates)"):
-            st.write("Particles <2.5μm. These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
+            st.write("Particles <2.5μm. . These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
         with st.expander("Ozone (O3)"):
             st.write("Ground-level ozone acts as a pulmonary irritant, effectively causing 'sunburn' to the lung lining.")
         with st.expander("NO2 (Nitrogen Dioxide)"):
@@ -586,19 +586,25 @@ with tab3:
 
     with col_b:
         st.markdown("#### 🧬 Systemic Physiological Load")
-        # Estimate load based on current AQI
         body_load = min(100, (current_aqi / 300) * 100)
         st.write(f"**Cumulative Systemic Load: {int(body_load)}%**")
         st.progress(body_load / 100)
-        st.caption("This index estimates the strain on your body's anti-inflammatory defenses based on real-time AQI.")
+        st.caption("Estimates the strain on your body's anti-inflammatory defenses based on real-time AQI.")
 
     st.markdown("---")
     
-    # 2. Personalized Activity Risk Calculator
+    # 2. Comparison Engine (Historical Context)
+    st.markdown("#### 📊 Contextual Intelligence")
+    historical_avg = df_yearly["mean_pm25"].mean() # Simple historical average
+    diff_from_avg = current_aqi - historical_avg
+    st.write(f"Current levels are **{abs(diff_from_avg):.1f} units {'above' if diff_from_avg > 0 else 'below'}** the historical 5-year average.")
+    
+    st.markdown("---")
+
+    # 3. Personalized Activity Risk Calculator
     st.markdown("### 🏃 Personalized Exposure Risk")
     activity = st.selectbox("Current Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="act_level")
     
-    # Logic for risk assessment
     if activity == "Heavy Exercise" and current_aqi > 100:
         st.error("🚨 CRITICAL RISK: High-intensity exercise during these levels drastically increases deep-lung particle deposition.")
     elif activity == "Heavy Exercise" and current_aqi > 50:
@@ -608,7 +614,20 @@ with tab3:
 
     st.markdown("---")
     
-    # 3. Safe Exposure Budget (Existing logic enhanced)
+    # 4. Indoor Strategy Calculator
+    st.markdown("### 🏠 Indoor Air Strategy")
+    room_sqft = st.number_input("Room Square Footage", value=200, key="sqft_input")
+    filter_type = st.selectbox("Air Purifier Efficiency", ["Standard", "HEPA (High Efficiency)", "Industrial/Commercial"])
+    
+    if st.button("Calculate Filtration Time"):
+        # Heuristic: Standard = 50 sqft/min, HEPA = 150 sqft/min
+        rate = 50 if filter_type == "Standard" else 150
+        time_to_clean = room_sqft / rate
+        st.write(f"Estimated time to scrub air in this room: **{time_to_clean:.1f} minutes**.")
+
+    st.markdown("---")
+    
+    # 5. Safe Exposure Budget
     st.markdown("### ⏳ Daily 'Safe Exposure' Budget")
     if current_aqi > 0:
         safe_hours = max(0, 800 / (float(current_aqi) * 1.5)) 
@@ -620,11 +639,6 @@ with tab3:
             st.warning("⚠️ **Caution.** Your inflammatory budget is depleting. Limit outdoor exercise.")
         else:
             st.error("🚫 **Alert.** Your inflammatory budget is low. Switch to indoor air protocol immediately.")
-
-    # Educational visual aid
-    st.caption("Reference: Biological impact visualization.")
-
-
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
