@@ -28,6 +28,8 @@ def add_heatmap_to_map(m, hotspots):
     HeatMap(hotspots, radius=20, blur=15).add_to(m)
     return m
 
+st.write(df_yearly.columns)
+
 
 # 1. Update Initialization
 # --- GEMINI INITIALIZATION ---
