@@ -500,6 +500,25 @@ with tab1:
             st.warning("Moderate resilience. Local conditions are stable; keep an eye on changing trends.")
         else:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
+
+st.markdown("---")
+    with st.expander("📊 View Advanced Atmospheric Telemetry"):
+        st.subheader("High-Density Environmental Metrics")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.write("Atmospheric Pressure (hPa)")
+            st.line_chart(df_yearly, x="year", y="pressure_hpa") 
+            
+        with col2:
+            st.write("Relative Humidity (%)")
+            st.line_chart(df_yearly, x="year", y="humidity")
+            
+        with col3:
+            st.write("Aerosol Optical Depth")
+            st.line_chart(df_yearly, x="year", y="aerosol_depth")
+            
+        st.caption("Data source: Historical telemetry nodes.")
         
 # --- TAB 2: ANALYTICS ---
 with tab2:
