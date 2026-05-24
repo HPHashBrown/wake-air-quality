@@ -573,13 +573,14 @@ with tab2:
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
     
-col_a, col_b = st.columns([1, 1])
+    # 1. Pollutant Deep Dive
+    col_a, col_b = st.columns([1, 1])
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
         with st.expander("PM2.5 (Fine Particulates)"):
             st.write("Particles <2.5μm. . These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
         with st.expander("PM10 (Coarse Particulates)"):
-            st.write("Particles <10μm. . These consist of dust, pollen, and mold. While larger, they cause significant irritation to the nose, throat, and upper airways.")
+            st.write("Particles <10μm. . These consist of dust, pollen, and mold. They cause significant irritation to the nose, throat, and upper airways.")
         with st.expander("Ozone (O3)"):
             st.write("Ground-level ozone acts as a pulmonary irritant, effectively causing 'sunburn' to the lung lining.")
         with st.expander("NO2 (Nitrogen Dioxide)"):
@@ -594,9 +595,9 @@ col_a, col_b = st.columns([1, 1])
 
     st.markdown("---")
     
-    # 2. Comparison Engine (Historical Context)
+    # 2. Comparison Engine
     st.markdown("#### 📊 Contextual Intelligence")
-    historical_avg = df_yearly["mean_pm25"].mean() # Simple historical average
+    historical_avg = df_yearly["mean_pm25"].mean()
     diff_from_avg = current_aqi - historical_avg
     st.write(f"Current levels are **{abs(diff_from_avg):.1f} units {'above' if diff_from_avg > 0 else 'below'}** the historical 5-year average.")
     
@@ -621,7 +622,6 @@ col_a, col_b = st.columns([1, 1])
     filter_type = st.selectbox("Air Purifier Efficiency", ["Standard", "HEPA (High Efficiency)", "Industrial/Commercial"])
     
     if st.button("Calculate Filtration Time"):
-        # Heuristic: Standard = 50 sqft/min, HEPA = 150 sqft/min
         rate = 50 if filter_type == "Standard" else 150
         time_to_clean = room_sqft / rate
         st.write(f"Estimated time to scrub air in this room: **{time_to_clean:.1f} minutes**.")
