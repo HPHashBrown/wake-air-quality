@@ -606,10 +606,8 @@ with tab3:
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
         with st.expander("PM2.5 (Fine Particulates)"):
-            st.write("Particles <2.5μm. 
+            st.write("Particles <2.5μm.) 
 
-[Image of the human respiratory system showing the bronchial tree]
-.")
             st.write("**Safe Limit:** < 12.0 μg/m³ (Annual mean) / < 35 μg/m³ (24-hour limit).")
             st.write("Levels above 35 μg/m³ are considered unhealthy for sensitive groups.")
         with st.expander("PM10 (Coarse Particulates)"):
