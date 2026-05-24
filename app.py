@@ -605,25 +605,25 @@ with tab3:
     col_a, col_b = st.columns([1, 1])
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
-with st.expander("PM2.5 (Fine Particulates)"):
-            st.write("Particles <2.5μm. .")
+        with st.expander("PM2.5 (Fine Particulates)"):
+            st.write("Particles <2.5μm. 
+
+[Image of the human respiratory system showing the bronchial tree]
+.")
             st.write("**Safe Limit:** < 12.0 μg/m³ (Annual mean) / < 35 μg/m³ (24-hour limit).")
             st.write("Levels above 35 μg/m³ are considered unhealthy for sensitive groups.")
-
         with st.expander("PM10 (Coarse Particulates)"):
             st.write("Particles <10μm. .")
             st.write("**Safe Limit:** < 150 μg/m³ (24-hour limit).")
             st.write("Exceeding this indicates high dust, smoke, or industrial particle concentrations.")
-
         with st.expander("Ozone (O3)"):
             st.write("Ground-level ozone acts as a pulmonary irritant.")
             st.write("**Safe Limit:** < 0.070 ppm (8-hour average).")
-            st.write("Levels above 0.070 ppm are associated with decreased lung function in healthy individuals.")
-
+            st.write("Levels above 0.070 ppm are associated with decreased lung function.")
         with st.expander("NO2 (Nitrogen Dioxide)"):
             st.write("A combustion byproduct that inflames airways.")
             st.write("**Safe Limit:** < 0.053 ppm (Annual mean) / < 0.100 ppm (1-hour limit).")
-            st.write("High levels often correlate with heavy traffic areas and combustion heating.")
+            st.write("High levels often correlate with heavy traffic areas.")
 
     with col_b:
         st.markdown("#### 🧬 Systemic Physiological Load")
@@ -634,7 +634,7 @@ with st.expander("PM2.5 (Fine Particulates)"):
 
     st.markdown("---")
     
-    # 2. Comparison Engine
+    # 2. Contextual Intelligence
     st.markdown("#### 📊 Contextual Intelligence")
     historical_avg = df_yearly["mean_pm25"].mean()
     diff_from_avg = current_aqi - historical_avg
