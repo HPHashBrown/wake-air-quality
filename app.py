@@ -501,6 +501,10 @@ with tab1:
         else:
             st.error("Low resilience detected. Conditions are stagnant and current pollutant levels are impactful.")
 
+
+    st.write("DEBUG: DataFrame columns are:", df_yearly.columns.tolist())
+st.write("DEBUG: DataFrame head is:", df_yearly.head())
+
     st.markdown("---")
     with st.expander("📊 View Advanced Atmospheric Telemetry"):
         st.subheader("High-Density Environmental Metrics")
