@@ -251,27 +251,40 @@ def get_nasa_climate_data(lat, lon):
 
 @st.cache_data(ttl=3600)
 def fetch_global_wildfire_data():
-    # FIRMS API v2 structure
-    base_url = "https://firms.modaps.eosdis.nasa.gov/api/country/csv"
-    # Change 'world' to 'USA'
-    url = f"{base_url}/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
+    # The clean URL without the API key inside it
+    url = "https://firms.modaps.eosdis.nasa.gov/api/country/csv"
+    
+    # Send the key and the region parameters as a dictionary
+    # This prevents the server from misinterpreting the URL structure
+    params = {
+        'api_key': FIRMS_API_KEY,
+        'area': 'USA',
+        'sensor': 'VIIRS_SNPP_NRT',
+        'day_range': '1'
+    }
     
     try:
-        response = requests.get(url, timeout=15)
+        # Construct the final URL via requests.get parameters
+        # This builds: .../csv/KEY/SENSOR/AREA/DAY_RANGE
+        # We manually build the path because FIRMS is picky about the order
+        final_url = f"{url}/{FIRMS_API_KEY}/VIIRS_SNPP_NRT/USA/1"
+        
+        response = requests.get(final_url, timeout=15)
+        
         if response.status_code == 200:
-            # Use StringIO to turn the raw text into a file-like object for pandas
             import io
             df = pd.read_csv(io.StringIO(response.text))
             if 'lat' in df.columns:
                 df = df.rename(columns={'lat': 'latitude', 'lon': 'longitude'})
             return df
         else:
-            st.error(f"NASA API Error: Received status {response.status_code}. Please check your API Key permissions.")
+            # If it still fails, the key might be completely inactive
+            st.error(f"NASA API Error: {response.status_code}. Key: {FIRMS_API_KEY[:5]}...")
             return pd.DataFrame()
+            
     except Exception as e:
         st.error(f"Connection failed: {e}")
         return pd.DataFrame()
-
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
