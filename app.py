@@ -80,20 +80,39 @@ if 'start_time' not in st.session_state:
 
 from openaq import OpenAQ
 
+@st.cache_data(ttl=3600)
 def get_real_pm25_data(lat, lon):
     try:
         client = OpenAQ(api_key=st.secrets["OPENAQ_API_KEY"])
         
-        # 1. Find locations near the coordinate
-        # The 'locations.list' method DOES accept 'coordinates' and 'radius'
+        # 1. Find sensors near the coordinate
         locations = client.locations.list(
             coordinates=(lat, lon),
             radius=25000,
-            limit=10 # Get a few nearby stations
+            parameter_ids=[1], # PM2.5 ID
+            limit=5
         )
-
-        real_data = get_real_pm25_data(st.session_state.map_center[0], st.session_state.map_center[1])
-        st.write(f"Data points found: {len(real_data)}") # <--- ADD THIS
+        
+        # Check if results exist
+        if not locations.results:
+            return []
+            
+        # 2. Extract sensor IDs
+        sensor_ids = [loc.id for loc in locations.results]
+        
+        # 3. Fetch measurements for those sensors
+        data = client.measurements.list(
+            location_ids=sensor_ids,
+            parameter_ids=[1],
+            limit=100
+        )
+        
+        # 4. Return formatted data
+        return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in data.results]
+        
+    except Exception as e:
+        # We don't want to show the full error to the user if it's just a rate limit
+        return []
         
         # 2. Extract IDs of the sensors found
         # (Assuming the SDK returns objects with an 'id' attribute)
