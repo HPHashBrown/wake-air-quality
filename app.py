@@ -19,6 +19,7 @@ import random
 import gspread
 from google.oauth2.service_account import Credentials
 from googletrans import Translator
+from prophet import Prophet
 
 
 # ============================================
@@ -217,10 +218,22 @@ selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 POLLUTANT_MAP = {"PM2.5": "pm2_5", "PM10": "pm10", "Ozone": "ozone", "NO2": "nitrogen_dioxide"}
 
 try:
-    from prophet import Prophet
     PROPHET_AVAILABLE = True
 except ImportError:
     PROPHET_AVAILABLE = False
+
+@st.cache_data(ttl=3600)
+def fetch_7day_forecast(lat, lon):
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi_max&timezone=auto&forecast_days=7"
+    try:
+        response = requests.get(url).json()
+        daily = response.get("daily", {})
+        return pd.DataFrame({
+            "date": pd.to_datetime(daily.get("time")),
+            "aqi": daily.get("us_aqi_max")
+        })
+    except:
+        return pd.DataFrame()
 
 @st.cache_data(show_spinner=True)
 def get_map_graph(lat1, lon1, lat2, lon2):
@@ -452,32 +465,18 @@ with st.spinner("Initializing Atmospheric Sensors..."):
     live_weather_raw = fetch_live_weather(35.7796, -78.6382)
     live_weather = live_weather_raw if live_weather_raw is not None else {}
 
-if PROPHET_AVAILABLE:
-    prophet_df = df_yearly.copy()
-    prophet_df['ds'] = pd.to_datetime(prophet_df['year'], format='%Y')
-    prophet_df = prophet_df.rename(columns={'mean_pm25': 'y'})
-    m = Prophet(yearly_seasonality=True)
-    m.fit(prophet_df)
-    future = m.make_future_dataframe(periods=10, freq='YS')
-    forecast = m.predict(future)
-    future_df = pd.DataFrame({
-        "year": forecast['ds'].dt.year,
-        "predicted_pm25": forecast['yhat'],
-        "yhat_lower": forecast['yhat_lower'],
-        "yhat_upper": forecast['yhat_upper']
-    })
-else:
-    X = df_yearly[["year"]]
-    y = df_yearly["mean_pm25"]
-    model = LinearRegression().fit(X, y)
-    future_years = np.arange(current_year, current_year + 11)
-    future_preds = model.predict(future_years.reshape(-1, 1))
-    future_df = pd.DataFrame({
-        "year": future_years, 
-        "predicted_pm25": future_preds,
-        "yhat_lower": future_preds - 1.5, 
-        "yhat_upper": future_preds + 1.5
-    })
+@st.cache_data(ttl=3600)
+def fetch_7day_forecast(lat, lon):
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi_max&timezone=auto&forecast_days=7"
+    try:
+        response = requests.get(url).json()
+        daily = response.get("daily", {})
+        return pd.DataFrame({
+            "date": pd.to_datetime(daily.get("time")),
+            "aqi": daily.get("us_aqi_max")
+        })
+    except:
+        return pd.DataFrame()
 
 # ============================================
 # MAIN UI LAYOUT
@@ -728,6 +727,30 @@ if 'map_center' in st.session_state:
         res_col2.success("✅ Exposure index within acceptable clinical range.")
         
     st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
+
+# --- 7-DAY FORECAST UI ---
+st.markdown("### 📅 7-Day Atmospheric Outlook")
+forecast_df = fetch_7day_forecast(curr_lat, curr_lon)
+
+if not forecast_df.empty:
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=forecast_df["date"], y=forecast_df["aqi"], 
+        mode="lines+markers", 
+        name="AQI Forecast",
+        line=dict(color="#00f2fe", width=4),
+        fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
+    ))
+    
+    fig.update_layout(
+        template="plotly_dark",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(t=30, b=30, l=30, r=30)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.warning("Forecast data currently unavailable.")
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
