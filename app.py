@@ -758,8 +758,11 @@ with tab3:
 
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
+    
+    # 1. Search Box with a layout wrapper
+    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
     city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
-
+    
     if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
@@ -767,21 +770,22 @@ with tab4:
             st.success(f"📍 Navigation locked to: {name}")
         else:
             st.error("Location not found.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Initialize map
+    # 2. Map Section
+    st.markdown("<div class='glass-card' style='padding:10px;'>", unsafe_allow_html=True)
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
-
-    # Marker for the current sensor hub
     folium.Marker(
         st.session_state.map_center, 
         tooltip="Active Sensor Hub",
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
-
-    # Render the map
+    
+    # Render map
     st_folium(m, width="100%", height=400)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Atmospheric Report
+    # 3. Atmospheric Report (Wrapped in styled columns)
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
@@ -791,9 +795,13 @@ with tab4:
         data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
         if data:
             col1, col2, col3 = st.columns(3)
-            col1.metric("US AQI", f"{data.get('us_aqi', 'N/A')}")
-            col2.metric(f"{active_pollutant_name}", f"{data.get(active_pollutant_key, 'N/A')}")
-            col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
+            # We wrap the metrics in your existing glass-card style
+            with col1:
+                st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{data.get('us_aqi', 'N/A')}</h3></div>", unsafe_allow_html=True)
+            with col2:
+                st.markdown(f"<div class='glass-card'><h5>{active_pollutant_name}</h5><h3>{data.get(active_pollutant_key, 'N/A')}</h3></div>", unsafe_allow_html=True)
+            with col3:
+                st.markdown(f"<div class='glass-card'><h5>Coordinates</h5><h5>{curr_lat:.2f}, {curr_lon:.2f}</h5></div>", unsafe_allow_html=True)
         else:
             st.error("Could not retrieve data for this node.")
 # --- TAB 5: SPACE INTEL ---
