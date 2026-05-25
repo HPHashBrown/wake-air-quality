@@ -753,45 +753,65 @@ with tab3:
         cols[3].markdown("[Climate Reality](https://www.climaterealityproject.org/)")
 
 with tab4:
-    st.markdown("### 🔍 Global Sensor Search")
-    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
+    st.markdown("### 🔍 Global Sensor Network")
     
-    if city_input:
-        lat, lon, name = get_city_coords(city_input)
-        if lat:
-            st.session_state.map_center = [lat, lon]
-            st.success(f"📍 Navigation locked to: {name}")
-        else:
-            st.error("Location not found.")
-            
-    # Initialize map
-    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+    # 1. Search Interface with Pollutant Toggle
+    col_search, col_pollutant = st.columns([3, 1])
     
-    # Marker for the current sensor hub
+    with col_search:
+        city_input = st.text_input("Search Location", placeholder="Enter City (e.g., Tokyo, Paris, Raleigh)...", key="city_input_field")
+    with col_pollutant:
+        # Allows switching the data being pulled dynamically
+        pollutant_selection = st.selectbox(
+            "Pollutant Layer", 
+            options=[('pm2_5', 'PM2.5'), ('pm10', 'PM10'), ('o3', 'Ozone'), ('no2', 'NO2')],
+            format_func=lambda x: x[1],
+            key="pollutant_selector"
+        )
+        st.session_state['selected_pollutant_key'] = pollutant_selection[0]
+        st.session_state['selected_pollutant_name'] = pollutant_selection[1]
+
+    if st.button("📡 Scan Region", use_container_width=True):
+        if city_input:
+            lat, lon, name = get_city_coords(city_input)
+            if lat:
+                st.session_state.map_center = [lat, lon]
+                st.success(f"📍 Node locked to: {name}")
+            else:
+                st.error("❌ Sensor node not found.")
+
+    # 2. Interactive Map Container
+    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
+    m = folium.Map(location=st.session_state.get('map_center', [35.7796, -78.6382]), zoom_start=8, tiles="CartoDB dark_matter")
+    
     folium.Marker(
-        st.session_state.map_center, 
+        st.session_state.get('map_center', [35.7796, -78.6382]), 
         tooltip="Active Sensor Hub",
-        icon=folium.Icon(color="blue", icon="info-sign")
+        icon=folium.Icon(color="blue", icon="satellite-dish", prefix="fa")
     ).add_to(m)
     
-    # Render the map
     st_folium(m, width="100%", height=400)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Atmospheric Report
-    st.markdown("### 📊 Atmospheric Report")
-    curr_lat, curr_lon = st.session_state.map_center
-    active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-    active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
+    # 3. Atmospheric Report (Live Data)
+    st.markdown("### 📊 Atmospheric Node Report")
+    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    active_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
+    active_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
     
-    with st.spinner(f"Fetching {active_pollutant_name} data..."):
-        data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
+    with st.spinner(f"Calibrating {active_name} sensors..."):
+        data = fetch_global_aqi(curr_lat, curr_lon, active_key)
+        
         if data:
-            col1, col2, col3 = st.columns(3)
-            col1.metric("US AQI", f"{data.get('us_aqi', 'N/A')}")
-            col2.metric(f"{active_pollutant_name}", f"{data.get(active_pollutant_key, 'N/A')}")
-            col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{data.get('us_aqi', 'N/A')}</h3></div>", unsafe_allow_html=True)
+            with c2:
+                st.markdown(f"<div class='glass-card'><h5>{active_name} Level</h5><h3>{data.get(active_key, 'N/A')} µg/m³</h3></div>", unsafe_allow_html=True)
+            with c3:
+                st.markdown(f"<div class='glass-card'><h5>Node Coord</h5><h3>{curr_lat:.2f}, {curr_lon:.2f}</h3></div>", unsafe_allow_html=True)
         else:
-            st.error("Could not retrieve data for this node.")
+            st.warning("⚠️ Real-time data stream offline for this node.")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
