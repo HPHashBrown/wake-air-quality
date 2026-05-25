@@ -16,3 +16,4 @@ osmnx
 networkx
 google-genai
 openaq
+gspread
