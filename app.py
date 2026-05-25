@@ -544,31 +544,6 @@ with tab1:
         st.warning("Recommendation: Engage indoor air purification protocols immediately.")
     else:
         st.success(f"✅ AQI ({current_aqi}) is within your specified safety threshold ({alert_threshold}).")
-    
-    # 4. PM2.5 Long-term Trajectory (Fixed Layout)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
-
-    forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
-    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
-
-    fig.add_trace(go.Scatter(
-        x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), 
-        y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), 
-        fill='toself', fillcolor='rgba(255, 8, 68, 0.1)', line=dict(color='rgba(255,255,255,0)'), 
-        showlegend=True, name="Confidence"
-    ))
-
-    fig.update_layout(
-        title="PM2.5 Long-Term Atmospheric Trajectory", 
-        template="plotly_dark", 
-        plot_bgcolor="rgba(0,0,0,0)", 
-        paper_bgcolor="rgba(0,0,0,0)", 
-        hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="center", x=0.5),
-        margin=dict(t=100, l=40, r=40, b=40)
-    )
-    st.plotly_chart(fig, use_container_width=True)
 
     # 5. Clinical Advisory
     st.markdown("---")
@@ -728,29 +703,32 @@ if 'map_center' in st.session_state:
         
     st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
 
-# --- 7-DAY FORECAST UI ---
-st.markdown("### 📅 7-Day Atmospheric Outlook")
-forecast_df = fetch_7day_forecast(curr_lat, curr_lon)
+# 4. 7-Day Atmospheric Outlook
+    st.markdown("### 📅 7-Day Atmospheric Outlook")
+    # Call your new API function (make sure it's defined at the top of your file)
+    forecast_df = fetch_7day_forecast(curr_lat, curr_lon)
 
-if not forecast_df.empty:
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=forecast_df["date"], y=forecast_df["aqi"], 
-        mode="lines+markers", 
-        name="AQI Forecast",
-        line=dict(color="#00f2fe", width=4),
-        fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
-    ))
-    
-    fig.update_layout(
-        template="plotly_dark",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=30, b=30, l=30, r=30)
-    )
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.warning("Forecast data currently unavailable.")
+    if not forecast_df.empty:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=forecast_df["date"], y=forecast_df["aqi"], 
+            mode="lines+markers", 
+            name="AQI Forecast",
+            line=dict(color="#00f2fe", width=4),
+            fill='tozeroy', 
+            fillcolor='rgba(0, 242, 254, 0.1)'
+        ))
+        
+        fig.update_layout(
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            hovermode="x unified",
+            margin=dict(t=30, b=30, l=30, r=30)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("Forecast data currently unavailable.")
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
