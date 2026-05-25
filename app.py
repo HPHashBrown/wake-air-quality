@@ -15,6 +15,7 @@ from google import genai
 from folium.plugins import HeatMap
 import openaq
 import pydeck as pdk
+import random
 
 
 # ============================================
@@ -817,11 +818,39 @@ with tab6:
         m.fit_bounds(data['route'])
         st_folium(m, width="100%", height=400)
 
-        st.markdown("---")
+st.markdown("---")
         st.markdown("### 🩺 Daily Clinical Briefing")
-        pm25_est = round(aqi_val * 0.4, 2)
-        with st.spinner("Analyzing physiological impact..."):
-            briefing = get_ai_health_briefing(pm25_est, aqi_val)
-            st.info(briefing)
-            st.caption("Biological Context:")
-            st.write("Exposure to fine particulates (PM2.5) can trigger systemic oxidative stress, as these particles cross the alveolar-capillary barrier.")
+
+        # Three versions for each category
+        good_advice = [
+            "✅ **Excellent Air Quality.** Perfect conditions for cycling. Enjoy the fresh air!",
+            "✅ **Air quality is optimal.** Your respiratory system will appreciate this clean commute.",
+            "✅ **Great conditions!** No restrictions on your outdoor activity today."
+        ]
+        
+        mid_advice = [
+            "⚠️ **Moderate Air Quality.** Consider a face mask if you are sensitive to particulates.",
+            "⚠️ **Caution:** AQI is mid-range. Limit high-intensity breathing during your commute.",
+            "⚠️ **Moderate levels detected.** If you have asthma or lung conditions, take it easy today."
+        ]
+        
+        bad_advice = [
+            "🚨 **High Risk.** The air quality is poor today. We strongly recommend choosing an indoor commute.",
+            "🚨 **Warning:** High particulate levels detected. Strenuous outdoor exercise is not advised.",
+            "🚨 **Alert:** Exposure today could lead to respiratory irritation. Please stick to indoor environments."
+        ]
+
+        # Select the response based on AQI
+        if aqi_val < 50:
+            st.success(random.choice(good_advice))
+        elif 50 <= aqi_val < 100:
+            st.warning(random.choice(mid_advice))
+        else:
+            st.error(random.choice(bad_advice))
+
+        st.markdown("#### Biological Context:")
+        st.write("""
+        Fine particulate matter (PM2.5) bypasses natural airway defenses, settling deep in the 
+        alveoli where gas exchange occurs. Once they cross this barrier, they can cause 
+        systemic inflammation throughout the body.
+        """)
