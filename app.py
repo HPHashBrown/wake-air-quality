@@ -32,6 +32,21 @@ def add_heatmap_to_map(m, hotspots):
     HeatMap(hotspots, radius=20, blur=15).add_to(m)
     return m
 
+def get_db_client():
+    creds_dict = st.secrets["gcp_service_account"]
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    client = gspread.authorize(creds)
+    return client.open("AirQualityHazards").sheet1
+
+def get_global_hazards():
+    try:
+        sheet = get_db_client()
+        return sheet.get_all_records()
+    except Exception as e:
+        st.error(f"Error fetching hazards: {e}")
+        return []
+
 
 # Ensure this is defined exactly once at the top of your script
 df_yearly = pd.DataFrame({
@@ -264,26 +279,6 @@ def get_global_fire_layer():
         f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Thermal_Anomalies_375m/default/{datetime.now().strftime('%Y-%m-%d')}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png",
         opacity=0.8
     )
-
-import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
-
-def get_db_client():
-    # 1. Load the secrets dictionary from your Streamlit dashboard
-    creds_dict = st.secrets["gcp_service_account"]
-    
-    # 2. Define the scope
-    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    
-    # 3. Create credentials object from the dictionary
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    
-    # 4. Authorize gspread
-    client = gspread.authorize(creds)
-    
-    # 5. Connect to your sheet
-    return client.open("AirQualityHazards").sheet1
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
