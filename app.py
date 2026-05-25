@@ -836,41 +836,45 @@ with tab3:
         cols[2].markdown("[Lung Association](https://www.lung.org/)")
         cols[3].markdown("[Climate Reality](https://www.climaterealityproject.org/)")
 
-with tab4:
-    st.markdown("### 🔍 Global Sensor Search")
-    
-    # Ensure map_center is initialized globally (outside tabs)
-    # if 'map_center' not in st.session_state: st.session_state.map_center = [35.7796, -78.6382]
+st.markdown("### 🔍 Global Sensor Search")
+city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
 
-    # Use a unique key specifically for this tab
-    city_input = st.text_input(
-        "Search Location (e.g., Tokyo, Raleigh, Paris)", 
-        key="tab4_city_input_field"  # <-- UNIQUE KEY
-    )
+if city_input:
+    lat, lon, name = get_city_coords(city_input)
+    if lat:
+        st.session_state.map_center = [lat, lon]
+        st.success(f"📍 Navigation locked to: {name}")
+    else:
+        st.error("Location not found.")
 
-    if city_input:
-        lat, lon, name = get_city_coords(city_input)
-        if lat:
-            st.session_state.map_center = [lat, lon]
-            st.success(f"📍 Navigation locked to: {name}")
-        else:
-            st.error("Location not found.")
+# Initialize map
+m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
 
-    # Render map
-    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
-    folium.Marker(
-        st.session_state.map_center, 
-        tooltip="Active Sensor Hub",
-        icon=folium.Icon(color="blue", icon="info-sign")
-    ).add_to(m)
-    
-    # ST_FOLIUM is a component, it doesn't need a key unless you interact with it heavily,
-    # but if you get an error, add key="tab4_map"
-    st_folium(m, width="100%", height=400, key="tab4_folium_map")
+# Marker for the current sensor hub
+folium.Marker(
+    st.session_state.map_center, 
+    tooltip="Active Sensor Hub",
+    icon=folium.Icon(color="blue", icon="info-sign")
+).add_to(m)
 
-    # Atmospheric Report
-    st.markdown("### 📊 Atmospheric Report")
-    # ... rest of your logic ...
+# Render the map
+st_folium(m, width="100%", height=400)
+
+# Atmospheric Report
+st.markdown("### 📊 Atmospheric Report")
+curr_lat, curr_lon = st.session_state.map_center
+active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
+active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
+
+with st.spinner(f"Fetching {active_pollutant_name} data..."):
+    data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
+    if data:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("US AQI", f"{data.get('us_aqi', 'N/A')}")
+        col2.metric(f"{active_pollutant_name}", f"{data.get(active_pollutant_key, 'N/A')}")
+        col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
+    else:
+        st.error("Could not retrieve data for this node.")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
