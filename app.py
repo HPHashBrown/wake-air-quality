@@ -489,6 +489,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 
 # --- TAB 1: OVERVIEW ---
 
+# --- TAB 1: OVERVIEW ---
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
@@ -538,7 +539,8 @@ with tab1:
     with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
     with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
 
-if current_aqi > alert_threshold:
+    # --- ALERT THRESHOLD LOGIC (NOW PROPERLY INDENTED) ---
+    if current_aqi > alert_threshold:
         st.error(f"⚠️ ALERT: Current AQI ({current_aqi}) exceeds your defined threshold of {alert_threshold}!")
         st.warning("Recommendation: Engage indoor air purification protocols immediately.")
     else:
@@ -558,7 +560,6 @@ if current_aqi > alert_threshold:
         showlegend=True, name="Confidence"
     ))
 
-    # Legend fixed to horizontal top to prevent overlap
     fig.update_layout(
         title="PM2.5 Long-Term Atmospheric Trajectory", 
         template="plotly_dark", 
