@@ -730,7 +730,7 @@ with tab3:
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
 
-    # 1. ADDED SEARCH BAR HERE
+    # 1. Search Bar
     city_input = st.text_input(
         "Search Location (e.g., Tokyo, Raleigh)", 
         placeholder="Enter city name...", 
@@ -748,15 +748,33 @@ with tab4:
     # 2. Map Rendering
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     
+    # Active Sensor Marker
     folium.Marker(
         st.session_state.map_center, 
         tooltip="Active Sensor Hub",
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
+
+    # 3. Community Hazard Reporting
+    st.subheader("🚩 Community Hazards")
+    if 'hazard_reports' not in st.session_state:
+        st.session_state.hazard_reports = []
+
+    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
+        st.session_state.hazard_reports.append(st.session_state.map_center)
+        st.toast("Report submitted! Your community thanks you.", icon="✅")
+
+    # Draw Hazard Pins
+    for report in st.session_state.hazard_reports:
+        folium.Marker(
+            report,
+            popup="Community Reported Hazard",
+            icon=folium.Icon(color='red', icon='warning-sign')
+        ).add_to(m)
     
     st_folium(m, width="100%", height=400, key="tab4_map")
 
-    # 3. Atmospheric Report
+    # 4. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
