@@ -709,17 +709,12 @@ if 'map_center' in st.session_state:
         
     st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
 
-# 4. 7-Day Atmospheric Outlook
-    st.markdown("### 📅 7-Day Atmospheric Outlook")
-
-    # Ensure forecast data exists in session state; default to Raleigh if not
-    if 'forecast_data' not in st.session_state:
-        st.session_state.forecast_data = fetch_7day_forecast(curr_lat, curr_lon)
+st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-    forecast_df = st.session_state.forecast_data
+    # This now reads from the state that gets updated when the button is pressed
+    forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
     # --- FALLBACK LOGIC ---
-    # If the API returns nothing, we use mock data to ensure the UI doesn't break
     if forecast_df.empty:
         forecast_df = pd.DataFrame({
             "date": pd.date_range(start=datetime.now(), periods=7),
@@ -742,12 +737,9 @@ if 'map_center' in st.session_state:
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         hovermode="x unified",
-        margin=dict(t=30, b=30, l=30, r=30),
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)')
+        margin=dict(t=30, b=30, l=30, r=30)
     )
     st.plotly_chart(fig, use_container_width=True)
-
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
