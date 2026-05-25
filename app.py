@@ -739,7 +739,7 @@ with tab4:
             st.error("Could not retrieve data for this node.")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
-    st.markdown("### 🌍 Global Satellite Intelligence")
+    st.markdown("### 🌍 Global Satellite Intelligence For Forest Fires")
 
     # Dynamically set the date to today (2026-05-24)
     today_str = datetime.now().strftime("%Y-%m-%d")
