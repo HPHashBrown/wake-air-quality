@@ -454,78 +454,104 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-    # 1. Location Search Input
-    st.markdown("### 🌍 Regional Atmospheric Analysis")
+    # 1. Location Search Input (High-Tech Console Vibe)
+    st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
+    
+    # Colorful gradient container for the search bar
+    st.markdown("<div style='background: linear-gradient(90deg, rgba(16,25,43,1) 0%, rgba(11,15,25,1) 100%); padding: 25px; border-radius: 15px; border-left: 5px solid #00f2fe; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.15);'>", unsafe_allow_html=True)
     col_search, col_btn = st.columns([4, 1])
     with col_search:
-        city_input = st.text_input("Enter City/Country for live telemetry", "Raleigh", key="tab1_city")
+        city_input = st.text_input("📍 Target Coordinates (City/Region)", "Raleigh", key="tab1_city")
     with col_btn:
-        st.write("##") # Spacer to align with input box
-        if st.button("Search"):
+        st.write("##") # Spacer
+        if st.button("📡 Scan Region", use_container_width=True):
             lat, lon, name = get_city_coords(city_input)
             if lat:
                 st.session_state.map_center = [lat, lon]
-                # Update session state with new data
                 st.session_state.current_data = fetch_global_aqi(lat, lon)
                 st.session_state.current_weather = fetch_live_weather(lat, lon)
                 st.rerun()
             else:
-                st.error("Location not found.")
+                st.error("❌ Target lost. Coordinates not found.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # 2. Retrieve Data (Default to Raleigh if no search performed)
+    # 2. Retrieve Data
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
     current_aqi = float(data.get('us_aqi', 0))
 
-    # 3. Metrics Display
+    # Dynamic Color Logic for AQI
+    if current_aqi <= 50:
+        aqi_color = "#10b981" # Neon Emerald
+        status_text = "OPTIMAL"
+    elif current_aqi <= 100:
+        aqi_color = "#f59e0b" # Vibrant Amber
+        status_text = "MODERATE"
+    elif current_aqi <= 150:
+        aqi_color = "#f97316" # Warning Orange
+        status_text = "SENSITIVE"
+    else:
+        aqi_color = "#ef4444" # Crimson Red
+        status_text = "HAZARDOUS"
+
+    # 3. Metrics Display (Glowing Glass-card UI)
     m1, m2, m3, m4 = st.columns(4)
     with m1:
-        st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{current_aqi}</h3></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}; text-shadow: 0 0 15px {aqi_color}55;'>{current_aqi}</h3><span style='color:{aqi_color}'>● {status_text}</span></div>", unsafe_allow_html=True)
     with m2:
         val = f"{weather.get('temperature_2m', 'N/A')}°C"
-        st.markdown(f"<div class='glass-card'><h5>Thermal State</h5><h3>{val}</h3><span>Active Node</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Thermal State</h5><h3 style='color:#fbbf24; text-shadow: 0 0 15px rgba(251, 191, 36, 0.4);'>{val}</h3><span>Active Node</span></div>", unsafe_allow_html=True)
     with m3:
         val = f"{weather.get('wind_speed_10m', 'N/A')} km/h"
-        st.markdown(f"<div class='glass-card'><h5>Wind Velocity</h5><h3>{val}</h3><span>Dispersion Rate</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind Velocity</h5><h3 style='color:#a78bfa; text-shadow: 0 0 15px rgba(167, 139, 250, 0.4);'>{val}</h3><span>Dispersion Rate</span></div>", unsafe_allow_html=True)
     with m4:
         val = f"{weather.get('wind_direction_10m', 'N/A')}°"
-        st.markdown(f"<div class='glass-card'><h5>Vector Heading</h5><h3>{val}</h3><span>Atmospheric Drift</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Vector Heading</h5><h3 style='color:#38bdf8; text-shadow: 0 0 15px rgba(56, 189, 248, 0.4);'>{val}</h3><span>Atmospheric Drift</span></div>", unsafe_allow_html=True)
 
-    # 4. Long-term Trajectory Graph
+    # 4. Long-term Trajectory Graph (Upgraded with neon accents)
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded Telemetry", line=dict(color="#00f2fe", width=4), marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#00f2fe"))))
+    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded Telemetry", line=dict(color="#00f2fe", width=4), marker=dict(size=10, color="#0b0f19", line=dict(width=3, color="#00f2fe"))))
     forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
-    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Algorithmic Forecast", line=dict(color="#f87171", width=4, dash="dot"), marker=dict(size=8, color="#ffffff", line=dict(width=2, color="#f87171"))))
-    fig.add_trace(go.Scatter(x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), fill='toself', fillcolor='rgba(248, 113, 113, 0.15)', line=dict(color='rgba(255,255,255,0)'), hoverinfo="skip", showlegend=True, name="AI Confidence Interval"))
-    fig.update_layout(title="PM2.5 Long-Term Atmospheric Trajectory", template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", hovermode="x unified")
+    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Algorithmic Forecast", line=dict(color="#ff0844", width=4, dash="dot"), marker=dict(size=10, color="#0b0f19", line=dict(width=3, color="#ff0844"))))
+    fig.add_trace(go.Scatter(x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), fill='toself', fillcolor='rgba(255, 8, 68, 0.15)', line=dict(color='rgba(255,255,255,0)'), hoverinfo="skip", showlegend=True, name="AI Confidence Interval"))
+    fig.update_layout(title="PM2.5 Long-Term Atmospheric Trajectory", template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", hovermode="x unified", legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01), margin=dict(l=20, r=20, t=50, b=20))
     st.plotly_chart(fig, use_container_width=True)
 
-    # 5. Health Advisory
+    # 5. Clinical Health Advisory 
     st.markdown("---")
-    st.subheader("🩺 Public Health Advisory")
-    if current_aqi <= 50:
-        st.success("✅ **Air Quality is Good.**")
-    elif current_aqi <= 100:
-        st.warning("⚠️ **Air Quality is Moderate.**")
-    elif current_aqi <= 150:
-        st.error("🚫 **Unhealthy for Sensitive Groups.**")
-    else:
-        st.error("🚨 **Health Alert.**")
+    st.subheader("🩺 Clinical Public Health & Neuro-Respiratory Advisory")
+    adv_col1, adv_col2 = st.columns([1, 2])
+    
+    with adv_col1:
+        # A massive, colorful typographic display for the AQI number
+        st.markdown(f"<div style='text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px;'><h1 style='color: {aqi_color}; font-size: 72px; margin: 0; text-shadow: 0 0 20px {aqi_color}66;'>{current_aqi}</h1><p style='color: #8b9bb4; font-size: 16px; text-transform: uppercase; letter-spacing: 2px;'>Current US AQI</p></div>", unsafe_allow_html=True)
+        
+    with adv_col2:
+        if current_aqi <= 50:
+            st.success("✅ **Air Quality is Optimal.**\n\nSystemic homeostasis is maintained. Minimal respiratory or neuro-inflammatory stress detected. Ideal conditions for outdoor activities.")
+        elif current_aqi <= 100:
+            st.warning("⚠️ **Air Quality is Moderate.**\n\nAcceptable conditions, but highly sensitive individuals may experience minor airway irritation or mild oxidative stress.")
+        elif current_aqi <= 150:
+            st.error("🚫 **Unhealthy for Sensitive Groups.**\n\nElevated particulate load. Risk of systemic inflammatory response and potential disruption to respiratory efficiency.")
+        else:
+            st.error("🚨 **Critical Health Alert.**\n\nHigh atmospheric toxicity. Severe risk of deep-lung particulate deposition. Strict indoor protocol recommended.")
 
-    # 6. Resilience Score
+    # 6. Environmental Resilience Score
     resilience_val = calculate_resilience_score(current_aqi, weather.get('wind_speed_10m', 0), weather.get('relative_humidity_2m', 50))
     st.markdown("---")
+    st.subheader("🛡️ Environmental Resilience Index")
     col_r1, col_r2 = st.columns([1, 3])
     with col_r1:
-        st.metric("Resilience Score", f"{resilience_val}/100")
+        # Added a dynamic delta to show how far above/below average the resilience is
+        st.metric("Resilience Score", f"{resilience_val}/100", delta=f"{resilience_val - 50} from baseline", delta_color="normal" if resilience_val >= 50 else "inverse")
     with col_r2:
         if resilience_val > 80:
-            st.success("The environment is highly resilient.")
+            st.info("🟢 **High Resilience:** The local environment shows excellent dispersion mechanics, preventing pollutant stagnation.")
         elif resilience_val > 50:
-            st.warning("Moderate resilience.")
+            st.info("🟡 **Moderate Resilience:** Average atmospheric drift. Pollutants may accumulate slightly depending on local emissions.")
         else:
-            st.error("Low resilience detected.")
+            st.info("🔴 **Low Resilience:** Stagnant atmospheric conditions. High risk of rapid localized pollutant accumulation.")
 
     # 7. Advanced Telemetry Expander
     st.markdown("---")
@@ -536,19 +562,18 @@ with tab1:
         "aerosol_depth": [0.12, 0.15, 0.10, 0.13, 0.09, 0.11]
     })
 
-    with st.expander("📊 View Advanced Atmospheric Telemetry"):
-        st.subheader("High-Density Environmental Metrics")
+    with st.expander("📊 View Advanced Atmospheric Bio-Telemetry"):
+        st.write("Modulations in these metrics directly correlate to atmospheric particulate dispersion rates.")
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.write("Atmospheric Pressure (hPa)")
-            st.line_chart(plot_df, x="year", y="pressure_hpa") 
+            st.markdown("**Atmospheric Pressure (hPa)**")
+            st.line_chart(plot_df, x="year", y="pressure_hpa", color="#fbbf24") 
         with col2:
-            st.write("Relative Humidity (%)")
-            st.line_chart(plot_df, x="year", y="humidity")
+            st.markdown("**Relative Humidity (%)**")
+            st.line_chart(plot_df, x="year", y="humidity", color="#38bdf8")
         with col3:
-            st.write("Aerosol Optical Depth")
-            st.line_chart(plot_df, x="year", y="aerosol_depth")
-        st.caption("Data source: Historical telemetry nodes.")
+            st.markdown("**Aerosol Optical Depth**")
+            st.line_chart(plot_df, x="year", y="aerosol_depth", color="#a78bfa")
         
 # --- TAB 2: ANALYTICS ---
 with tab2:
