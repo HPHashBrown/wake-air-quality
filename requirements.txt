@@ -17,3 +17,4 @@ networkx
 google-genai
 openaq
 gspread
+oauth2client
