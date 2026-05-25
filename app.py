@@ -47,7 +47,17 @@ def get_db_client():
 def get_global_hazards():
     try:
         sheet = get_db_client()
-        return sheet.get_all_records()
+        # Ensure we are calling the method correctly to get the data
+        data = sheet.get_all_records()
+        
+        # Add this check to debug what exactly is coming back
+        if isinstance(data, list):
+            return data
+        else:
+            # If it's a response object, the sheet might be empty or improperly accessed
+            st.warning(f"Data returned was not a list: {type(data)}")
+            return []
+            
     except Exception as e:
         st.error(f"Error fetching hazards: {e}")
         return []
