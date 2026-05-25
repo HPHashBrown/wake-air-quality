@@ -25,19 +25,6 @@ from googletrans import Translator
 # INITIALIZATION & STATE
 # ============================================
 
-from deep_translator import GoogleTranslator
-
-# Function to translate
-def get_text(text, lang):
-    if lang == "English":
-        return text
-    # Map friendly names to language codes
-    code_map = {"Spanish": "es", "French": "fr", "German": "de"}
-    return GoogleTranslator(source='en', target=code_map[lang]).translate(text)
-
-# Usage
-lang = st.sidebar.selectbox("Language", ["English", "Spanish", "French"])
-st.title(get_text("Wake Air Quality Dashboard", lang))
 
 def create_base_map(lat, lon, zoom=12):
     return folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB dark_matter")
