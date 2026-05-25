@@ -531,12 +531,10 @@ with col_btn:
                 else:
                     st.error("❌ Target lost.")
 
-    # 2. State Retrieval
-    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
     current_aqi = float(data.get('us_aqi', 0))
-
     # Dynamic UI colors
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
