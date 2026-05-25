@@ -226,14 +226,18 @@ except ImportError:
 def fetch_7day_forecast(lat, lon):
     url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi_max&timezone=auto&forecast_days=7"
     try:
-        response = requests.get(url).json()
-        daily = response.get("daily", {})
-        return pd.DataFrame({
-            "date": pd.to_datetime(daily.get("time")),
-            "aqi": daily.get("us_aqi_max")
-        })
-    except:
-        return pd.DataFrame()
+        response = requests.get(url, timeout=5) # Added timeout
+        if response.status_code == 200:
+            data = response.json()
+            daily = data.get("daily", {})
+            if "time" in daily and "us_aqi_max" in daily:
+                return pd.DataFrame({
+                    "date": pd.to_datetime(daily["time"]),
+                    "aqi": daily["us_aqi_max"]
+                })
+        return pd.DataFrame() # Returns empty if API fails
+    except Exception:
+        return pd.DataFrame() # Returns empty if connection fails
 
 @st.cache_data(show_spinner=True)
 def get_map_graph(lat1, lon1, lat2, lon2):
