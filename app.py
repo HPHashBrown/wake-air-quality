@@ -713,28 +713,26 @@ if 'map_center' in st.session_state:
         
     st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
 
-# 4. 7-Day Atmospheric Outlook
-    st.markdown("### 📅 7-Day Atmospheric Outlook")
+st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-    # Ensure this starts exactly under the 'st' in 'st.markdown' above
+    # Retrieve forecast from state
     forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
-    # --- FALLBACK LOGIC ---
+    # Fallback Logic
     if forecast_df.empty:
         forecast_df = pd.DataFrame({
             "date": pd.date_range(start=datetime.now(), periods=7),
             "aqi": [45, 52, 60, 58, 42, 38, 40]
         })
 
-    # --- FORECAST PLOTTING ---
+    # Plotting
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=forecast_df["date"], y=forecast_df["aqi"], 
         mode="lines+markers", 
         name="AQI Forecast",
         line=dict(color="#00f2fe", width=4),
-        fill='tozeroy', 
-        fillcolor='rgba(0, 242, 254, 0.1)'
+        fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
     ))
     
     fig.update_layout(
@@ -745,14 +743,6 @@ if 'map_center' in st.session_state:
         margin=dict(t=30, b=30, l=30, r=30)
     )
     st.plotly_chart(fig, use_container_width=True)
-
-# 4. 7-Day Atmospheric Outlook
-    st.markdown("### 📅 7-Day Atmospheric Outlook")
-    
-    # DEBUG: See what the code is thinking
-    # st.write(f"Lat being used: {curr_lat}") 
-
-    forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
     
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
