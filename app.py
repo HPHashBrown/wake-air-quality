@@ -538,6 +538,12 @@ with tab1:
     with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
     with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
 
+if current_aqi > alert_threshold:
+        st.error(f"⚠️ ALERT: Current AQI ({current_aqi}) exceeds your defined threshold of {alert_threshold}!")
+        st.warning("Recommendation: Engage indoor air purification protocols immediately.")
+    else:
+        st.success(f"✅ AQI ({current_aqi}) is within your specified safety threshold ({alert_threshold}).")
+    
     # 4. PM2.5 Long-term Trajectory (Fixed Layout)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
