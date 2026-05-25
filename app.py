@@ -514,18 +514,22 @@ with tab1:
         col_search, col_btn = st.columns([4, 1])
         with col_search:
             city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
-        with col_btn:
+with col_btn:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
+                    # Update all session state variables at once
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon)
                     st.session_state.current_weather = fetch_live_weather(lat, lon)
+                    
+                    # FORCE a fresh fetch for the forecast
                     st.session_state.forecast_data = fetch_7day_forecast(lat, lon)
+                    
+                    # Force the whole app to re-run
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
@@ -741,6 +745,15 @@ if 'map_center' in st.session_state:
         margin=dict(t=30, b=30, l=30, r=30)
     )
     st.plotly_chart(fig, use_container_width=True)
+
+# 4. 7-Day Atmospheric Outlook
+    st.markdown("### 📅 7-Day Atmospheric Outlook")
+    
+    # DEBUG: See what the code is thinking
+    # st.write(f"Lat being used: {curr_lat}") 
+
+    forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
+    
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
