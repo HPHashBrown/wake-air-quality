@@ -493,6 +493,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 # --- TAB 1: OVERVIEW ---
+# --- TAB 1: OVERVIEW ---
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
@@ -514,38 +515,36 @@ with tab1:
         col_search, col_btn = st.columns([4, 1])
         with col_search:
             city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
-with col_btn:
+        with col_btn:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
-                    # Update all session state variables at once
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon)
                     st.session_state.current_weather = fetch_live_weather(lat, lon)
-                    
-                    # FORCE a fresh fetch for the forecast
                     st.session_state.forecast_data = fetch_7day_forecast(lat, lon)
-                    
-                    # Force the whole app to re-run
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    # 2. State Retrieval
+    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
     current_aqi = float(data.get('us_aqi', 0))
+
     # Dynamic UI colors
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 3. Metrics Display (Glowing Glass-card UI)
+    # 3. Metrics Display
     m1, m2, m3, m4 = st.columns(4)
     with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
     with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
     with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
     with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
 
-    # --- ALERT THRESHOLD LOGIC (NOW PROPERLY INDENTED) ---
+    # 4. Alert Threshold Logic
     if current_aqi > alert_threshold:
         st.error(f"⚠️ ALERT: Current AQI ({current_aqi}) exceeds your defined threshold of {alert_threshold}!")
         st.warning("Recommendation: Engage indoor air purification protocols immediately.")
@@ -562,44 +561,6 @@ curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
         if current_aqi <= 50: st.success("✅ **Air Quality is Optimal.** Ideal conditions for outdoor activities.")
         elif current_aqi <= 100: st.warning("⚠️ **Air Quality is Moderate.** Sensitive individuals should limit prolonged exertion.")
         else: st.error("🚨 **High Toxicity Detected.** Deep-lung particulate risk. Indoor protocols advised.")
-
-    # 6. Environmental Resilience Index
-    resilience_val = calculate_resilience_score(current_aqi, weather.get('wind_speed_10m', 0), weather.get('relative_humidity_2m', 50))
-    st.markdown("---")
-    st.subheader("🛡️ Environmental Resilience Index")
-    col_r1, col_r2 = st.columns([1, 3])
-    with col_r1:
-        st.metric("Resilience Score", f"{resilience_val}/100", delta=f"{resilience_val - 50} from baseline", delta_color="normal" if resilience_val >= 50 else "inverse")
-    with col_r2:
-        if resilience_val > 80:
-            st.info("🟢 **High Resilience:** Excellent atmospheric dispersion preventing pollutant stagnation.")
-        elif resilience_val > 50:
-            st.info("🟡 **Moderate Resilience:** Average atmospheric drift; pollutants may accumulate based on local emissions.")
-        else:
-            st.info("🔴 **Low Resilience:** Stagnant atmospheric conditions. High risk of rapid localized accumulation.")
-
-    # 7. Advanced Telemetry Expander
-    st.markdown("---")
-    plot_df = pd.DataFrame({
-        "year": [2018, 2019, 2020, 2021, 2022, 2023],
-        "pressure_hpa": [1012, 1015, 1010, 1013, 1018, 1011],
-        "humidity": [65, 72, 60, 68, 62, 70],
-        "aerosol_depth": [0.12, 0.15, 0.10, 0.13, 0.09, 0.11]
-    })
-
-    with st.expander("📊 View Advanced Atmospheric Bio-Telemetry"):
-        st.write("Modulations in these metrics directly correlate to atmospheric particulate dispersion rates.")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown("**Atmospheric Pressure (hPa)**")
-            st.line_chart(plot_df, x="year", y="pressure_hpa", color="#fbbf24") 
-        with col2:
-            st.markdown("**Relative Humidity (%)**")
-            st.line_chart(plot_df, x="year", y="humidity", color="#38bdf8")
-        with col3:
-            st.markdown("**Aerosol Optical Depth**")
-            st.line_chart(plot_df, x="year", y="aerosol_depth", color="#a78bfa")
-
 # --- TAB 2: ANALYTICS ---
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
