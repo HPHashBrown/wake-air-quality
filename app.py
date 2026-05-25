@@ -688,9 +688,7 @@ with tab3:
 
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
-    
-    # 1. Search Interface
-    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh)", key="tab4_city_search")
+
 
     if city_input:
         lat, lon, name = get_city_coords(city_input)
@@ -699,36 +697,42 @@ with tab4:
             st.success(f"📍 Navigation locked to: {name}")
         else:
             st.error("Location not found.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # 2. Render Map
+    
+    # Using the current session_state (Defaults to Raleigh if not changed)
+    # Initialize map
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
-    folium.Marker(st.session_state.map_center, tooltip="Active Sensor Hub").add_to(m)
-    st_folium(m, width="100%", height=400, key="tab4_map_render")
+    
 
-    # 3. Dynamic Atmospheric Report
+    # Marker for the current sensor hub
+    folium.Marker(
+        st.session_state.map_center, 
+        tooltip="Active Sensor Hub",
+        icon=folium.Icon(color="blue", icon="info-sign")
+    ).add_to(m)
+    
+
+    # Render the map
+    st_folium(m, width="100%", height=400)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ... rest of your code
+    # Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
-    
-    # Extract current coords from session state
     curr_lat, curr_lon = st.session_state.map_center
-    
-    # Get active pollutant preference
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
     active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
 
-    # Fetch data based on the current coordinates
-    with st.spinner(f"Updating {active_pollutant_name} data for coordinates..."):
+    with st.spinner(f"Fetching {active_pollutant_name} data..."):
         data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
-        
         if data:
             col1, col2, col3 = st.columns(3)
-            # US AQI
             col1.metric("US AQI", f"{data.get('us_aqi', 'N/A')}")
-            # Pollutant value (e.g., PM2.5)
             col2.metric(f"{active_pollutant_name}", f"{data.get(active_pollutant_key, 'N/A')}")
-            # Coordinates
             col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
         else:
-            st.error("Could not retrieve sensor data for this location.")
+            st.error("Could not retrieve data for this node.")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
