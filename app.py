@@ -658,7 +658,7 @@ with tab3:
     # 1. Pollutant Deep Dive
     col_a, col_b = st.columns([1, 1])
     with col_a:
-        st.markdown("#### 🔬 Pollutant Breakdown")
+        st.markdown("<div class='glass-card'><h4>🔬 Pollutant Breakdown</h4>", unsafe_allow_html=True)
         with st.expander("PM2.5 (Fine Particulates)"):
             st.write("Particles <2.5μm. These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
             st.write("**Safe Limit:** < 12.0 μg/m³ (Annual mean) / < 35 μg/m³ (24-hour limit).")
@@ -675,13 +675,15 @@ with tab3:
             st.write("A combustion byproduct that inflames airways.")
             st.write("**Safe Limit:** < 0.053 ppm (Annual mean) / < 0.100 ppm (1-hour limit).")
             st.write("High levels often correlate with heavy traffic areas.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col_b:
-        st.markdown("#### 🧬 Systemic Physiological Load")
+        st.markdown("<div class='glass-card'><h4>🧬 Systemic Physiological Load</h4>", unsafe_allow_html=True)
         body_load = min(100, (current_aqi / 300) * 100)
         st.write(f"**Cumulative Systemic Load: {int(body_load)}%**")
         st.progress(body_load / 100)
         st.caption("Estimates the strain on your body's anti-inflammatory defenses based on real-time AQI.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
     
@@ -689,11 +691,13 @@ with tab3:
     st.markdown("### 🌱 Mitigation: Ways to Reduce Pollution")
     col_small, col_big = st.columns(2)
     with col_small:
-        st.subheader("🤏 Small Scale (Daily Impact)")
+        st.markdown("<div class='glass-card'><h5>🤏 Small Scale (Daily Impact)</h5>", unsafe_allow_html=True)
         st.write("- Use public transit or bike for short trips.\n- Switch to LED bulbs to reduce energy demand.\n- Choose 'Green' cleaning products (low-VOC).\n- Avoid burning wood or trash.\n- Plant native vegetation to filter air particles.")
+        st.markdown("</div>", unsafe_allow_html=True)
     with col_big:
-        st.subheader("🏢 Large Scale (Systemic Impact)")
+        st.markdown("<div class='glass-card'><h5>🏢 Large Scale (Systemic Impact)</h5>", unsafe_allow_html=True)
         st.write("- Transition to high-efficiency HVAC/Heat Pumps.\n- Support clean energy grid infrastructure.\n- Advocate for 'Green Space' zoning in cities.\n- Purchase from sustainable manufacturers.\n- Install residential solar panels.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # 3. Community Involvement
     with st.expander("🌍 Get Involved: Foundations & Policy"):
