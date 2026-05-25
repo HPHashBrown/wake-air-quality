@@ -836,6 +836,7 @@ with tab3:
         cols[2].markdown("[Lung Association](https://www.lung.org/)")
         cols[3].markdown("[Climate Reality](https://www.climaterealityproject.org/)")
 
+    with tab4:
 st.markdown("### 🔍 Global Sensor Search")
 city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
 
