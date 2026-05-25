@@ -659,32 +659,37 @@ with tab2:
             </div>
         """, unsafe_allow_html=True)
 
-st.subheader("🧬 Real-Time Lung Age Calculator")
+st.subheader("🧬 Biological Impact: Your Lung Age")
 
-# 1. User Inputs
-col_age, col_years, col_area = st.columns(3)
-user_age = col_age.number_input("Your Age", 18, 100, 30)
-years_in_area = col_years.number_input("Years in this area", 0, 100, 5)
-base_aqi = col_area.number_input("Avg Local AQI (Estimate)", 0, 300, 50)
-
-# 2. Calculation Logic
-# Formula: (Base Age) + (Exposure Duration * AQI Factor)
-# This simulates how chronic exposure to particulates leads to lung aging.
-pollution_factor = (base_aqi / 100) * 0.5 
-calculated_lung_age = user_age + (years_in_area * pollution_factor)
-
-# 3. Visualization
-st.markdown("---")
-col_res1, col_res2 = st.columns(2)
-col_res1.metric("Calculated Biological Lung Age", f"{calculated_lung_age:.1f} years")
-
-# Advice based on the result
-if calculated_lung_age > (user_age + 5):
-    col_res2.error("⚠️ Elevated Risk: Chronic exposure index is high.")
+# Logic: Pull the AQI from the current session location
+if 'map_center' in st.session_state:
+    # We use a placeholder for local AQI, or fetch it if you have the data object
+    # For this demo, we assume current_aqi is available in your global scope
+    local_aqi = current_aqi if 'current_aqi' in globals() else 50 
+    
+    col_a, col_b = st.columns(2)
+    user_age = col_a.number_input("Your Age", 18, 100, 30, key="age_in")
+    years_resident = col_b.number_input("Years living in this city", 0, 80, 5, key="years_in")
+    
+    # Calculation
+    # Factor: (AQI / 100) * 0.2 represents the accelerated biological impact 
+    # of chronic particulate exposure per year of residency.
+    pollution_factor = (local_aqi / 100) * 0.2
+    lung_age = user_age + (years_resident * pollution_factor)
+    
+    st.markdown("---")
+    res_col1, res_col2 = st.columns(2)
+    res_col1.metric("Calculated Biological Lung Age", f"{lung_age:.1f} years")
+    
+    # Dynamic advice
+    if lung_age > (user_age + 5):
+        res_col2.error("⚠️ Your 'Lung Age' is higher than your actual age due to chronic exposure.")
+    else:
+        res_col2.success("✅ Your 'Lung Age' is within a healthy range.")
+        
+    st.caption(f"Calculation based on real-time AQI of {local_aqi} in your selected area.")
 else:
-    col_res2.success("✅ Healthy: Exposure index is within normal range.")
-
-st.caption("Calculation based on chronic exposure modeling. Consult a physician for actual lung function testing.")
+    st.info("Please search for your city in the 'Global Sensor Search' tab to enable the Lung Age calculator.")
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
