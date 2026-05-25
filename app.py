@@ -674,7 +674,7 @@ if 'map_center' in st.session_state:
 
 st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-    # Retrieve forecast from state
+# Retrieve forecast from state
     forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
     # Fallback Logic
