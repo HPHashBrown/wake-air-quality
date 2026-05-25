@@ -652,18 +652,19 @@ with tab2:
         gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=30, b=30, l=30, r=30))
         st.plotly_chart(gauge, use_container_width=True)
 
-    with col_sim_slider:
+with col_sim_slider:
         st.markdown("**Emission Mitigation Simulator**")
         st.write("Adjust the reduction percentage to visualize projected health improvements.")
         reduction = st.slider("Target Mitigation (%)", 0, 50, 0, help="Simulate a reduction in local particulate output.")
 
-        # Calculation
-        sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
+        # Updated logic: Use current_aqi as the baseline for the simulation 
+        # since we no longer have the long-term forecast dataframe
+        sim_val = current_aqi * (1 - (reduction/100))
 
         # Display Metric
         st.markdown(f"""
             <div class='glass-card' style='margin-top: 20px; text-align: center;'>
-                <h5 style='color: #8b9bb4;'>Estimated {future_df['year'].iloc[-1]} PM2.5</h5>
+                <h5 style='color: #8b9bb4;'>Projected PM2.5 Level</h5>
                 <h2 style='color: #00f2fe;'>{sim_val:.2f} µg/m³</h2>
                 <span style='font-size: 0.8em;'>Projected Impact: -{reduction}%</span>
             </div>
