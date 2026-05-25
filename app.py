@@ -17,7 +17,7 @@ import openaq
 import pydeck as pdk
 import random
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import ServiceAccountCredentials
 
 
 # ============================================
@@ -265,17 +265,25 @@ def get_global_fire_layer():
         opacity=0.8
     )
 
-def get_db_client():
-    scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets']
-    # Ensure you have your 'credentials.json' file in your project folder
-    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
-    client = gspread.authorize(creds)
-    return client.open("AirQualityHazards").sheet1
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
 
-# Call this to update your map
-def get_global_hazards():
-    sheet = get_db_client()
-    return sheet.get_all_records() # Returns a list of {'lat': x, 'lon': y}
+def get_db_client():
+    # 1. Load the secrets dictionary from your Streamlit dashboard
+    creds_dict = st.secrets["gcp_service_account"]
+    
+    # 2. Define the scope
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    
+    # 3. Create credentials object from the dictionary
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    
+    # 4. Authorize gspread
+    client = gspread.authorize(creds)
+    
+    # 5. Connect to your sheet
+    return client.open("AirQualityHazards").sheet1
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
