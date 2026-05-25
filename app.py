@@ -759,9 +759,14 @@ with tab3:
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
     
-    # 1. Search Box with a layout wrapper
+    # Ensure map_center exists in session state (this is likely in your init section, 
+    # but good to be explicit here if it's acting up)
+    if 'map_center' not in st.session_state:
+        st.session_state.map_center = [35.7796, -78.6382]
+    
+    # 1. Search Box
     st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
+    city_input = st.text_input("Search Location", key="city_input_field")
     
     if city_input:
         lat, lon, name = get_city_coords(city_input)
@@ -772,38 +777,22 @@ with tab4:
             st.error("Location not found.")
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # 2. Map Section
+    # 2. Map Section - This will now load on startup because it uses the session state
     st.markdown("<div class='glass-card' style='padding:10px;'>", unsafe_allow_html=True)
+    
+    # Using the current session_state (Defaults to Raleigh if not changed)
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+    
     folium.Marker(
         st.session_state.map_center, 
         tooltip="Active Sensor Hub",
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
     
-    # Render map
     st_folium(m, width="100%", height=400)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # 3. Atmospheric Report (Wrapped in styled columns)
-    st.markdown("### 📊 Atmospheric Report")
-    curr_lat, curr_lon = st.session_state.map_center
-    active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-    active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
-
-    with st.spinner(f"Fetching {active_pollutant_name} data..."):
-        data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
-        if data:
-            col1, col2, col3 = st.columns(3)
-            # We wrap the metrics in your existing glass-card style
-            with col1:
-                st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{data.get('us_aqi', 'N/A')}</h3></div>", unsafe_allow_html=True)
-            with col2:
-                st.markdown(f"<div class='glass-card'><h5>{active_pollutant_name}</h5><h3>{data.get(active_pollutant_key, 'N/A')}</h3></div>", unsafe_allow_html=True)
-            with col3:
-                st.markdown(f"<div class='glass-card'><h5>Coordinates</h5><h5>{curr_lat:.2f}, {curr_lon:.2f}</h5></div>", unsafe_allow_html=True)
-        else:
-            st.error("Could not retrieve data for this node.")
+    # ... rest of your code
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
