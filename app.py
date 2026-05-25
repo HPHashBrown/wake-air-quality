@@ -655,234 +655,58 @@ with tab2:
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
-    # 1. Pollutant Deep Dive
-    # 1. Pollutant Diagnostic Matrix
-    st.markdown("#### 🔬 Pollutant Diagnostic Matrix")
-    col_a, col_b = st.columns([1, 1])
-    
+    # 1. Pollutant Matrix (Simplified)
+    col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
-        st.markdown("<div class='glass-card'><h4>🔬 Pollutant Breakdown</h4>", unsafe_allow_html=True)
-        with st.expander("PM2.5 (Fine Particulates)"):
-            st.write("Particles <2.5μm. These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
-            st.write("**Safe Limit:** < 12.0 μg/m³ (Annual mean) / < 35 μg/m³ (24-hour limit).")
-            st.write("Levels above 35 μg/m³ are considered unhealthy for sensitive groups.")
-        with st.expander("PM10 (Coarse Particulates)"):
-            st.write("Particles <10μm. These consist of dust, pollen, and mold. They cause significant irritation to the nose, throat, and upper airways.")
-            st.write("**Safe Limit:** < 150 μg/m³ (24-hour limit).")
-            st.write("Exceeding this indicates high dust, smoke, or industrial particle concentrations.")
-        with st.expander("Ozone (O3)"):
-            st.write("Ground-level ozone acts as a pulmonary irritant.")
-            st.write("**Safe Limit:** < 0.070 ppm (8-hour average).")
-            st.write("Levels above 0.070 ppm are associated with decreased lung function.")
-        with st.expander("NO2 (Nitrogen Dioxide)"):
-            st.write("A combustion byproduct that inflames airways.")
-            st.write("**Safe Limit:** < 0.053 ppm (Annual mean) / < 0.100 ppm (1-hour limit).")
-            st.write("High levels often correlate with heavy traffic areas.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        with st.expander("PM2.5 (Fine Particulates) 🟢", expanded=True):
-            st.write("Particles <2.5μm. Bypass defenses, lodge in alveoli, enter blood.")
-            st.metric("Safe Limit", "< 12.0 μg/m³", delta="Annual Mean")
-        with st.expander("PM10 (Coarse Particulates) 🟡"):
-            st.write("Particles <10μm. Dust/pollen/mold irritants.")
-            st.metric("Safe Limit", "< 150 μg/m³", delta="24-Hour Limit")
-    
+        with st.expander("PM2.5 (Fine Particulates)", expanded=True):
+            st.write("Particles <2.5μm. Bypass defenses, lodge in alveoli.")
+            st.metric("Safe Limit", "< 12.0 μg/m³")
     with col_b:
         st.markdown("#### 🧬 Systemic Physiological Load")
-        st.markdown("<div class='glass-card'><h4>🧬 Systemic Physiological Load</h4>", unsafe_allow_html=True)
         body_load = min(100, (current_aqi / 300) * 100)
-        st.write(f"**Cumulative Systemic Load: {int(body_load)}%**")
         st.progress(body_load / 100)
-        st.caption("Estimates the strain on your body's anti-inflammatory defenses based on real-time AQI.")
-        st.markdown("</div>", unsafe_allow_html=True)
-        with st.expander("Ozone (O3) 🔵"):
-            st.write("Ground-level pulmonary irritant.")
-            st.metric("Safe Limit", "< 0.070 ppm", delta="8-Hour Avg")
-        with st.expander("NO2 (Nitrogen Dioxide) 🟠"):
-            st.write("Combustion byproduct; triggers inflammation.")
-            st.metric("Safe Limit", "< 0.053 ppm", delta="Annual Mean")
+        st.caption(f"Estimated inflammatory strain: {int(body_load)}%")
 
-    # 2. Physiological Load Indicator
+    # 2. Activity & Indoor Tools (Keys made unique)
     st.markdown("---")
-    st.markdown("#### 🧬 Systemic Physiological Load")
-    body_load = min(100, (current_aqi / 300) * 100)
-    st.progress(body_load / 100)
-    st.caption(f"Estimated current inflammatory strain: **{int(body_load)}%**")
-
-    # 3. Interactive Mitigation Checklists
-    st.markdown("---")
-    st.markdown("### 🌱 Mitigation: Create Your Action Plan")
-    m_col1, m_col2 = st.columns(2)
-
-    # 2. Mitigation Strategies
-    st.markdown("### 🌱 Mitigation: Ways to Reduce Pollution")
-    col_small, col_big = st.columns(2)
-    with col_small:
-        st.subheader("🤏 Small Scale (Daily Impact)")
-        st.markdown("<div class='glass-card'><h5>🤏 Small Scale (Daily Impact)</h5>", unsafe_allow_html=True)
-        st.write("- Use public transit or bike for short trips.\n- Switch to LED bulbs to reduce energy demand.\n- Choose 'Green' cleaning products (low-VOC).\n- Avoid burning wood or trash.\n- Plant native vegetation to filter air particles.")
-    with m_col1:
-        st.markdown("<div class='glass-card'><h5>🤏 Daily Micro-Adjustments</h5>", unsafe_allow_html=True)
-        st.checkbox("Use public transit/cycle", key="m1")
-        st.checkbox("Use green cleaning products", key="m2")
-        st.checkbox("Install native vegetation", key="m3")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with col_big:
-        st.subheader("🏢 Large Scale (Systemic Impact)")
-        st.markdown("<div class='glass-card'><h5>🏢 Large Scale (Systemic Impact)</h5>", unsafe_allow_html=True)
-        st.write("- Transition to high-efficiency HVAC/Heat Pumps.\n- Support clean energy grid infrastructure.\n- Advocate for 'Green Space' zoning in cities.\n- Purchase from sustainable manufacturers.\n- Install residential solar panels.")
-        
-    with m_col2:
-        st.markdown("<div class='glass-card'><h5>🏢 Systemic Macro-Actions</h5>", unsafe_allow_html=True)
-        st.checkbox("Transition to Heat Pumps", key="m4")
-        st.checkbox("Advocate for Green Zones", key="m5")
-        st.checkbox("Solar panel installation", key="m6")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # 3. Community Involvement
-    with st.expander("🌍 Get Involved: Foundations & Policy"):
-        st.write("Support organizations driving global air quality standards:")
-        st.markdown("- [Clean Air Task Force](https://www.catf.us/)")
-        st.markdown("- [Environmental Defense Fund](https://www.edf.org/)")
-        st.markdown("- [American Lung Association](https://www.lung.org/)")
-        st.markdown("- [The Climate Reality Project](https://www.climaterealityproject.org/)")
-
-    st.markdown("---")
-
-    # 4. Contextual Intelligence
-    st.markdown("#### 📊 Contextual Intelligence")
-    historical_avg = df_yearly["mean_pm25"].mean()
-    diff_from_avg = current_aqi - historical_avg
-    st.write(f"Current levels are **{abs(diff_from_avg):.1f} units {'above' if diff_from_avg > 0 else 'below'}** the historical 5-year average.")
-    
-
-    st.markdown("---")
-
-    # 5. Personalized Activity Risk Calculator
-    st.markdown("### 🏃 Personalized Exposure Risk")
-    activity = st.selectbox("Current Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="act_level")
-    if activity == "Heavy Exercise" and current_aqi > 100:
-        st.error("🚨 CRITICAL RISK: High-intensity exercise during these levels drastically increases deep-lung particle deposition.")
-    elif activity == "Heavy Exercise" and current_aqi > 50:
-        st.warning("⚠️ CAUTION: Increased respiration rate will elevate your pollutant intake. Consider reducing intensity.")
-    else:
-        st.success("✅ Air quality risk is manageable for your current activity level.")
-    st.metric("Current Deviation from 5-Year Avg", f"{abs(diff_from_avg):.1f} units", delta=f"{'Above' if diff_from_avg > 0 else 'Below'} Mean", delta_color="inverse")
-
-    # 5. Dashboard Calculators (Interactive Inputs)
-    st.markdown("---")
-    c_calc1, c_calc2 = st.columns(2)
-
-    # 6. Indoor Strategy Calculator
-    st.markdown("### 🏠 Indoor Air Strategy")
-    room_sqft = st.number_input("Room Square Footage", value=200, key="sqft_input")
-    filter_type = st.selectbox("Air Purifier Efficiency", ["Standard", "HEPA (High Efficiency)", "Industrial/Commercial"])
-    if st.button("Calculate Filtration Time"):
-        rate = 50 if filter_type == "Standard" else 150
-        time_to_clean = room_sqft / rate
-        st.write(f"Estimated time to scrub air in this room: **{time_to_clean:.1f} minutes**.")
-    with c_calc1:
+    c1, c2 = st.columns(2)
+    with c1:
         st.subheader("🏃 Exposure Risk Calculator")
-        activity = st.selectbox("Select Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="act_level")
-        # Visual feedback for activity
+        activity = st.selectbox("Select Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="tab3_act_level")
         if activity == "Heavy Exercise" and current_aqi > 100:
             st.error("🚨 CRITICAL: High-intensity exercise prohibited.")
         elif activity == "Heavy Exercise" and current_aqi > 50:
             st.warning("⚠️ CAUTION: Reduce intensity recommended.")
-        else:
-            st.success("✅ Risk manageable.")
-
-    with c_calc2:
+    with c2:
         st.subheader("🏠 Indoor Scrubbing Tool")
-        room_sqft = st.number_input("Room Square Footage", value=200, key="sqft_input")
-        filter_eff = st.select_slider("Purifier Efficiency", options=["Standard", "HEPA", "Industrial"])
+        room_sqft = st.number_input("Room Square Footage", value=200, key="tab3_sqft")
+        filter_eff = st.select_slider("Purifier Efficiency", options=["Standard", "HEPA", "Industrial"], key="tab3_filter")
         if st.button("Calculate Scrub Time"):
             rate = 50 if filter_eff == "Standard" else (100 if filter_eff == "HEPA" else 150)
             st.write(f"⏱️ Scrub Time: **{room_sqft / rate:.1f} minutes**.")
 
-    # 6. Final Safe Exposure Budget
-    st.markdown("---")
-    
-
-    # 7. Safe Exposure Budget
-    st.markdown("### ⏳ Daily 'Safe Exposure' Budget")
-    st.subheader("⏳ Daily 'Safe Exposure' Budget")
-    if current_aqi > 0:
-        safe_hours = max(0, 800 / (float(current_aqi) * 1.5)) 
-        st.metric("Estimated Safe Hours Left Today", f"{safe_hours:.1f} Hours")
-        if safe_hours > 6:
-            st.success("✅ **Air Quality is Clear.** No restrictions on your outdoor exposure.")
-        elif safe_hours > 3:
-            st.warning("⚠️ **Caution.** Your inflammatory budget is depleting. Limit outdoor exercise.")
-        else:
-            st.error("🚫 **Alert.** Your inflammatory budget is low. Switch to indoor air protocol immediately.")
-        safe_hours = max(0, 800 / (float(current_aqi) * 1.5))
-        
-        # Color coding the budget status
-        color = "green" if safe_hours > 6 else ("orange" if safe_hours > 3 else "red")
-        st.markdown(f"""
-            <div style='padding: 15px; border-radius: 10px; background: rgba(0,0,0,0.2); border-left: 5px solid {color};'>
-                <h3 style='margin:0;'>{safe_hours:.1f} Hours Remaining</h3>
-            </div>
-        """, unsafe_allow_html=True)
-
-    # 7. Community Links
-    with st.expander("🌍 Global Advocacy Network"):
-        st.write("Support organizations driving global standards:")
-        cols = st.columns(4)
-        cols[0].markdown("[Clean Air Task Force](https://www.catf.us/)")
-        cols[1].markdown("[Environmental Defense Fund](https://www.edf.org/)")
-        cols[2].markdown("[Lung Association](https://www.lung.org/)")
-        cols[3].markdown("[Climate Reality](https://www.climaterealityproject.org/)")
-
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
-
+    # Added the missing input widget
+    city_input = st.text_input("Enter City for Analysis", "Raleigh", key="tab4_city_input")
 
     if city_input:
         lat, lon, name = get_city_coords(city_input)
         if lat:
             st.session_state.map_center = [lat, lon]
             st.success(f"📍 Navigation locked to: {name}")
-        else:
-            st.error("Location not found.")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    
-    # Using the current session_state (Defaults to Raleigh if not changed)
-    # Initialize map
+        
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
-    
+    folium.Marker(st.session_state.map_center, tooltip="Sensor Hub").add_to(m)
+    st_folium(m, width="100%", height=400, key="tab4_map")
 
-    # Marker for the current sensor hub
-    folium.Marker(
-        st.session_state.map_center, 
-        tooltip="Active Sensor Hub",
-        icon=folium.Icon(color="blue", icon="info-sign")
-    ).add_to(m)
-    
-
-    # Render the map
-    st_folium(m, width="100%", height=400)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ... rest of your code
-    # Atmospheric Report
+    # Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
-    active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-    active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
-
-    with st.spinner(f"Fetching {active_pollutant_name} data..."):
-        data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
-        if data:
-            col1, col2, col3 = st.columns(3)
-            col1.metric("US AQI", f"{data.get('us_aqi', 'N/A')}")
-            col2.metric(f"{active_pollutant_name}", f"{data.get(active_pollutant_key, 'N/A')}")
-            col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
-        else:
-            st.error("Could not retrieve data for this node.")
+    data = fetch_global_aqi(curr_lat, curr_lon)
+    if data:
+        st.metric("US AQI", data.get('us_aqi', 'N/A'))
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
