@@ -579,50 +579,78 @@ with tab1:
 # --- TAB 2: ANALYTICS ---
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
+    
+    # 1. Cognitive Risk Assessment Section
     raw_pm25 = current_data.get('pm2_5', 0)
     pm25_val = float(raw_pm25) if raw_pm25 != 'N/A' else 0.0
     risk_score = (pm25_val / 12) * 1.5
-    col_a, col_b = st.columns([1, 2])
-    col_a.metric("Cognitive Risk Index", f"{round(risk_score, 1)}/10")
+    
+    # Logic for status
     if pm25_val < 12:
-        status = "Baseline Homeostasis"
-        briefing = "Air quality is optimal. Minimal systemic inflammation detected. Cognitive function is not under environmental stress."
+        status, briefing, col_color = "Baseline Homeostasis", "Air quality is optimal. Minimal systemic inflammation detected. Cognitive function is not under environmental stress.", "#10b981"
     elif 12 <= pm25_val < 35:
-        status = "Mild Oxidative Stress"
-        briefing = "Moderate particulate load. Your body is mobilizing antioxidants to counteract minor systemic inflammation. You may experience subtle focus fatigue."
+        status, briefing, col_color = "Mild Oxidative Stress", "Moderate particulate load. Your body is mobilizing antioxidants. You may experience subtle focus fatigue.", "#f59e0b"
     else:
-        status = "Neuro-Inflammatory Warning"
-        briefing = "High PM2.5 load. Particulates are likely triggering a systemic inflammatory response. This can impact neural processing speed and executive function. Limit intense cognitive tasks and exertion."
-    col_b.write(f"**Status:** {status}")
-    col_b.info(briefing)
+        status, briefing, col_color = "Neuro-Inflammatory Warning", "High PM2.5 load. Particulates are triggering systemic inflammatory response. Limit intense cognitive tasks.", "#ef4444"
+
+    # Display Risk in a styled container
+    st.markdown(f"""
+        <div style='background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; border-left: 5px solid {col_color};'>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <h5 style='margin:0;'>Cognitive Risk Index</h5>
+                    <h2 style='color:{col_color}; margin:0;'>{round(risk_score, 1)} / 10</h2>
+                </div>
+                <div style='text-align: right;'>
+                    <h5 style='margin:0;'>Current Status</h5>
+                    <span style='color: white; font-weight: bold;'>{status}</span>
+                </div>
+            </div>
+            <p style='margin-top: 15px; font-size: 0.9em; color: #a1a1aa;'>{briefing}</p>
+        </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("---")
-    g1, g2 = st.columns(2)
-    with g1:
+
+    # 2. Unified Simulation Panel
+    col_sim_gauge, col_sim_slider = st.columns([1, 1])
+    
+    with col_sim_gauge:
         st.markdown("**Current Threat Level (AQI)**")
         current_aqi_val = float(current_aqi) if current_aqi != 'N/A' else 0
         gauge = go.Figure(go.Indicator(
             mode="gauge+number", 
             value=current_aqi_val, 
             gauge={
-                'axis': {'range': [0, 300], 'tickwidth': 1, 'tickcolor': "white"}, 
-                'bar': {'color': "#00f2fe"}, 
-                'bgcolor': "rgba(255,255,255,0.05)", 
+                'axis': {'range': [0, 300], 'tickcolor': "white"}, 
+                'bar': {'color': col_color}, 
+                'bgcolor': "rgba(0,0,0,0)", 
                 'steps': [
-                    {'range': [0, 50], 'color': "rgba(16, 185, 129, 0.3)"}, 
-                    {'range': [50, 100], 'color': "rgba(245, 158, 11, 0.3)"}, 
-                    {'range': [100, 300], 'color': "rgba(239, 68, 68, 0.3)"}
+                    {'range': [0, 50], 'color': "rgba(16, 185, 129, 0.2)"}, 
+                    {'range': [50, 150], 'color': "rgba(245, 158, 11, 0.2)"}, 
+                    {'range': [150, 300], 'color': "rgba(239, 68, 68, 0.2)"}
                 ]
             }
         ))
-        gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
+        gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=30, b=30, l=30, r=30))
         st.plotly_chart(gauge, use_container_width=True)
         
-    with g2:
+    with col_sim_slider:
         st.markdown("**Emission Mitigation Simulator**")
-        reduction = st.slider("Simulated Reduction (%)", 0, 50, 0)
+        st.write("Adjust the reduction percentage to visualize projected health improvements.")
+        reduction = st.slider("Target Mitigation (%)", 0, 50, 0, help="Simulate a reduction in local particulate output.")
+        
+        # Calculation
         sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
-        st.metric(f"Estimated {future_df['year'].iloc[-1]} PM2.5", f"{sim_val:.2f} µg/m³", delta=f"-{reduction}% impact")
+        
+        # Display Metric
+        st.markdown(f"""
+            <div class='glass-card' style='margin-top: 20px; text-align: center;'>
+                <h5 style='color: #8b9bb4;'>Estimated {future_df['year'].iloc[-1]} PM2.5</h5>
+                <h2 style='color: #00f2fe;'>{sim_val:.2f} µg/m³</h2>
+                <span style='font-size: 0.8em;'>Projected Impact: -{reduction}%</span>
+            </div>
+        """, unsafe_allow_html=True)
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
