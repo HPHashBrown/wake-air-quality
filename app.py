@@ -659,16 +659,32 @@ with tab2:
             </div>
         """, unsafe_allow_html=True)
 
-# Add this inside your dashboard/metrics tab
-st.subheader("🧬 Biological Impact Tracker")
-# Heuristic: 1000 AQI-days = 1 biological year of aging
-# This is for demo purposes; explain it as an 'estimated index'
-cumulative_aqi = st.session_state.get('cumulative_aqi', 500) 
-lung_age = 25 + (cumulative_aqi / 1000) 
+st.subheader("🧬 Real-Time Lung Age Calculator")
 
-col1, col2 = st.columns(2)
-col1.metric("Current Estimated Lung Age", f"{lung_age:.1f} years")
-col2.caption("Based on your 30-day exposure patterns.")
+# 1. User Inputs
+col_age, col_years, col_area = st.columns(3)
+user_age = col_age.number_input("Your Age", 18, 100, 30)
+years_in_area = col_years.number_input("Years in this area", 0, 100, 5)
+base_aqi = col_area.number_input("Avg Local AQI (Estimate)", 0, 300, 50)
+
+# 2. Calculation Logic
+# Formula: (Base Age) + (Exposure Duration * AQI Factor)
+# This simulates how chronic exposure to particulates leads to lung aging.
+pollution_factor = (base_aqi / 100) * 0.5 
+calculated_lung_age = user_age + (years_in_area * pollution_factor)
+
+# 3. Visualization
+st.markdown("---")
+col_res1, col_res2 = st.columns(2)
+col_res1.metric("Calculated Biological Lung Age", f"{calculated_lung_age:.1f} years")
+
+# Advice based on the result
+if calculated_lung_age > (user_age + 5):
+    col_res2.error("⚠️ Elevated Risk: Chronic exposure index is high.")
+else:
+    col_res2.success("✅ Healthy: Exposure index is within normal range.")
+
+st.caption("Calculation based on chronic exposure modeling. Consult a physician for actual lung function testing.")
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
