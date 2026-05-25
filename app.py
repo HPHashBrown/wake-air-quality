@@ -659,6 +659,17 @@ with tab2:
             </div>
         """, unsafe_allow_html=True)
 
+# Add this inside your dashboard/metrics tab
+st.subheader("🧬 Biological Impact Tracker")
+# Heuristic: 1000 AQI-days = 1 biological year of aging
+# This is for demo purposes; explain it as an 'estimated index'
+cumulative_aqi = st.session_state.get('cumulative_aqi', 500) 
+lung_age = 25 + (cumulative_aqi / 1000) 
+
+col1, col2 = st.columns(2)
+col1.metric("Current Estimated Lung Age", f"{lung_age:.1f} years")
+col2.caption("Based on your 30-day exposure patterns.")
+
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
