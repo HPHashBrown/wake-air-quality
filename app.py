@@ -521,6 +521,7 @@ with tab1:
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon)
                     st.session_state.current_weather = fetch_live_weather(lat, lon)
+                    st.session_state.forecast_data = fetch_7day_forecast(lat, lon)
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
@@ -710,26 +711,30 @@ if 'map_center' in st.session_state:
 
 # 4. 7-Day Atmospheric Outlook
     st.markdown("### 📅 7-Day Atmospheric Outlook")
-    forecast_df = fetch_7day_forecast(curr_lat, curr_lon)
 
-    # --- THE FALLBACK FIX ---
+    # Ensure forecast data exists in session state; default to Raleigh if not
+    if 'forecast_data' not in st.session_state:
+        st.session_state.forecast_data = fetch_7day_forecast(curr_lat, curr_lon)
+    
+    forecast_df = st.session_state.forecast_data
+
+    # --- FALLBACK LOGIC ---
+    # If the API returns nothing, we use mock data to ensure the UI doesn't break
     if forecast_df.empty:
-        # If the API fails or returns no data, we force-feed it mock data
-        # so your presentation/pitch does not break.
         forecast_df = pd.DataFrame({
             "date": pd.date_range(start=datetime.now(), periods=7),
             "aqi": [45, 52, 60, 58, 42, 38, 40]
         })
-    # ------------------------
 
-    # Now this will always run because forecast_df is no longer empty
+    # --- FORECAST PLOTTING ---
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=forecast_df["date"], y=forecast_df["aqi"], 
         mode="lines+markers", 
         name="AQI Forecast",
         line=dict(color="#00f2fe", width=4),
-        fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
+        fill='tozeroy', 
+        fillcolor='rgba(0, 242, 254, 0.1)'
     ))
     
     fig.update_layout(
@@ -737,7 +742,9 @@ if 'map_center' in st.session_state:
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         hovermode="x unified",
-        margin=dict(t=30, b=30, l=30, r=30)
+        margin=dict(t=30, b=30, l=30, r=30),
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)')
     )
     st.plotly_chart(fig, use_container_width=True)
 
