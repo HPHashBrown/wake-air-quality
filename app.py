@@ -763,9 +763,12 @@ with tab5:
     col1, col2 = st.columns(2)
     col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
     col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
+    
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
+    import random
+
     col1, col2 = st.columns(2)
     start_addr = col1.text_input("Starting Address", "100 Main St, Raleigh, NC", key="start_addr")
     end_addr = col2.text_input("Destination Address", "500 Main St, Rolesville, NC", key="end_addr")
@@ -818,29 +821,25 @@ with tab6:
         m.fit_bounds(data['route'])
         st_folium(m, width="100%", height=400)
 
-st.markdown("---")
+        st.markdown("---")
         st.markdown("### 🩺 Daily Clinical Briefing")
 
-        # Three versions for each category
         good_advice = [
             "✅ **Excellent Air Quality.** Perfect conditions for cycling. Enjoy the fresh air!",
             "✅ **Air quality is optimal.** Your respiratory system will appreciate this clean commute.",
             "✅ **Great conditions!** No restrictions on your outdoor activity today."
         ]
-        
         mid_advice = [
             "⚠️ **Moderate Air Quality.** Consider a face mask if you are sensitive to particulates.",
             "⚠️ **Caution:** AQI is mid-range. Limit high-intensity breathing during your commute.",
             "⚠️ **Moderate levels detected.** If you have asthma or lung conditions, take it easy today."
         ]
-        
         bad_advice = [
             "🚨 **High Risk.** The air quality is poor today. We strongly recommend choosing an indoor commute.",
             "🚨 **Warning:** High particulate levels detected. Strenuous outdoor exercise is not advised.",
             "🚨 **Alert:** Exposure today could lead to respiratory irritation. Please stick to indoor environments."
         ]
 
-        # Select the response based on AQI
         if aqi_val < 50:
             st.success(random.choice(good_advice))
         elif 50 <= aqi_val < 100:
