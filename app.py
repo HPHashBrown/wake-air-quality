@@ -16,6 +16,8 @@ from folium.plugins import HeatMap
 import openaq
 import pydeck as pdk
 import random
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 # ============================================
@@ -262,6 +264,18 @@ def get_global_fire_layer():
         f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Thermal_Anomalies_375m/default/{datetime.now().strftime('%Y-%m-%d')}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png",
         opacity=0.8
     )
+
+def get_db_client():
+    scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets']
+    # Ensure you have your 'credentials.json' file in your project folder
+    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    client = gspread.authorize(creds)
+    return client.open("AirQualityHazards").sheet1
+
+# Call this to update your map
+def get_global_hazards():
+    sheet = get_db_client()
+    return sheet.get_all_records() # Returns a list of {'lat': x, 'lon': y}
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
@@ -755,25 +769,33 @@ with tab4:
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
 
-    # 3. Community Hazard Reporting
+# 3. Community Hazard Reporting
     st.subheader("🚩 Community Hazards")
-    if 'hazard_reports' not in st.session_state:
-        st.session_state.hazard_reports = []
-
-    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
-        st.session_state.hazard_reports.append(st.session_state.map_center)
-        st.toast("Report submitted! Your community thanks you.", icon="✅")
-
-    # Draw Hazard Pins
-    for report in st.session_state.hazard_reports:
+    
+    # FETCH GLOBAL PINS FROM CLOUD
+    # Replace 'get_global_hazards()' with the actual function call 
+    # to your Google Sheets API integration
+    hazards = get_global_hazards() 
+    
+    # Draw Hazard Pins from CLOUD (Global)
+    for h in hazards:
         folium.Marker(
-            report,
+            [h['lat'], h['lon']],
             popup="Community Reported Hazard",
             icon=folium.Icon(color='red', icon='warning-sign')
         ).add_to(m)
     
+    # Keep the report button here if you want users to flag hazards directly from the map
+    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
+        # PUSH TO CLOUD
+        sheet = get_db_client()
+        lat, lon = st.session_state.map_center
+        sheet.append_row([lat, lon])
+        st.toast("Report synced to global community map!", icon="✅")
+        # Rerun to refresh the map with the new pin immediately
+        st.rerun()
+    
     st_folium(m, width="100%", height=400, key="tab4_map")
-
     # 4. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
