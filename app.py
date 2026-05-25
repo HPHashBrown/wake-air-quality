@@ -789,6 +789,32 @@ with tab4:
             col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
         else:
             st.error("Could not retrieve data for this node.")
+
+st.subheader("🚩 Community Hazards Map")
+st.write("Report a local pollution spike (e.g., heavy smoke, idling trucks) to warn others.")
+
+# 1. Initialize the storage list if it doesn't exist
+if 'hazard_reports' not in st.session_state:
+    st.session_state.hazard_reports = []
+
+# 2. Add button to report current location
+if st.button("🚩 Report Poor Air at Current Location"):
+    # Save the current map center as a report
+    new_report = st.session_state.map_center
+    st.session_state.hazard_reports.append(new_report)
+    st.toast("Report submitted! Your community thanks you.", icon="✅")
+
+# 3. Render the Map with Hazard Pins
+# We use your existing 'm' map object from tab4
+for report in st.session_state.hazard_reports:
+    folium.Marker(
+        report,
+        popup="Community Reported Hazard",
+        icon=folium.Icon(color='red', icon='warning-sign')
+    ).add_to(m)
+
+# 4. Display the map again (ensuring it shows the new pins)
+st_folium(m, width="100%", height=400, key="hazard_map")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence For Forest Fires")
