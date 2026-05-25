@@ -782,33 +782,25 @@ with tab4:
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
 
-# 3. Community Hazard Reporting
+    # 3. Community Hazard Reporting
     st.subheader("🚩 Community Hazards")
-    
-    # FETCH GLOBAL PINS FROM CLOUD
-    # Replace 'get_global_hazards()' with the actual function call 
-    # to your Google Sheets API integration
-    hazards = get_global_hazards() 
-    
-    # Draw Hazard Pins from CLOUD (Global)
-    for h in hazards:
+    if 'hazard_reports' not in st.session_state:
+        st.session_state.hazard_reports = []
+
+    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
+        st.session_state.hazard_reports.append(st.session_state.map_center)
+        st.toast("Report submitted! Your community thanks you.", icon="✅")
+
+    # Draw Hazard Pins
+    for report in st.session_state.hazard_reports:
         folium.Marker(
-            [h['lat'], h['lon']],
+            report,
             popup="Community Reported Hazard",
             icon=folium.Icon(color='red', icon='warning-sign')
         ).add_to(m)
     
-    # Keep the report button here if you want users to flag hazards directly from the map
-    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
-        # PUSH TO CLOUD
-        sheet = get_db_client()
-        lat, lon = st.session_state.map_center
-        sheet.append_row([lat, lon])
-        st.toast("Report synced to global community map!", icon="✅")
-        # Rerun to refresh the map with the new pin immediately
-        st.rerun()
-    
     st_folium(m, width="100%", height=400, key="tab4_map")
+
     # 4. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
@@ -824,32 +816,6 @@ with tab4:
             col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
         else:
             st.error("Could not retrieve data for this node.")
-
-st.subheader("🚩 Community Hazards Map")
-st.write("Report a local pollution spike (e.g., heavy smoke, idling trucks) to warn others.")
-
-# 1. Initialize the storage list if it doesn't exist
-if 'hazard_reports' not in st.session_state:
-    st.session_state.hazard_reports = []
-
-# 2. Add button to report current location
-if st.button("🚩 Report Poor Air at Current Location"):
-    # Save the current map center as a report
-    new_report = st.session_state.map_center
-    st.session_state.hazard_reports.append(new_report)
-    st.toast("Report submitted! Your community thanks you.", icon="✅")
-
-# 3. Render the Map with Hazard Pins
-# We use your existing 'm' map object from tab4
-for report in st.session_state.hazard_reports:
-    folium.Marker(
-        report,
-        popup="Community Reported Hazard",
-        icon=folium.Icon(color='red', icon='warning-sign')
-    ).add_to(m)
-
-# 4. Display the map again (ensuring it shows the new pins)
-st_folium(m, width="100%", height=400, key="hazard_map")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence For Forest Fires")
