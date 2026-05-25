@@ -282,14 +282,20 @@ def fetch_pollutant_data(lat, lon, pollutant_key):
 
 @st.cache_data(ttl=86400)
 def get_city_coords(city_name):
+    # Failsafe for New Delhi
+    if "new delhi" in city_name.lower().strip():
+        # Force these specific coordinates to bypass ambiguity
+        return 28.6139, 77.2090, "New Delhi"
+    
     url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}&count=1&language=en&format=json"
+    
     try:
         response = requests.get(url).json()
-        if "results" in response:
+        if "results" in response and response["results"]:
             data = response["results"][0]
             return data["latitude"], data["longitude"], data["name"]
         return None, None, None
-    except Exception as e:
+    except Exception:
         return None, None, None
 
 def generate_pdf_report(df_yearly, future_df, current_aqi):
