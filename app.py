@@ -18,11 +18,31 @@ import pydeck as pdk
 import random
 import gspread
 from google.oauth2.service_account import Credentials
+from googletrans import Translator
 
 
 # ============================================
 # INITIALIZATION & STATE
 # ============================================
+
+# 1. Initialize the translator once at the start
+translator = Translator()
+
+# 2. Define the translation function
+def get_text(text, lang_code):
+    if lang_code == "English":
+        return text
+    # Maps language names to Google Translate codes
+    lang_map = {"Spanish": "es", "French": "fr", "German": "de", "Chinese": "zh-cn"}
+    dest = lang_map.get(lang_code, "es")
+    return translator.translate(text, dest=dest).text
+
+# 3. Setup the UI Selector
+lang = st.sidebar.selectbox("Language / Idioma", ["English", "Spanish", "French", "German", "Chinese"])
+
+# 4. Use it anywhere you display text
+st.title(get_text("Wake Air Quality Dashboard", lang))
+st.write(get_text("Welcome to the air quality app.", lang))
 
 def create_base_map(lat, lon, zoom=12):
     return folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB dark_matter")
