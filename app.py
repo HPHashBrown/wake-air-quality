@@ -34,28 +34,29 @@ def add_heatmap_to_map(m, hotspots):
 
 def get_db_client():
     creds_dict = st.secrets["gcp_service_account"]
-    
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     client = gspread.authorize(creds)
-    return client.open("AirQualityHazards").sheet1
+    
+    # 1. Open the Spreadsheet by Name
+    spreadsheet = client.open("AirQualityHazards")
+    
+    # 2. Return the SPECIFIC worksheet (change "Sheet1" if yours is named differently)
+    return spreadsheet.worksheet("Sheet1") 
 
 def get_global_hazards():
     try:
-        # Access the client
-        client = get_db_client() 
-        # Ensure we are looking at the actual worksheet data
-        # If your data is on the first tab, use .get_all_records()
-        data = client.get_all_records()
+        # Get the worksheet object
+        worksheet = get_db_client()
+        # Get the data
+        data = worksheet.get_all_records()
         return data
     except Exception as e:
         st.error(f"Error fetching hazards: {e}")
         return []
-
 
 # Ensure this is defined exactly once at the top of your script
 df_yearly = pd.DataFrame({
