@@ -709,9 +709,10 @@ if 'map_center' in st.session_state:
         
     st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
 
-st.markdown("### 📅 7-Day Atmospheric Outlook")
+# 4. 7-Day Atmospheric Outlook
+    st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-    # This now reads from the state that gets updated when the button is pressed
+    # Ensure this starts exactly under the 'st' in 'st.markdown' above
     forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
     # --- FALLBACK LOGIC ---
