@@ -689,6 +689,12 @@ with tab3:
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
 
+    # 1. ADDED SEARCH BAR HERE
+    city_input = st.text_input(
+        "Search Location (e.g., Tokyo, Raleigh)", 
+        placeholder="Enter city name...", 
+        key="tab4_search_bar"
+    )
 
     if city_input:
         lat, lon, name = get_city_coords(city_input)
@@ -696,29 +702,20 @@ with tab4:
             st.session_state.map_center = [lat, lon]
             st.success(f"📍 Navigation locked to: {name}")
         else:
-            st.error("Location not found.")
-    st.markdown("</div>", unsafe_allow_html=True)
+            st.error("Location not found. Please check the spelling.")
 
-    
-    # Using the current session_state (Defaults to Raleigh if not changed)
-    # Initialize map
+    # 2. Map Rendering
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
     
-
-    # Marker for the current sensor hub
     folium.Marker(
         st.session_state.map_center, 
         tooltip="Active Sensor Hub",
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
     
+    st_folium(m, width="100%", height=400, key="tab4_map")
 
-    # Render the map
-    st_folium(m, width="100%", height=400)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # ... rest of your code
-    # Atmospheric Report
+    # 3. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
