@@ -47,7 +47,7 @@ try:
     # The new SDK automatically picks up the API key from the environment 
     # or you can pass it explicitly if needed.
     client = genai.Client(api_key=st.secrets["GEM_KEY"])
-    
+
     # You no longer need 'GenerativeModel' as a separate class assignment
     # You just call it through the client
 except Exception as e:
@@ -57,7 +57,7 @@ except Exception as e:
 def get_ai_health_briefing(pm25_val, aqi_val):
     if client is None:
         return "AI Health briefing is currently unavailable."
-        
+
     prompt = f"""
     Act as a clinical health educator. The current PM2.5 level is {pm25_val} µg/m³ and the AQI is {aqi_val}.
     Write a 3-sentence "Daily Health Briefing" for a general audience.
@@ -85,14 +85,14 @@ def calculate_resilience_score(aqi, wind_speed, humidity):
     """
     # Normalize AQI: 0 is perfect, 300 is hazardous
     aqi_impact = max(0, 100 - (aqi / 3)) 
-    
+
     # Wind bonus: Up to 15 points if wind is strong (helps dispersion)
     wind_bonus = min(15, wind_speed * 1.5)
-    
+
     # Resilience score
     score = aqi_impact + wind_bonus
     return min(100, max(0, round(score)))
-        
+
 # Set a longer timeout for the API request
 ox.settings.timeout = 300 
 # Tell OSMnx to use the public Overpass server via a more stable request method
@@ -112,7 +112,7 @@ from openaq import OpenAQ
 def get_real_pm25_data(lat, lon):
     try:
         client = OpenAQ(api_key=st.secrets["OPENAQ_API_KEY"])
-        
+
         # 1. Find sensors near the coordinate
         locations = client.locations.list(
             coordinates=(lat, lon),
@@ -120,32 +120,32 @@ def get_real_pm25_data(lat, lon):
             parameter_ids=[1], # PM2.5 ID
             limit=5
         )
-        
+
         # Check if results exist
         if not locations.results:
             return []
-            
+
         # 2. Extract sensor IDs
         sensor_ids = [loc.id for loc in locations.results]
-        
+
         # 3. Fetch measurements for those sensors
         data = client.measurements.list(
             location_ids=sensor_ids,
             parameter_ids=[1],
             limit=100
         )
-        
+
         # 4. Return formatted data
         return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in data.results]
-        
+
     except Exception as e:
         # We don't want to show the full error to the user if it's just a rate limit
         return []
-        
+
         # 2. Extract IDs of the sensors found
         # (Assuming the SDK returns objects with an 'id' attribute)
         sensor_ids = [loc.id for loc in locations.results]
-        
+
         if not sensor_ids:
             return []
 
@@ -155,9 +155,9 @@ def get_real_pm25_data(lat, lon):
             sensors_id=sensor_ids[0], # Fetch from the first sensor found
             limit=100
         )
-        
+
         return [[m.coordinates.latitude, m.coordinates.longitude, min(m.value, 100)] for m in data.results]
-        
+
     except Exception as e:
         st.error(f"Error fetching real-time data: {e}")
         return []
@@ -224,14 +224,14 @@ def get_healthiest_route(start_lat, start_lon, end_lat, end_lon):
     # Sample 3 points: Start, Midpoint, End
     mid_lat = (start_lat + end_lat) / 2
     mid_lon = (start_lon + end_lon) / 2
-    
+
     points = [(start_lat, start_lon), (mid_lat, mid_lon), (end_lat, end_lon)]
-    
+
     total_aqi = 0
     for lat, lon in points:
         data = fetch_global_aqi(lat, lon)
         total_aqi += data.get('us_aqi', 50) # Default to 50 if data missing
-        
+
     avg_aqi = total_aqi / 3
     return avg_aqi
 
@@ -386,7 +386,7 @@ with st.sidebar:
             if target_email: st.success("Protocol Active.")
             else: st.error("Error: Valid Email Required.")
 
-    
+
     st.markdown("---")
     selected_name = st.selectbox("🧬 Select Pollutant", options=list(POLLUTANT_MAP.keys()))
     st.session_state['selected_pollutant_key'] = POLLUTANT_MAP[selected_name]
@@ -456,7 +456,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
-    
+
     st.markdown("""
         <style>
         .search-box {
@@ -494,7 +494,7 @@ with tab1:
 
     # Dynamic UI colors
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
-    
+
     # 3. Metrics Display (Glowing Glass-card UI)
     m1, m2, m3, m4 = st.columns(4)
     with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
@@ -505,17 +505,17 @@ with tab1:
     # 4. PM2.5 Long-term Trajectory (Fixed Layout)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
-    
+
     forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
     fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
-    
+
     fig.add_trace(go.Scatter(
         x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), 
         y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), 
         fill='toself', fillcolor='rgba(255, 8, 68, 0.1)', line=dict(color='rgba(255,255,255,0)'), 
         showlegend=True, name="Confidence"
     ))
-    
+
     # Legend fixed to horizontal top to prevent overlap
     fig.update_layout(
         title="PM2.5 Long-Term Atmospheric Trajectory", 
@@ -575,16 +575,16 @@ with tab1:
         with col3:
             st.markdown("**Aerosol Optical Depth**")
             st.line_chart(plot_df, x="year", y="aerosol_depth", color="#a78bfa")
-        
+
 # --- TAB 2: ANALYTICS ---
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
-    
+
     # 1. Cognitive Risk Assessment Section
     raw_pm25 = current_data.get('pm2_5', 0)
     pm25_val = float(raw_pm25) if raw_pm25 != 'N/A' else 0.0
     risk_score = (pm25_val / 12) * 1.5
-    
+
     # Logic for status
     if pm25_val < 12:
         status, briefing, col_color = "Baseline Homeostasis", "Air quality is optimal. Minimal systemic inflammation detected. Cognitive function is not under environmental stress.", "#10b981"
@@ -614,7 +614,7 @@ with tab2:
 
     # 2. Unified Simulation Panel
     col_sim_gauge, col_sim_slider = st.columns([1, 1])
-    
+
     with col_sim_gauge:
         st.markdown("**Current Threat Level (AQI)**")
         current_aqi_val = float(current_aqi) if current_aqi != 'N/A' else 0
@@ -634,15 +634,15 @@ with tab2:
         ))
         gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=30, b=30, l=30, r=30))
         st.plotly_chart(gauge, use_container_width=True)
-        
+
     with col_sim_slider:
         st.markdown("**Emission Mitigation Simulator**")
         st.write("Adjust the reduction percentage to visualize projected health improvements.")
         reduction = st.slider("Target Mitigation (%)", 0, 50, 0, help="Simulate a reduction in local particulate output.")
-        
+
         # Calculation
         sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
-        
+
         # Display Metric
         st.markdown(f"""
             <div class='glass-card' style='margin-top: 20px; text-align: center;'>
@@ -654,12 +654,32 @@ with tab2:
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
-    
+
+    # 1. Pollutant Deep Dive
     # 1. Pollutant Diagnostic Matrix
     st.markdown("#### 🔬 Pollutant Diagnostic Matrix")
     col_a, col_b = st.columns([1, 1])
     
     with col_a:
+        st.markdown("<div class='glass-card'><h4>🔬 Pollutant Breakdown</h4>", unsafe_allow_html=True)
+        with st.expander("PM2.5 (Fine Particulates)"):
+            st.write("Particles <2.5μm. These bypass natural defenses, lodge deep in the alveoli, and enter the bloodstream.")
+            st.write("**Safe Limit:** < 12.0 μg/m³ (Annual mean) / < 35 μg/m³ (24-hour limit).")
+            st.write("Levels above 35 μg/m³ are considered unhealthy for sensitive groups.")
+        with st.expander("PM10 (Coarse Particulates)"):
+            st.write("Particles <10μm. These consist of dust, pollen, and mold. They cause significant irritation to the nose, throat, and upper airways.")
+            st.write("**Safe Limit:** < 150 μg/m³ (24-hour limit).")
+            st.write("Exceeding this indicates high dust, smoke, or industrial particle concentrations.")
+        with st.expander("Ozone (O3)"):
+            st.write("Ground-level ozone acts as a pulmonary irritant.")
+            st.write("**Safe Limit:** < 0.070 ppm (8-hour average).")
+            st.write("Levels above 0.070 ppm are associated with decreased lung function.")
+        with st.expander("NO2 (Nitrogen Dioxide)"):
+            st.write("A combustion byproduct that inflames airways.")
+            st.write("**Safe Limit:** < 0.053 ppm (Annual mean) / < 0.100 ppm (1-hour limit).")
+            st.write("High levels often correlate with heavy traffic areas.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
         with st.expander("PM2.5 (Fine Particulates) 🟢", expanded=True):
             st.write("Particles <2.5μm. Bypass defenses, lodge in alveoli, enter blood.")
             st.metric("Safe Limit", "< 12.0 μg/m³", delta="Annual Mean")
@@ -668,6 +688,12 @@ with tab3:
             st.metric("Safe Limit", "< 150 μg/m³", delta="24-Hour Limit")
     
     with col_b:
+        st.markdown("<div class='glass-card'><h4>🧬 Systemic Physiological Load</h4>", unsafe_allow_html=True)
+        body_load = min(100, (current_aqi / 300) * 100)
+        st.write(f"**Cumulative Systemic Load: {int(body_load)}%**")
+        st.progress(body_load / 100)
+        st.caption("Estimates the strain on your body's anti-inflammatory defenses based on real-time AQI.")
+        st.markdown("</div>", unsafe_allow_html=True)
         with st.expander("Ozone (O3) 🔵"):
             st.write("Ground-level pulmonary irritant.")
             st.metric("Safe Limit", "< 0.070 ppm", delta="8-Hour Avg")
@@ -686,13 +712,22 @@ with tab3:
     st.markdown("---")
     st.markdown("### 🌱 Mitigation: Create Your Action Plan")
     m_col1, m_col2 = st.columns(2)
-    
+
+    # 2. Mitigation Strategies
+    st.markdown("### 🌱 Mitigation: Ways to Reduce Pollution")
+    col_small, col_big = st.columns(2)
+    with col_small:
+        st.markdown("<div class='glass-card'><h5>🤏 Small Scale (Daily Impact)</h5>", unsafe_allow_html=True)
+        st.write("- Use public transit or bike for short trips.\n- Switch to LED bulbs to reduce energy demand.\n- Choose 'Green' cleaning products (low-VOC).\n- Avoid burning wood or trash.\n- Plant native vegetation to filter air particles.")
     with m_col1:
         st.markdown("<div class='glass-card'><h5>🤏 Daily Micro-Adjustments</h5>", unsafe_allow_html=True)
         st.checkbox("Use public transit/cycle", key="m1")
         st.checkbox("Use green cleaning products", key="m2")
         st.checkbox("Install native vegetation", key="m3")
         st.markdown("</div>", unsafe_allow_html=True)
+    with col_big:
+        st.markdown("<div class='glass-card'><h5>🏢 Large Scale (Systemic Impact)</h5>", unsafe_allow_html=True)
+        st.write("- Transition to high-efficiency HVAC/Heat Pumps.\n- Support clean energy grid infrastructure.\n- Advocate for 'Green Space' zoning in cities.\n- Purchase from sustainable manufacturers.\n- Install residential solar panels.")
         
     with m_col2:
         st.markdown("<div class='glass-card'><h5>🏢 Systemic Macro-Actions</h5>", unsafe_allow_html=True)
@@ -701,15 +736,47 @@ with tab3:
         st.checkbox("Solar panel installation", key="m6")
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # 3. Community Involvement
+    with st.expander("🌍 Get Involved: Foundations & Policy"):
+        st.write("Support organizations driving global air quality standards:")
+        st.markdown("- [Clean Air Task Force](https://www.catf.us/)")
+        st.markdown("- [Environmental Defense Fund](https://www.edf.org/)")
+        st.markdown("- [American Lung Association](https://www.lung.org/)")
+        st.markdown("- [The Climate Reality Project](https://www.climaterealityproject.org/)")
+
+    st.markdown("---")
+
     # 4. Contextual Intelligence
+    st.markdown("#### 📊 Contextual Intelligence")
     historical_avg = df_yearly["mean_pm25"].mean()
     diff_from_avg = current_aqi - historical_avg
+    st.write(f"Current levels are **{abs(diff_from_avg):.1f} units {'above' if diff_from_avg > 0 else 'below'}** the historical 5-year average.")
+    
+    st.markdown("---")
+
+    # 5. Personalized Activity Risk Calculator
+    st.markdown("### 🏃 Personalized Exposure Risk")
+    activity = st.selectbox("Current Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="act_level")
+    if activity == "Heavy Exercise" and current_aqi > 100:
+        st.error("🚨 CRITICAL RISK: High-intensity exercise during these levels drastically increases deep-lung particle deposition.")
+    elif activity == "Heavy Exercise" and current_aqi > 50:
+        st.warning("⚠️ CAUTION: Increased respiration rate will elevate your pollutant intake. Consider reducing intensity.")
+    else:
+        st.success("✅ Air quality risk is manageable for your current activity level.")
     st.metric("Current Deviation from 5-Year Avg", f"{abs(diff_from_avg):.1f} units", delta=f"{'Above' if diff_from_avg > 0 else 'Below'} Mean", delta_color="inverse")
 
     # 5. Dashboard Calculators (Interactive Inputs)
     st.markdown("---")
     c_calc1, c_calc2 = st.columns(2)
-    
+
+    # 6. Indoor Strategy Calculator
+    st.markdown("### 🏠 Indoor Air Strategy")
+    room_sqft = st.number_input("Room Square Footage", value=200, key="sqft_input")
+    filter_type = st.selectbox("Air Purifier Efficiency", ["Standard", "HEPA (High Efficiency)", "Industrial/Commercial"])
+    if st.button("Calculate Filtration Time"):
+        rate = 50 if filter_type == "Standard" else 150
+        time_to_clean = room_sqft / rate
+        st.write(f"Estimated time to scrub air in this room: **{time_to_clean:.1f} minutes**.")
     with c_calc1:
         st.subheader("🏃 Exposure Risk Calculator")
         activity = st.selectbox("Select Activity Level", ["Resting", "Light Walk", "Heavy Exercise"], key="act_level")
@@ -731,8 +798,19 @@ with tab3:
 
     # 6. Final Safe Exposure Budget
     st.markdown("---")
+    
+    # 7. Safe Exposure Budget
+    st.markdown("### ⏳ Daily 'Safe Exposure' Budget")
     st.subheader("⏳ Daily 'Safe Exposure' Budget")
     if current_aqi > 0:
+        safe_hours = max(0, 800 / (float(current_aqi) * 1.5)) 
+        st.metric("Estimated Safe Hours Left Today", f"{safe_hours:.1f} Hours")
+        if safe_hours > 6:
+            st.success("✅ **Air Quality is Clear.** No restrictions on your outdoor exposure.")
+        elif safe_hours > 3:
+            st.warning("⚠️ **Caution.** Your inflammatory budget is depleting. Limit outdoor exercise.")
+        else:
+            st.error("🚫 **Alert.** Your inflammatory budget is low. Switch to indoor air protocol immediately.")
         safe_hours = max(0, 800 / (float(current_aqi) * 1.5))
         
         # Color coding the budget status
@@ -753,73 +831,53 @@ with tab3:
         cols[3].markdown("[Climate Reality](https://www.climaterealityproject.org/)")
 
 with tab4:
-    st.markdown("### 🔍 Global Sensor Network")
-    
-    # 1. Search Interface with Pollutant Toggle
-    col_search, col_pollutant = st.columns([3, 1])
-    
-    with col_search:
-        city_input = st.text_input("Search Location", placeholder="Enter City (e.g., Tokyo, Paris, Raleigh)...", key="city_input_field")
-    with col_pollutant:
-        # Allows switching the data being pulled dynamically
-        pollutant_selection = st.selectbox(
-            "Pollutant Layer", 
-            options=[('pm2_5', 'PM2.5'), ('pm10', 'PM10'), ('o3', 'Ozone'), ('no2', 'NO2')],
-            format_func=lambda x: x[1],
-            key="pollutant_selector"
-        )
-        st.session_state['selected_pollutant_key'] = pollutant_selection[0]
-        st.session_state['selected_pollutant_name'] = pollutant_selection[1]
+    st.markdown("### 🔍 Global Sensor Search")
+    city_input = st.text_input("Search Location (e.g., Tokyo, Raleigh, Paris)", key="city_input_field")
 
-    if st.button("📡 Scan Region", use_container_width=True):
-        if city_input:
-            lat, lon, name = get_city_coords(city_input)
-            if lat:
-                st.session_state.map_center = [lat, lon]
-                st.success(f"📍 Node locked to: {name}")
-            else:
-                st.error("❌ Sensor node not found.")
-
-    # 2. Interactive Map Container
-    st.markdown("<div class='glass-card'>", unsafe_allow_html=True)
-    m = folium.Map(location=st.session_state.get('map_center', [35.7796, -78.6382]), zoom_start=8, tiles="CartoDB dark_matter")
-    
-    folium.Marker(
-        st.session_state.get('map_center', [35.7796, -78.6382]), 
-        tooltip="Active Sensor Hub",
-        icon=folium.Icon(color="blue", icon="satellite-dish", prefix="fa")
-    ).add_to(m)
-    
-    st_folium(m, width="100%", height=400)
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # 3. Atmospheric Report (Live Data)
-    st.markdown("### 📊 Atmospheric Node Report")
-    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
-    active_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
-    active_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
-    
-    with st.spinner(f"Calibrating {active_name} sensors..."):
-        data = fetch_global_aqi(curr_lat, curr_lon, active_key)
-        
-        if data:
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.markdown(f"<div class='glass-card'><h5>US AQI</h5><h3>{data.get('us_aqi', 'N/A')}</h3></div>", unsafe_allow_html=True)
-            with c2:
-                st.markdown(f"<div class='glass-card'><h5>{active_name} Level</h5><h3>{data.get(active_key, 'N/A')} µg/m³</h3></div>", unsafe_allow_html=True)
-            with c3:
-                st.markdown(f"<div class='glass-card'><h5>Node Coord</h5><h3>{curr_lat:.2f}, {curr_lon:.2f}</h3></div>", unsafe_allow_html=True)
+    if city_input:
+        lat, lon, name = get_city_coords(city_input)
+        if lat:
+            st.session_state.map_center = [lat, lon]
+            st.success(f"📍 Navigation locked to: {name}")
         else:
-            st.warning("⚠️ Real-time data stream offline for this node.")
+            st.error("Location not found.")
+
+    # Initialize map
+    m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
+
+    # Marker for the current sensor hub
+    folium.Marker(
+        st.session_state.map_center, 
+        tooltip="Active Sensor Hub",
+        icon=folium.Icon(color="blue", icon="info-sign")
+    ).add_to(m)
+
+    # Render the map
+    st_folium(m, width="100%", height=400)
+
+    # Atmospheric Report
+    st.markdown("### 📊 Atmospheric Report")
+    curr_lat, curr_lon = st.session_state.map_center
+    active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
+    active_pollutant_name = st.session_state.get('selected_pollutant_name', 'PM2.5')
+
+    with st.spinner(f"Fetching {active_pollutant_name} data..."):
+        data = fetch_global_aqi(curr_lat, curr_lon, active_pollutant_key)
+        if data:
+            col1, col2, col3 = st.columns(3)
+            col1.metric("US AQI", f"{data.get('us_aqi', 'N/A')}")
+            col2.metric(f"{active_pollutant_name}", f"{data.get(active_pollutant_key, 'N/A')}")
+            col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
+        else:
+            st.error("Could not retrieve data for this node.")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence")
-    
+
     # Dynamically set the date to today (2026-05-24)
     today_str = datetime.now().strftime("%Y-%m-%d")
     tile_url = f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Thermal_Anomalies_375m/default/{today_str}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png"
-    
+
     st.pydeck_chart(pdk.Deck(
         initial_view_state=pdk.ViewState(latitude=20, longitude=0, zoom=1.5),
         layers=[
@@ -885,14 +943,14 @@ with tab6:
         aqi_val = round(data.get('exposure', 0), 1)
         col1.metric("Route AQI", aqi_val)
         col2.metric("Est. Travel Time", f"{data.get('time_est', 'N/A')} min")
-        
+
         m = folium.Map(tiles="CartoDB dark_matter")
         folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
         folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
         folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
         m.fit_bounds(data['route'])
         st_folium(m, width="100%", height=400)
-        
+
         st.markdown("---")
         st.markdown("### 🩺 Daily Clinical Briefing")
         pm25_est = round(aqi_val * 0.4, 2)
