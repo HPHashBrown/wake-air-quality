@@ -19,4 +19,4 @@ openaq
 gspread
 google-auth
 google-auth-oauthlib
-googletrans==4.0.0-rc1
+googletrans
