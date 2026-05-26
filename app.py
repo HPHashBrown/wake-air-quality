@@ -761,19 +761,24 @@ with tab5:
 # ============================================
 # TAB 6: CLEAN-AIR COMMUTE (FIXED)
 # ============================================
+# ============================================
+# TAB 6: CLEAN-AIR COMMUTE (STRICT FIX)
+# ============================================
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
     import random
 
+    # 1. Address Inputs
     col1, col2 = st.columns(2)
-    start_addr = col1.text_input("Starting Address", "100 Main St, Raleigh, NC", key="start_addr")
-    end_addr = col2.text_input("Destination Address", "500 Main St, Rolesville, NC", key="end_addr")
+    start_addr = col1.text_input("Starting Address", "100 Main St, Raleigh, NC", key="start_addr_input")
+    end_addr = col2.text_input("Destination Address", "500 Main St, Rolesville, NC", key="end_addr_input")
 
-    if st.button("Generate Healthiest Path"):
+    # 2. Path Generation Logic
+    if st.button("Generate Healthiest Path", key="gen_path_btn"):
         try:
             from geopy.geocoders import Nominatim
-            geolocator = Nominatim(user_agent="wake_air_quality_app")
+            geolocator = Nominatim(user_agent="wake_air_quality_app_v2")
             s_loc = geolocator.geocode(start_addr)
             e_loc = geolocator.geocode(end_addr)
             
@@ -782,8 +787,9 @@ with tab6:
             else:
                 s_lat, s_lon = s_loc.latitude, s_loc.longitude
                 e_lat, e_lon = e_loc.latitude, e_loc.longitude
-                dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
                 
+                # Simple distance check
+                dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
                 if dist_km > 50:
                     st.error("Distance too large (max 50km).")
                 else:
@@ -791,41 +797,49 @@ with tab6:
                     if graph:
                         start_node = ox.distance.nearest_nodes(graph, s_lon, s_lat)
                         end_node = ox.distance.nearest_nodes(graph, e_lon, e_lat)
-                        try:
-                            route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
-                            route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
-                            total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
-                            
-                            # STORE IN SESSION STATE
-                            st.session_state.route_data = {
-                                "route": route_coords, 
-                                "s_lat": s_lat, "s_lon": s_lon,
-                                "e_lat": e_lat, "e_lon": e_lon,
-                                "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
-                                "time_est": round(total_time_min, 1)
-                            }
-                        except Exception:
-                            st.error("No path found.")
+                        
+                        route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
+                        route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
+                        
+                        # Calculate time
+                        edge_times = [graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])]
+                        total_time_min = sum(edge_times) / 60
+                        
+                        # UPDATE SESSION STATE WITH DICTIONARY
+                        st.session_state['route_data'] = {
+                            "route": route_coords, 
+                            "s_lat": s_lat, "s_lon": s_lon,
+                            "e_lat": e_lat, "e_lon": e_lon,
+                            "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
+                            "time_est": round(total_time_min, 1)
+                        }
         except Exception as e:
-            st.error(f"Address error: {e}")
+            st.error(f"Routing Error: {str(e)}")
 
-    # FIXED SECTION: Using 'route_results' instead of 'data' to avoid naming conflicts
-    if 'route_data' in st.session_state:
-        route_results = st.session_state.route_data
-        col_m1, col_m2 = st.columns(2)
+    # 3. DISPLAY LOGIC (The problematic part)
+    # Check if key exists AND is not None
+    if st.session_state.get('route_data') is not None:
+        # Explicitly assign to a local variable for the display block
+        res = st.session_state['route_data']
         
-        # This is where your error was:
-        route_aqi_val = round(route_results.get('exposure', 0), 1)
-        
-        col_m1.metric("Route AQI", route_aqi_val)
-        col_m2.metric("Est. Travel Time", f"{route_results.get('time_est', 'N/A')} min")
+        # Ensure 'res' is actually a dictionary before calling .get()
+        if isinstance(res, dict):
+            col_m1, col_m2 = st.columns(2)
+            
+            # Use 0.0 as a safe fallback if 'exposure' is missing
+            route_aqi_val = round(res.get('exposure', 0), 1)
+            
+            col_m1.metric("Route AQI", route_aqi_val)
+            col_m2.metric("Est. Travel Time", f"{res.get('time_est', 'N/A')} min")
 
-        m = folium.Map(tiles="CartoDB dark_matter")
-        folium.PolyLine(route_results['route'], color="#4facfe", weight=5).add_to(m)
-        folium.Marker([route_results['s_lat'], route_results['s_lon']], icon=folium.Icon(color='green')).add_to(m)
-        folium.Marker([route_results['e_lat'], route_results['e_lon']], icon=folium.Icon(color='red')).add_to(m)
-        m.fit_bounds(route_results['route'])
-        st_folium(m, width="100%", height=400, key="route_map_display")
+            m = folium.Map(tiles="CartoDB dark_matter")
+            folium.PolyLine(res['route'], color="#4facfe", weight=5).add_to(m)
+            folium.Marker([res['s_lat'], res['s_lon']], icon=folium.Icon(color='green')).add_to(m)
+            folium.Marker([res['e_lat'], res['e_lon']], icon=folium.Icon(color='red')).add_to(m)
+            m.fit_bounds(res['route'])
+            st_folium(m, width="100%", height=400, key="commute_map")
+        else:
+            st.warning("Routing data is currently being processed...")
 
         st.markdown("---")
         st.markdown("### 🩺 Daily Clinical Briefing")
