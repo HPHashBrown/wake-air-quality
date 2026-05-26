@@ -670,10 +670,12 @@ with tab2:
             </div>
         """, unsafe_allow_html=True)
 
-st.markdown("### 📅 7-Day Atmospheric Outlook")
+    # 3. 7-Day Atmospheric Outlook
+    st.markdown("---")
+    st.markdown("### 📅 7-Day Atmospheric Outlook")
     
     # Get stored forecast data
-forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
+    forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
     if not forecast_df.empty:
         fig = go.Figure()
@@ -696,7 +698,6 @@ forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
         st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Searching for location data to generate 7-day forecast...")
-
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
