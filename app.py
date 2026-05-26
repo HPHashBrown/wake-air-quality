@@ -30,6 +30,24 @@ from google.oauth2.service_account import Credentials
 if 'forecast_data' not in st.session_state:
     st.session_state.forecast_data = pd.DataFrame() # Empty by default
 
+# 1. Initialize State ONLY if it doesn't exist
+if 'map_center' not in st.session_state:
+    st.session_state.map_center = [35.7796, -78.6382]
+if 'current_data' not in st.session_state:
+    st.session_state.current_data = {}
+if 'current_weather' not in st.session_state:
+    st.session_state.current_weather = {}
+
+# 2. Define a "Global Refresh" function to prevent duplication
+def refresh_dashboard_data(lat, lon, name):
+    st.session_state.map_center = [lat, lon]
+    st.session_state.current_data = fetch_global_aqi(lat, lon, name)
+    st.session_state.current_weather = fetch_live_weather(lat, lon, name)
+
+# 3. Handle Initial Load (ONLY if empty)
+if not st.session_state.current_data:
+    refresh_dashboard_data(35.7796, -78.6382, "Raleigh")
+
 
 def create_base_map(lat, lon, zoom=12):
     return folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB dark_matter")
@@ -511,10 +529,12 @@ with tab1:
         col_search, col_btn = st.columns([4, 1])
         with col_search:
             city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed")
-        with col_btn:
+with col_btn:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
+                    refresh_dashboard_data(lat, lon, name)
+                    st.rerun()
                     # UPDATE ALL STATE VARIABLES
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon, name)
