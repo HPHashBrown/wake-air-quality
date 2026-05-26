@@ -314,7 +314,7 @@ def get_global_fire_layer():
     )
 
 @st.cache_data(ttl=60)
-def fetch_live_weather(lat, lon, city_name):
+def fetch_live_weather(lat, lon, city_name="Default"):
     # Ensure lat/lon are floats
     lat, lon = float(lat), float(lon)
     
@@ -476,7 +476,7 @@ with st.sidebar:
 # --- FIX: Ensure live_weather is always a dictionary ---
 with st.spinner("Initializing Atmospheric Sensors..."):
     # This ensures live_weather is never None, but a safe empty dict instead
-    live_weather_raw = fetch_live_weather(35.7796, -78.6382)
+    live_weather_raw = fetch_live_weather(35.7796, -78.6382, "Default")
     live_weather = live_weather_raw if live_weather_raw is not None else {}
 
 @st.cache_data(ttl=3600)
