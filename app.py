@@ -178,8 +178,13 @@ def fetch_global_aqi(lat, lon, metric="pm2_5"):
         return {}
 
 # Safe Initialization
+# Safe Initialization for both AQI and Weather
 if 'current_data' not in st.session_state:
     st.session_state.current_data = fetch_global_aqi(35.7796, -78.6382)
+
+if 'current_weather' not in st.session_state:
+    # Initialize weather state so Tab 1 isn't empty on first load
+    st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
 
 current_data = st.session_state.get('current_data', {})
 # SAFELY convert to float, default to 0 if it's 'N/A' or missing
@@ -241,10 +246,10 @@ def get_healthiest_route(start_lat, start_lon, end_lat, end_lon):
     avg_aqi = total_aqi / 3
     return avg_aqi
 
-# --- MOVE THIS UP TO UNDER YOUR IMPORTS/INITIALIZATION ---
 def refresh_dashboard_data(lat, lon, name):
     st.session_state.map_center = [lat, lon]
     st.session_state.current_data = fetch_global_aqi(lat, lon)
+    # This line is crucial for the "Scan Region" button to work!
     st.session_state.current_weather = fetch_live_weather(lat, lon)
 # ---------------------------------------------------------
 
@@ -447,11 +452,11 @@ with st.sidebar:
 # PROCESSING & MODELING
 # ============================================
 
-# --- FIX: Ensure live_weather is always a dictionary ---
+# --- FIX: Update Session State instead of local variables ---
 with st.spinner("Initializing Atmospheric Sensors..."):
-    # This ensures live_weather is never None, but a safe empty dict instead
-    live_weather_raw = fetch_live_weather(35.7796, -78.6382)
-    live_weather = live_weather_raw if live_weather_raw is not None else {}
+    # If the state is empty (first load), fetch the data
+    if st.session_state.get('current_weather') is None:
+        st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
 
 if PROPHET_AVAILABLE:
     prophet_df = df_yearly.copy()
@@ -494,7 +499,14 @@ with tab1:
     # 1. RETRIEVE & SANITIZE FIRST (Prevents NameErrors)
     data = st.session_state.get('current_data', {})
     weather = st.session_state.get('current_weather', {}) or {}
-    
+
+    # Extract numeric values from the session state
+    temp = float(weather.get('temperature_2m') or 0.0)
+    wind = float(weather.get('wind_speed_10m') or 0.0)
+    head = float(weather.get('wind_direction_10m') or 0.0)
+    # Note: humidity is usually 'relative_humidity_2m' in the Open-Meteo response
+    humidity = float(weather.get('relative_humidity_2m') or 50.0)
+
     # Check for empty weather AFTER retrieval
     if not weather: 
         st.sidebar.warning("API Connectivity: Weather data failed to load (Timeout).")
