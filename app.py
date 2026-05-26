@@ -777,83 +777,79 @@ with tab4:
 # ============================================================
 # TAB 5: NASA FOREST FIRE & SMOKE INTELLIGENCE (VIIRS UPGRADE)
 # ============================================================
+# ============================================================
+# TAB 5: GLOBAL FIRE INTELLIGENCE & HEATMAP
+# ============================================================
 with tab5:
-    st.markdown("### 🌍 NASA VIIRS Satellite Intelligence")
-    st.caption("Using the latest VIIRS (Suomi-NPP) sensors for seamless, gap-free global monitoring.")
+    st.markdown("### 🌍 Global Satellite & Fire Intelligence")
+    st.caption("Layering NIFC Perimeters (USA) and NASA VIIRS Thermal Hotspots (Global).")
 
-    # 1. Target Date Setup
-    # VIIRS data is usually fully processed with a 24-48 hour latency for the global composite.
-    nasa_date = (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')
-    st.info(f"📅 Displaying Gap-Free VIIRS Imagery for: **{nasa_date}**")
-
-    # 2. Control Toggles
-    col_layer1, col_layer2 = st.columns(2)
-    with col_layer1:
-        show_smoke_layer = st.checkbox("☁️ NASA VIIRS True Color (No Gaps)", value=True)
-    with col_layer2:
-        show_fire_layer = st.checkbox("🔥 Thermal Heat Anomalies (375m)", value=True)
-
-    # 3. Base Map Generation
-    lat_c, lon_c = st.session_state.get('map_center', [35.7796, -78.6382])
-    m_intel = folium.Map(location=[lat_c, lon_c], zoom_start=5, tiles="CartoDB dark_matter")
-
-    # LAYER A: VIIRS SNPP Corrected Reflectance (True Color)
-    # This is the "New Satellite" layer that fixes the black holes.
-    if show_smoke_layer:
-        # Note the change to VIIRS_SNPP_CorrectedReflectance_TrueColor
-        viirs_tile_url = (
-            "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
-            "VIIRS_SNPP_CorrectedReflectance_TrueColor/default/"
-            f"{nasa_date}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
-        )
-        folium.TileLayer(
-            tiles=viirs_tile_url,
-            attr="NASA GIBS / VIIRS SNPP",
-            name="VIIRS True Color",
-            overlay=True,
-            opacity=0.8
-        ).add_to(m_intel)
-
-    # LAYER B: VIIRS Thermal Anomalies
-    if show_fire_layer:
-        fire_tile_url = (
-            "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
-            "VIIRS_SNPP_Thermal_Anomalies_375m_All/default/"
-            f"{nasa_date}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png"
-        )
-        folium.TileLayer(
-            tiles=fire_tile_url,
-            attr="NASA FIRMS Intelligence",
-            name="Active Fire Points",
-            overlay=True
-        ).add_to(m_intel)
-
-    # Add focus marker
-    folium.Marker([lat_c, lon_c], icon=folium.Icon(color='blue', icon='screenshot', prefix='glyphicon')).add_to(m_intel)
-
-    st_folium(m_intel, width="100%", height=550, key="viirs_nasa_intel_map")
-
-    # 4. NASA Metrics Section
-    st.markdown("---")
-    st.markdown("### 🛰️ Satellite Telemetry")
-    nasa_data = get_nasa_climate_data(lat_c, lon_c)
-    c1, c2 = st.columns(2)
-    c1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
-    c2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
-
-# Create a Global Fire Heatmap from the satellite points
-if fire_geo and 'features' in fire_geo:
-    # Extract coordinates for the heatmap
-    heat_data = []
-    for feature in fire_geo['features']:
-        # This assumes your global satellite feed is in GeoJSON format
-        coords = feature['geometry']['coordinates']
-        # GeoJSON is [lon, lat], Folium Heatmap needs [lat, lon]
-        heat_data.append([coords[1], coords[0]])
+    # 1. INITIALIZE VARIABLE TO PREVENT NAMEERROR
+    fire_geo = None 
     
-    if heat_data:
-        from folium.plugins import HeatMap
-        HeatMap(heat_data, radius=10, blur=15, gradient={0.4: 'blue', 0.65: 'lime', 1: 'red'}).add_to(m_fire)
+    # 2. Target Date Setup
+    nasa_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # Toggles
+    c1, c2, c3 = st.columns(3)
+    show_perimeters = c1.checkbox("🇺🇸 Show US Perimeters", value=True)
+    show_global_heat = c2.checkbox("🌏 Show Global Heatmap", value=True)
+    show_smoke = c3.checkbox("☁️ Show Smoke Satellite", value=True)
+
+    # 3. Fetch Data
+    if show_perimeters or show_global_heat:
+        with st.spinner("Fetching global fire data..."):
+            # This function must be defined in your helper functions section
+            fire_geo = fetch_us_fire_perimeters() 
+
+    # 4. Map Logic
+    lat_c, lon_c = st.session_state.get('map_center', [35.7796, -78.6382])
+    m_fire = folium.Map(location=[lat_c, lon_c], zoom_start=4, tiles="CartoDB dark_matter")
+
+    # ADD GLOBAL SMOKE (VIIRS - No Gaps)
+    if show_smoke:
+        smoke_url = (
+            f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+            f"VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{nasa_date}/"
+            f"GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
+        )
+        folium.TileLayer(tiles=smoke_url, attr="NASA GIBS", name="Smoke", overlay=True, opacity=0.5).add_to(m_fire)
+
+    # CHECK IF DATA EXISTS BEFORE USING (Fixes NameError)
+    if fire_geo and 'features' in fire_geo:
+        
+        # A. Draw US Perimeters (Shapes)
+        if show_perimeters:
+            folium.GeoJson(
+                fire_geo,
+                name="Fire Shapes",
+                style_function=lambda x: {'fillColor': 'red', 'color': 'orange', 'weight': 2, 'fillOpacity': 0.4}
+            ).add_to(m_fire)
+
+        # B. Draw Global Heatmap
+        if show_global_heat:
+            from folium.plugins import HeatMap
+            heat_data = []
+            for feature in fire_geo['features']:
+                if feature['geometry'] and feature['geometry']['type'] == 'Point':
+                    coords = feature['geometry']['coordinates']
+                    heat_data.append([coords[1], coords[0]]) # Folium uses [Lat, Lon]
+                elif feature['geometry'] and feature['geometry']['type'] == 'Polygon':
+                    # Get center of polygon for heatmap point
+                    coords = feature['geometry']['coordinates'][0][0]
+                    heat_data.append([coords[1], coords[0]])
+
+            if heat_data:
+                HeatMap(heat_data, radius=15, blur=10, gradient={0.4: 'blue', 0.6: 'yellow', 1: 'red'}).add_to(m_fire)
+
+    st_folium(m_fire, width="100%", height=600, key="global_fire_map")
+
+    # 5. NASA Metrics (Bottom)
+    st.markdown("---")
+    nasa_data = get_nasa_climate_data(lat_c, lon_c)
+    col_m1, col_m2 = st.columns(2)
+    col_m1.metric("Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
+    col_m2.metric("Wind Speed", f"{nasa_data['satellite_wind_speed']} m/s")
 
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
