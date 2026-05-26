@@ -504,7 +504,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 with tab1:
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
 
-    # 1. Search Console (Indented 4 spaces)
+    # 1. Search Console
     with st.container():
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
         col_search, col_btn = st.columns([4, 1])
@@ -514,33 +514,37 @@ with tab1:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
+                    # UPDATE ALL STATE VARIABLES AT ONCE
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon, name)
                     st.session_state.current_weather = fetch_live_weather(lat, lon, name)
-                    st.rerun()
+                    st.rerun() # This forces the page to redraw with the new data
                 else:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. Consolidated State Retrieval
+    # 2. Retrieve the now-updated data from session state
+    # We use .get() to provide a fallback, but it will prefer the data from the button click
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    data = st.session_state.get('current_data', {})
+    weather = st.session_state.get('current_weather', {})
     
-    # Safely fetch or default data
-    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon, "Default"))
-    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon, "Default")) or {}
-    
+    # If the button hasn't been clicked yet, grab some default data
+    if not data:
+        data = fetch_global_aqi(curr_lat, curr_lon, "Default")
+    if not weather:
+        weather = fetch_live_weather(curr_lat, curr_lon, "Default")
+
     current_aqi = float(data.get('us_aqi', 0))
-    alert_threshold = st.session_state.get('alert_threshold', 100) 
-    
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 3. Restored Map View
+    # 3. Map View
     st.subheader("📍 Interactive Region Map")
     m = create_base_map(curr_lat, curr_lon)
     folium.Marker([curr_lat, curr_lon], popup="Target Region").add_to(m)
     st_folium(m, width=1200, height=400)
 
-    # 4. Metrics Display
+    # 4. Metrics Display (Now using the variables refreshed above)
     m1, m2, m3, m4 = st.columns(4)
     with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
     with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
