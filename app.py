@@ -241,10 +241,12 @@ def get_healthiest_route(start_lat, start_lon, end_lat, end_lon):
     avg_aqi = total_aqi / 3
     return avg_aqi
 
+# --- MOVE THIS UP TO UNDER YOUR IMPORTS/INITIALIZATION ---
 def refresh_dashboard_data(lat, lon, name):
     st.session_state.map_center = [lat, lon]
     st.session_state.current_data = fetch_global_aqi(lat, lon)
     st.session_state.current_weather = fetch_live_weather(lat, lon)
+# ---------------------------------------------------------
 
 
 def get_nasa_climate_data(lat, lon):
