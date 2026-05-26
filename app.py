@@ -186,6 +186,10 @@ if 'current_weather' not in st.session_state:
     # Initialize weather state so Tab 1 isn't empty on first load
     st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
 
+# Safe Initialization for Weather
+if 'current_weather' not in st.session_state:
+    st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
+
 current_data = st.session_state.get('current_data', {})
 # SAFELY convert to float, default to 0 if it's 'N/A' or missing
 raw_aqi = current_data.get('us_aqi', 0)
