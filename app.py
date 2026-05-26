@@ -489,16 +489,12 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["ðŸ“Š Telemetry & Forecasting", "ð
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-    # 1. RETRIEVE & SANITIZE FIRST (Prevents NameErrors)
-    data = st.session_state.get('current_data', {})
-    weather = st.session_state.get('current_weather', {}) or {}
-
-    # Extract numeric values from the session state
-    temp = float(weather.get('temperature_2m') or 0.0)
-    wind = float(weather.get('wind_speed_10m') or 0.0)
-    head = float(weather.get('wind_direction_10m') or 0.0)
-    # Note: humidity is usually 'relative_humidity_2m' in the Open-Meteo response
-    humidity = float(weather.get('relative_humidity_2m') or 50.0)
+weather = st.session_state.get('current_weather', {})
+    
+    # Ensure we have floats even if the API is slow
+    temp = float(weather.get('temperature_2m', 0.0))
+    wind = float(weather.get('wind_speed_10m', 0.0))
+    head = float(weather.get('wind_direction_10m', 0.0))
 
     # Check for empty weather AFTER retrieval
     if not weather: 
