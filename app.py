@@ -44,7 +44,48 @@ def refresh_dashboard_data(lat, lon, name):
     st.session_state.current_data = fetch_global_aqi(lat, lon, name)
     st.session_state.current_weather = fetch_live_weather(lat, lon, name)
 
-# 3. Handle Initial Load (ONLY if empty)
+
+@st.cache_data(ttl=3600)
+def fetch_global_aqi(lat, lon, metric="pm2_5"):
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&current=us_aqi,{metric}"
+    try: 
+        response = requests.get(url).json()
+        return response.get("current", {})
+    except: 
+        return {}
+
+@st.cache_data(ttl=60)
+def fetch_live_weather(lat, lon, city_name="Default"):
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
+    try:
+        response = requests.get(url).json()
+        current = response.get("current", {})
+        return {
+            "temperature_2m": current.get("temperature_2m", "N/A"),
+            "wind_speed_10m": current.get("wind_speed_10m", "N/A"),
+            "wind_direction_10m": current.get("wind_direction_10m", "N/A")
+        }
+    except Exception:
+        return {"temperature_2m": "N/A", "wind_speed_10m": "N/A", "wind_direction_10m": "N/A"}
+
+# ============================================
+# 2. DEFINE REFRESH FUNCTION
+# ============================================
+def refresh_dashboard_data(lat, lon, name):
+    st.session_state.map_center = [lat, lon]
+    st.session_state.current_data = fetch_global_aqi(lat, lon, name)
+    st.session_state.current_weather = fetch_live_weather(lat, lon, name)
+
+# ============================================
+# 3. INITIALIZE STATE & LOAD DATA
+# ============================================
+if 'map_center' not in st.session_state:
+    st.session_state.map_center = [35.7796, -78.6382]
+if 'current_data' not in st.session_state:
+    st.session_state.current_data = {}
+if 'current_weather' not in st.session_state:
+    st.session_state.current_weather = {}
+
 if not st.session_state.current_data:
     refresh_dashboard_data(35.7796, -78.6382, "Raleigh")
 
