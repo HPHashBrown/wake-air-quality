@@ -675,34 +675,26 @@ if 'map_center' in st.session_state:
 # 7-Day Atmospheric Outlook
     st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-    # This line MUST start with exactly 4 spaces
+    # Create a container so we can clear it if needed
+    placeholder = st.empty()
+    
+    # Force the fetch from state
     forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
-    # Fallback Logic
-    if forecast_df.empty:
-        forecast_df = pd.DataFrame({
-            "date": pd.date_range(start=datetime.now(), periods=7),
-            "aqi": [45, 52, 60, 58, 42, 38, 40]
-        })
-
-    # Plotting
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=forecast_df["date"], y=forecast_df["aqi"], 
-        mode="lines+markers", 
-        name="AQI Forecast",
-        line=dict(color="#00f2fe", width=4),
-        fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
-    ))
-    
-    fig.update_layout(
-        template="plotly_dark",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        hovermode="x unified",
-        margin=dict(t=30, b=30, l=30, r=30)
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    with placeholder.container():
+        if not forecast_df.empty:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=forecast_df["date"], y=forecast_df["aqi"], 
+                mode="lines+markers", 
+                name="AQI Forecast",
+                line=dict(color="#00f2fe", width=4),
+                fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
+            ))
+            fig.update_layout(template="plotly_dark", hovermode="x unified")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.write("No forecast data available. Please scan a region.")
     
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
