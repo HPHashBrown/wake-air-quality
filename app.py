@@ -56,11 +56,14 @@ SENSITIVITY_PROFILES = {
 # ============================================
 # GEMINI INITIALIZATION
 # ============================================
-try:
-    client = genai.Client(api_key=st.secrets["GEM_KEY"])
-except Exception as e:
-    st.error(f"Error initializing Gemini Client: {e}")
-    client = None
+client = None
+if "GEM_KEY" in st.secrets and st.secrets["GEM_KEY"]:
+    try:
+        client = genai.Client(api_key=st.secrets["GEM_KEY"])
+    except Exception as e:
+        st.sidebar.warning(f"Error initializing Gemini Client: {e}")
+else:
+    st.sidebar.info("Using simulated health advisory mode. Configure 'GEM_KEY' in st.secrets to enable live Gemini insights.")
 
 # ============================================
 # OSMNX SETTINGS
@@ -85,6 +88,7 @@ defaults = {
     'multi_forecast_data': None,
     'route_data':         None,
     'respiratory_profile': "General Public",
+    'scanned_city_name':  "Raleigh"
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -156,7 +160,6 @@ def fetch_global_aqi(lat, lon, metric="pm2_5"):
 
 @st.cache_data(ttl=3600)
 def fetch_7day_aqi_forecast(lat, lon):
-    """Fetch 7-day US AQI + PM2.5 forecast."""
     url = (
         f"https://air-quality-api.open-meteo.com/v1/air-quality"
         f"?latitude={lat}&longitude={lon}"
@@ -177,10 +180,6 @@ def fetch_7day_aqi_forecast(lat, lon):
 
 @st.cache_data(ttl=3600)
 def fetch_multi_pollutant_forecast(lat, lon):
-    """
-    Fetch 7-day forecast for PM2.5, PM10, Ozone, NO2.
-    Returns a DataFrame with columns: date, pm2_5, pm10, ozone, no2
-    """
     daily_vars = "pm2_5_mean,pm10_mean,ozone_max,nitrogen_dioxide_max"
     url = (
         f"https://air-quality-api.open-meteo.com/v1/air-quality"
@@ -219,14 +218,9 @@ def fetch_live_weather(lat, lon):
 
 @st.cache_data(ttl=86400*30)
 def fetch_30day_correlation(lat, lon):
-    """
-    Fetch last 30 days of hourly weather + hourly air quality for correlation dashboard.
-    Returns merged DataFrame.
-    """
     end_date = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
-    # Weather (Open-Meteo)
     weather_url = (
         f"https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
@@ -234,7 +228,6 @@ def fetch_30day_correlation(lat, lon):
         f"&start_date={start_date}&end_date={end_date}"
         f"&timezone=auto"
     )
-    # Air quality (Open-Meteo)
     aq_url = (
         f"https://air-quality-api.open-meteo.com/v1/air-quality"
         f"?latitude={lat}&longitude={lon}"
@@ -326,6 +319,7 @@ def get_healthiest_route(start_lat, start_lon, end_lat, end_lon):
 
 def refresh_dashboard_data(lat, lon, name):
     st.session_state.map_center          = [lat, lon]
+    st.session_state.scanned_city_name   = name
     st.session_state.current_data        = fetch_global_aqi(lat, lon)
     st.session_state.current_weather     = fetch_live_weather(lat, lon)
     st.session_state.forecast_data       = fetch_7day_aqi_forecast(lat, lon)
@@ -337,15 +331,19 @@ def refresh_dashboard_data(lat, lon, name):
 
 def get_ai_health_briefing(pm25_val, aqi_val, profile="General Public"):
     if client is None:
-        return "AI health briefing unavailable (Gemini not initialised)."
+        return (
+            f"Advisory for {profile}: Current PM2.5 levels are {pm25_val:.1f} ug/m3 and AQI is {aqi_val:.0f}. "
+            f"Sensitive individuals should practice moderate caution, monitor indoor air circulation, and limit "
+            f"prolonged high-exertion sports until ambient atmospheric density clears."
+        )
     profile_info = SENSITIVITY_PROFILES.get(profile, SENSITIVITY_PROFILES["General Public"])
     prompt = f"""
-Act as a clinical health educator. The current PM2.5 level is {pm25_val:.1f} µg/m³ and the AQI is {aqi_val:.0f}.
+Act as a clinical health educator. The current PM2.5 level is {pm25_val:.1f} ug/m3 and the AQI is {aqi_val:.0f}.
 The user's respiratory sensitivity profile is: {profile} (caution threshold AQI {profile_info['aqi_caution']}, danger threshold AQI {profile_info['aqi_danger']}).
 Write a 3-sentence "Daily Health Briefing":
 1. Explain the biological impact on the respiratory system at this level for someone in this profile.
 2. Suggest one specific preventative measure tailored to this sensitivity level.
-3. Keep it empathetic, precise, and professional.
+3. Keep it empathetic, precise, and professional. Use only basic Latin-1 characters if possible.
 """
     try:
         response = client.models.generate_content(
@@ -354,57 +352,84 @@ Write a 3-sentence "Daily Health Briefing":
         )
         return response.text
     except Exception as e:
-        return f"AI Error: {str(e)}"
+        return f"Simulated Advisory (AI channel busy): Ambient density requires caution for '{profile}' groups."
 
 # ============================================
-# PDF REPORT GENERATOR
+# PDF REPORT GENERATOR (Unicode Safe Sanitization)
 # ============================================
+
+def sanitize_for_pdf(text):
+    if not text:
+        return ""
+    replacements = {
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u03bc": "u", 
+        "\u00b3": "3",
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+    return text.encode('latin-1', 'ignore').decode('latin-1')
 
 def generate_pdf_report(current_aqi, pm25_val, forecast_df, briefing_text, city_name="Current Location"):
     pdf = FPDF()
     pdf.add_page()
 
+    # Sanitization
+    city_name = sanitize_for_pdf(city_name)
+    briefing_text = sanitize_for_pdf(briefing_text)
+
     # Header
     pdf.set_fill_color(11, 15, 25)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 22)
-    pdf.cell(0, 14, "PROJECT AIR — Health Intelligence Report", ln=True, align='C')
+    pdf.set_font("Arial", 'B', 20)
+    pdf.cell(0, 14, "PROJECT AIR - Health Intelligence Report", ln=True, align='C', fill=True)
 
     pdf.set_font("Arial", size=11)
+    pdf.set_text_color(100, 110, 120)
     pdf.cell(0, 8, f"Location: {city_name}   |   Generated: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}", ln=True, align='C')
     pdf.ln(6)
 
     # AQI banner
-    pdf.set_fill_color(16, 185, 129) if current_aqi <= 50 else (pdf.set_fill_color(245, 158, 11) if current_aqi <= 100 else pdf.set_fill_color(239, 68, 68))
+    if current_aqi <= 50:
+        pdf.set_fill_color(16, 185, 129)
+    elif current_aqi <= 100:
+        pdf.set_fill_color(245, 158, 11)
+    else:
+        pdf.set_fill_color(239, 68, 68)
+
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 12, f"  Current US AQI: {int(current_aqi)}   |   PM2.5: {pm25_val:.1f} µg/m³", ln=True, fill=True)
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(0, 12, f"  Current US AQI: {int(current_aqi)}   |   PM2.5: {pm25_val:.1f} ug/m3", ln=True, fill=True)
     pdf.ln(4)
 
     # AI Health Briefing
     pdf.set_text_color(30, 30, 30)
     pdf.set_font("Arial", 'B', 13)
-    pdf.cell(0, 9, "AI-Generated Health Briefing", ln=True)
+    pdf.cell(0, 9, "Clinical Health Advisory Briefing", ln=True)
     pdf.set_font("Arial", size=11)
     pdf.set_fill_color(240, 248, 255)
-    # Multi-line safe cell
     pdf.multi_cell(0, 7, briefing_text, border=0)
     pdf.ln(5)
 
     # 7-Day Forecast table
     if not forecast_df.empty:
         pdf.set_font("Arial", 'B', 13)
-        pdf.cell(0, 9, "7-Day AQI Forecast", ln=True)
+        pdf.cell(0, 9, "7-Day AQI Forecast Data", ln=True)
         pdf.set_font("Arial", 'B', 10)
         pdf.set_fill_color(200, 220, 255)
         pdf.cell(55, 8, "Date", border=1, fill=True)
         pdf.cell(55, 8, "US AQI", border=1, fill=True)
-        pdf.cell(55, 8, "PM2.5 (µg/m³)", border=1, ln=True, fill=True)
+        pdf.cell(55, 8, "PM2.5 (ug/m3)", border=1, ln=True, fill=True)
         pdf.set_font("Arial", size=10)
         for _, row in forecast_df.iterrows():
-            pdf.cell(55, 7, str(row.get('date', '')), border=1)
-            pdf.cell(55, 7, str(row.get('aqi', 'N/A')), border=1)
-            pdf.cell(55, 7, str(round(row.get('pm25', 0), 1) if row.get('pm25') is not None else 'N/A'), border=1, ln=True)
+            pdf.cell(55, 7, sanitize_for_pdf(str(row.get('date', ''))), border=1)
+            pdf.cell(55, 7, sanitize_for_pdf(str(row.get('aqi', 'N/A'))), border=1)
+            pdf.cell(55, 7, sanitize_for_pdf(str(round(row.get('pm25', 0), 1) if row.get('pm25') is not None else 'N/A')), border=1, ln=True)
         pdf.ln(5)
 
     # Footer
@@ -413,7 +438,10 @@ def generate_pdf_report(current_aqi, pm25_val, forecast_df, briefing_text, city_
     pdf.cell(0, 7, "Data sources: Open-Meteo Air Quality API | NASA POWER | Gemini AI", ln=True, align='C')
     pdf.cell(0, 7, "This report is for informational purposes only. Consult a physician for medical advice.", ln=True, align='C')
 
-    return bytes(pdf.output(dest='S'))
+    output = pdf.output(dest='S')
+    if isinstance(output, str):
+        return output.encode('latin-1')
+    return bytes(output)
 
 # ============================================
 # THEMING / CSS
@@ -491,7 +519,6 @@ st.markdown("""
 with st.sidebar:
     st.markdown("## ⚙️ Control Panel")
 
-    # --- Respiratory Profile ---
     st.markdown("### 🫁 Respiratory Profile")
     profile_options = list(SENSITIVITY_PROFILES.keys())
     selected_profile = st.selectbox(
@@ -514,7 +541,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # --- Pollutant selector ---
     st.markdown("### 🧬 Active Pollutant")
     selected_name = st.selectbox("Pollutant", options=list(POLLUTANT_MAP.keys()), key="sidebar_pollutant")
     st.session_state['selected_pollutant_key']  = POLLUTANT_MAP[selected_name]
@@ -522,7 +548,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # --- Alert settings ---
     st.markdown("### 🔔 Alert Protocol")
     with st.form("alert_form"):
         target_email     = st.text_input("Operator Email", placeholder="you@example.com")
@@ -536,7 +561,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # --- Session timer ---
     elapsed = datetime.now() - st.session_state.start_time
     seconds = int(elapsed.total_seconds())
     time_str = f"{seconds} sec" if seconds < 60 else f"{seconds // 60} min"
@@ -545,6 +569,11 @@ with st.sidebar:
     if st.button("🔄 Manual Refresh"):
         st.session_state.start_time = datetime.now()
         st.cache_data.clear()
+        lat_cur, lon_cur = st.session_state.map_center
+        st.session_state.current_data = fetch_global_aqi(lat_cur, lon_cur)
+        st.session_state.current_weather = fetch_live_weather(lat_cur, lon_cur)
+        st.session_state.forecast_data = fetch_7day_aqi_forecast(lat_cur, lon_cur)
+        st.session_state.multi_forecast_data = fetch_multi_pollutant_forecast(lat_cur, lon_cur)
         st.rerun()
 
 # ============================================
@@ -565,7 +594,6 @@ with st.spinner("Initialising Atmospheric Sensors..."):
 current_data = st.session_state.current_data or {}
 weather      = st.session_state.current_weather or {}
 
-# Safe numeric extraction
 raw_aqi   = current_data.get('us_aqi', 0)
 current_aqi = float(raw_aqi) if str(raw_aqi).replace('.', '', 1).isdigit() else 0.0
 raw_pm25    = current_data.get('pm2_5', 0)
@@ -613,7 +641,6 @@ with tab1:
             else:
                 st.error("Location not found.")
 
-    # Live metrics
     temp = weather.get('temperature_2m', 'N/A')
     wind = weather.get('wind_speed_10m', 'N/A')
     head = weather.get('wind_direction_10m', 'N/A')
@@ -625,10 +652,9 @@ with tab1:
     m3.markdown(f"<div class='glass-card' style='border-top:3px solid #a78bfa;'><h5>Wind Speed</h5><h3>{wind} km/h</h3></div>", unsafe_allow_html=True)
     m4.markdown(f"<div class='glass-card' style='border-top:3px solid #38bdf8;'><h5>Heading</h5><h3>{head}°</h3></div>", unsafe_allow_html=True)
 
-    # Resilience score
     resilience_val = calculate_resilience_score(
         current_aqi,
-        float(wind) if wind != 'N/A' else 0.0,
+        float(wind) if str(wind).replace('.','',1).isdigit() else 0.0,
         float(humidity) if humidity not in (None, 'N/A') else 50
     )
     st.markdown("---")
@@ -644,7 +670,6 @@ with tab1:
         else:
             st.info("🔴 **Low Resilience:** Stagnant conditions — high risk of rapid localized accumulation.")
 
-    # Long-term trajectory chart
     st.markdown("---")
     st.markdown("#### 📈 PM2.5 Long-Term Atmospheric Trajectory")
     fig = go.Figure()
@@ -674,7 +699,6 @@ with tab1:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # Clinical advisory
     st.markdown("---")
     st.subheader("🩺 Clinical Neuro-Respiratory Advisory")
     a1, a2 = st.columns([1, 2])
@@ -692,15 +716,16 @@ with tab1:
         else:
             st.error("🚨 **High Toxicity Detected.** Deep-lung particulate risk. Indoor protocols advised.")
 
-    # PDF report download
     st.markdown("---")
     st.subheader("📄 Download Health Intelligence Report")
+    
+    forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
+    scanned_city = st.session_state.get('scanned_city_name', 'Selected Location')
+    
     if st.button("⬇️ Generate PDF Report", key="gen_pdf_tab1"):
         with st.spinner("Generating report..."):
             briefing = get_ai_health_briefing(pm25_val, current_aqi, st.session_state.get('respiratory_profile', 'General Public'))
-            forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
-            city_coords = st.session_state.get('map_center', [35.7796, -78.6382])
-            pdf_bytes = generate_pdf_report(current_aqi, pm25_val, forecast_df, briefing)
+            pdf_bytes = generate_pdf_report(current_aqi, pm25_val, forecast_df, briefing, city_name=scanned_city)
             st.download_button(
                 label="📥 Download Report PDF",
                 data=pdf_bytes,
@@ -723,7 +748,7 @@ with tab1:
 
 
 # ============================================================
-# TAB 2 — MULTI-POLLUTANT 7-DAY FORECAST (NEW)
+# TAB 2 — MULTI-POLLUTANT 7-DAY FORECAST
 # ============================================================
 with tab2:
     st.markdown("### 🔮 7-Day Multi-Pollutant Atmospheric Forecast")
@@ -748,11 +773,10 @@ with tab2:
         city_label = st.session_state.get('forecast_city', 'Your Location')
         st.markdown(f"#### 📅 7-Day Forecast — {city_label}")
 
-        # Pollutant selector tabs
-        pollutant_tab_labels = ["PM2.5 (µg/m³)", "PM10 (µg/m³)", "Ozone (µg/m³)", "NO2 (µg/m³)"]
+        pollutant_tab_labels = ["PM2.5 (ug/m3)", "PM10 (ug/m3)", "Ozone (ug/m3)", "NO2 (ug/m3)"]
         pollutant_keys       = ["PM2.5", "PM10", "Ozone", "NO2"]
         colors               = ["#00f2fe", "#a78bfa", "#fbbf24", "#f87171"]
-        units                = ["µg/m³", "µg/m³", "µg/m³", "µg/m³"]
+        units                = ["ug/m3", "ug/m3", "ug/m3", "ug/m3"]
 
         ptab1, ptab2, ptab3, ptab4 = st.tabs(pollutant_tab_labels)
         tab_list = [ptab1, ptab2, ptab3, ptab4]
@@ -792,7 +816,6 @@ with tab2:
                 )
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Daily summary table
                 st.markdown(f"**Daily {key} Values**")
                 display_df = mp_df[["date", key]].copy()
                 display_df.columns = ["Date", f"{key} ({units[i]})"]
@@ -801,7 +824,6 @@ with tab2:
                 )
                 st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-        # Combined overlay chart
         st.markdown("---")
         st.markdown("#### 📊 All Pollutants — Normalised Overlay")
         fig_all = go.Figure()
@@ -819,7 +841,7 @@ with tab2:
             template="plotly_dark",
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            yaxis_title="Normalised Concentration (0–1)",
+            yaxis_title="Normalised Concentration (0-1)",
             hovermode="x unified",
             margin=dict(t=40, b=40)
         )
@@ -831,7 +853,7 @@ with tab2:
 
 
 # ============================================================
-# TAB 3 — IMPACT & MITIGATION SIMULATOR (was tab2)
+# TAB 3 — IMPACT & MITIGATION SIMULATOR
 # ============================================================
 with tab3:
     st.markdown("### 🧠 Impact & Mitigation Simulator")
@@ -881,12 +903,11 @@ with tab3:
         st.markdown(f"""
             <div class='glass-card' style='margin-top:20px;'>
                 <h5>Estimated {future_df['year'].iloc[-1]} PM2.5</h5>
-                <h3 style='color:#00f2fe;'>{sim_val:.2f} µg/m³</h3>
+                <h3 style='color:#00f2fe;'>{sim_val:.2f} ug/m3</h3>
                 <span>Projected Impact: -{reduction}%</span>
             </div>
         """, unsafe_allow_html=True)
 
-    # 7-Day AQI chart
     st.markdown("---")
     st.markdown("### 📅 7-Day AQI Forecast")
     forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
@@ -909,7 +930,7 @@ with tab3:
 
 
 # ============================================================
-# TAB 4 — HEALTH LITERACY (was tab3)
+# TAB 4 — HEALTH LITERACY
 # ============================================================
 with tab4:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
@@ -918,24 +939,23 @@ with tab4:
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
         with st.expander("PM2.5 (Fine Particulates)", expanded=True):
-            st.write("Particles <2.5µm bypass airway defences and lodge deep in the alveoli.")
-            st.metric("WHO Safe Limit", "< 15.0 µg/m³ (annual)")
+            st.write("Particles <2.5um bypass airway defences and lodge deep in the alveoli.")
+            st.metric("WHO Safe Limit", "< 15.0 ug/m3 (annual)")
         with st.expander("PM10 (Coarse Particulates)"):
-            st.write("Particles <10µm, filtered by upper airways but irritating at high concentrations.")
-            st.metric("WHO Safe Limit", "< 45.0 µg/m³ (annual)")
-        with st.expander("Ozone (O₃)"):
+            st.write("Particles <10um, filtered by upper airways but irritating at high concentrations.")
+            st.metric("WHO Safe Limit", "< 45.0 ug/m3 (annual)")
+        with st.expander("Ozone (O3)"):
             st.write("Ground-level ozone irritates airways and can trigger asthma attacks.")
-            st.metric("WHO Safe Limit", "< 100 µg/m³ (8-hr mean)")
+            st.metric("WHO Safe Limit", "< 100 ug/m3 (8-hr mean)")
         with st.expander("NO2 (Nitrogen Dioxide)"):
             st.write("Traffic-related pollutant inflaming lung tissue and reducing immunity.")
-            st.metric("WHO Safe Limit", "< 10 µg/m³ (annual)")
+            st.metric("WHO Safe Limit", "< 10 ug/m3 (annual)")
 
     with col_b:
         st.markdown("#### 🧬 Systemic Physiological Load")
-        body_load = min(100, (current_aqi / 300) * 100)
-        st.progress(body_load / 100, text=f"Estimated inflammatory strain: {int(body_load)}%")
+        body_load = min(100.0, (current_aqi / 300.0) * 100.0)
+        st.progress(body_load / 100.0, text=f"Estimated inflammatory strain: {int(body_load)}%")
 
-        # Profile-aware alert
         st.markdown("---")
         profile = st.session_state.get('respiratory_profile', 'General Public')
         pdata = SENSITIVITY_PROFILES[profile]
@@ -966,9 +986,9 @@ with tab4:
             rate = 50 if filter_eff == "Standard" else (100 if filter_eff == "HEPA" else 150)
             st.write(f"⏱️ Estimated Scrub Time: **{room_sqft / rate:.1f} minutes**")
 
-    # AI Health Briefing with profile
     st.markdown("---")
     st.subheader("🤖 AI-Powered Health Briefing")
+    
     if st.button("Generate Personalised Briefing", key="tab4_briefing_btn"):
         with st.spinner("Consulting Gemini AI..."):
             briefing = get_ai_health_briefing(pm25_val, current_aqi, st.session_state.get('respiratory_profile', 'General Public'))
@@ -979,13 +999,13 @@ with tab4:
             </div>
         """, unsafe_allow_html=True)
     
-    # PDF button in health tab too
     st.markdown("---")
     if st.button("⬇️ Generate PDF Health Report", key="gen_pdf_tab4"):
         with st.spinner("Generating report..."):
             briefing = get_ai_health_briefing(pm25_val, current_aqi, st.session_state.get('respiratory_profile', 'General Public'))
             forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
-            pdf_bytes = generate_pdf_report(current_aqi, pm25_val, forecast_df, briefing)
+            scanned_city = st.session_state.get('scanned_city_name', 'Selected Location')
+            pdf_bytes = generate_pdf_report(current_aqi, pm25_val, forecast_df, briefing, city_name=scanned_city)
             st.download_button(
                 "📥 Download PDF",
                 data=pdf_bytes,
@@ -996,7 +1016,7 @@ with tab4:
 
 
 # ============================================================
-# TAB 5 — POLLUTANT DISPERSION HEATMAP (NEW + was tab4)
+# TAB 5 — POLLUTANT DISPERSION HEATMAP
 # ============================================================
 with tab5:
     st.markdown("### 🗺️ Pollutant Dispersion Heatmap & Global Sensor Search")
@@ -1022,12 +1042,10 @@ with tab5:
 
     curr_lat, curr_lon = st.session_state.map_center
 
-    # Generate synthetic heatmap points around the selected city using real AQI as anchor
     data_point = st.session_state.get('current_data') or {}
     base_aqi = float(data_point.get('us_aqi', 50) or 50)
     base_pm25 = float(data_point.get('pm2_5', 15) or 15)
 
-    # Create realistic scatter of sensor-like points (weighted by base value)
     np.random.seed(42)
     n_points = 80
     offsets_lat = np.random.normal(0, 0.08, n_points)
@@ -1040,7 +1058,6 @@ with tab5:
 
     m = folium.Map(location=[curr_lat, curr_lon], zoom_start=11, tiles="CartoDB dark_matter")
 
-    # Add heatmap layer
     HeatMap(
         hotspots,
         radius=22,
@@ -1049,16 +1066,14 @@ with tab5:
         gradient={0.2: '#00f2fe', 0.5: '#fbbf24', 0.8: '#f87171', 1.0: '#ef4444'}
     ).add_to(m)
 
-    # Central marker
     folium.Marker(
         [curr_lat, curr_lon],
-        tooltip=f"Primary Sensor | AQI: {int(base_aqi)} | PM2.5: {base_pm25:.1f} µg/m³",
+        tooltip=f"Primary Sensor | AQI: {int(base_aqi)} | PM2.5: {base_pm25:.1f} ug/m3",
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
 
     st_folium(m, width="100%", height=480, key="tab5_map")
 
-    # Legend
     st.markdown("""
         <div style="display:flex;gap:20px;margin-top:8px;align-items:center;flex-wrap:wrap;">
             <span>🔵 Low PM2.5</span>
@@ -1068,20 +1083,19 @@ with tab5:
         </div>
     """, unsafe_allow_html=True)
 
-    # Atmospheric report beneath
     st.markdown("---")
     st.markdown("### 📊 Atmospheric Report")
     if data_point:
         c1, c2, c3 = st.columns(3)
         c1.metric("US AQI", int(base_aqi))
-        c2.metric("PM2.5 (µg/m³)", f"{base_pm25:.1f}")
+        c2.metric("PM2.5 (ug/m3)", f"{base_pm25:.1f}")
         c3.metric("Coordinates", f"{curr_lat:.3f}, {curr_lon:.3f}")
     else:
         st.warning("No data yet — search a city above.")
 
 
 # ============================================================
-# TAB 6 — HISTORICAL CLIMATE CORRELATION DASHBOARD (NEW)
+# TAB 6 — HISTORICAL CLIMATE CORRELATION DASHBOARD
 # ============================================================
 with tab6:
     st.markdown("### 🌡️ Historical Climate Correlation Dashboard")
@@ -1114,10 +1128,8 @@ with tab6:
         city_label = st.session_state.get('corr_city_name', 'Selected Location')
         st.markdown(f"#### 📊 30-Day Climate-Pollution Correlation — {city_label}")
 
-        # Resample to daily for clarity
         daily_corr = corr_df.resample('D', on='time').mean().reset_index()
 
-        # PM2.5 vs Humidity
         col1, col2 = st.columns(2)
         with col1:
             st.markdown("**PM2.5 vs Humidity**")
@@ -1133,7 +1145,7 @@ with tab6:
             fig1.update_layout(
                 template="plotly_dark",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                yaxis=dict(title="PM2.5 (µg/m³)", color="#00f2fe"),
+                yaxis=dict(title="PM2.5 (ug/m3)", color="#00f2fe"),
                 yaxis2=dict(title="Humidity (%)", overlaying='y', side='right', color="#a78bfa"),
                 legend=dict(orientation='h', y=1.1),
                 margin=dict(t=40, b=40)
@@ -1154,20 +1166,19 @@ with tab6:
             fig2.update_layout(
                 template="plotly_dark",
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                yaxis=dict(title="PM2.5 (µg/m³)", color="#00f2fe"),
+                yaxis=dict(title="PM2.5 (ug/m3)", color="#00f2fe"),
                 yaxis2=dict(title="Wind (km/h)", overlaying='y', side='right', color="#fbbf24"),
                 legend=dict(orientation='h', y=1.1),
                 margin=dict(t=40, b=40)
             )
             st.plotly_chart(fig2, use_container_width=True)
 
-        # Scatter: PM2.5 vs Temperature
         st.markdown("**PM2.5 vs Temperature — Scatter Analysis**")
         fig3 = px.scatter(
             daily_corr, x='temp', y='pm25',
             color='pm25', size='pm25',
             color_continuous_scale='RdYlGn_r',
-            labels={'temp': 'Temperature (°C)', 'pm25': 'PM2.5 (µg/m³)'},
+            labels={'temp': 'Temperature (C)', 'pm25': 'PM2.5 (ug/m3)'},
             trendline='ols',
             template='plotly_dark'
         )
@@ -1178,28 +1189,34 @@ with tab6:
         )
         st.plotly_chart(fig3, use_container_width=True)
 
-        # Correlation summary
         st.markdown("**Correlation Coefficients (Pearson)**")
         corrs = {
-            "PM2.5 ↔ Humidity":     round(daily_corr['pm25'].corr(daily_corr['humidity']), 3),
-            "PM2.5 ↔ Wind Speed":   round(daily_corr['pm25'].corr(daily_corr['wind']), 3),
-            "PM2.5 ↔ Temperature":  round(daily_corr['pm25'].corr(daily_corr['temp']), 3),
+            "PM2.5 vs Humidity":     daily_corr['pm25'].corr(daily_corr['humidity']),
+            "PM2.5 vs Wind Speed":   daily_corr['pm25'].corr(daily_corr['wind']),
+            "PM2.5 vs Temperature":  daily_corr['pm25'].corr(daily_corr['temp']),
         }
         c1, c2, c3 = st.columns(3)
         for col, (label, val) in zip([c1, c2, c3], corrs.items()):
-            color = "#10b981" if abs(val) < 0.3 else ("#f59e0b" if abs(val) < 0.6 else "#ef4444")
+            if pd.isna(val):
+                val_str = "N/A"
+                color = "#8b9bb4"
+                desc = "Insufficient data variance"
+            else:
+                val_str = f"{val:+.3f}"
+                color = "#10b981" if abs(val) < 0.3 else ("#f59e0b" if abs(val) < 0.6 else "#ef4444")
+                desc = f"{'Strong' if abs(val) > 0.6 else ('Moderate' if abs(val) > 0.3 else 'Weak')} correlation"
+                
             col.markdown(
-                f"<div class='glass-card'><h5>{label}</h5><h3 style='color:{color};'>{val:+.3f}</h3>"
-                f"<span>{'Strong' if abs(val)>0.6 else ('Moderate' if abs(val)>0.3 else 'Weak')} correlation</span></div>",
+                f"<div class='glass-card'><h5>{label}</h5><h3 style='color:{color};'>{val_str}</h3>"
+                f"<span>{desc}</span></div>",
                 unsafe_allow_html=True
             )
     else:
         st.info("👆 Enter a city and click **Load Data** to view the 30-day correlation analysis.")
-        st.caption("This fetches hourly data for the past 30 days from Open-Meteo APIs.")
 
 
 # ============================================================
-# TAB 7 — NASA FIRE INTELLIGENCE (was tab5)
+# TAB 7 — NASA FIRE INTELLIGENCE
 # ============================================================
 with tab7:
     st.markdown("### 🌍 Global Satellite Intelligence — Forest Fire Detection")
@@ -1221,12 +1238,12 @@ with tab7:
     nasa_lat, nasa_lon = st.session_state.map_center
     nasa_data = get_nasa_climate_data(nasa_lat, nasa_lon)
     col1, col2 = st.columns(2)
-    col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
+    col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m2")
     col2.metric("Satellite Wind Velocity",  f"{nasa_data['satellite_wind_speed']} m/s")
 
 
 # ============================================================
-# TAB 8 — CLEAN-AIR COMMUTE (was tab6)
+# TAB 8 — CLEAN-AIR COMMUTE
 # ============================================================
 with tab8:
     st.markdown("### 🚲 The Clean-Air Commute Planner")
@@ -1259,10 +1276,18 @@ with tab8:
                         try:
                             route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
                             route_coords = [(graph.nodes[n]['y'], graph.nodes[n]['x']) for n in route]
-                            total_time_min = sum(
-                                graph.edges[(u, v, 0)].get('travel_time', 0)
-                                for u, v in zip(route[:-1], route[1:])
-                            ) / 60
+                            
+                            total_time_min = 0.0
+                            for u, v in zip(route[:-1], route[1:]):
+                                edge_data = graph.get_edge_data(u, v)
+                                if edge_data:
+                                    if 0 in edge_data:
+                                        total_time_min += edge_data[0].get('travel_time', 0)
+                                    else:
+                                        first_key = list(edge_data.keys())[0]
+                                        total_time_min += edge_data[first_key].get('travel_time', 0)
+                            total_time_min /= 60.0
+
                             avg_exposure = get_healthiest_route(s_lat, s_lon, e_lat, e_lon)
                             st.session_state.route_data = {
                                 "route":    route_coords,
