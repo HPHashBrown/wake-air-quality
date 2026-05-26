@@ -489,7 +489,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["ğŸ“Š Telemetry & Forecasting", "ğ
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-weather = st.session_state.get('current_weather', {})
+    weather = st.session_state.get('current_weather', {})
     
     # Ensure we have floats even if the API is slow
     temp = float(weather.get('temperature_2m', 0.0))
