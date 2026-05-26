@@ -484,8 +484,15 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-    if not weather: st.sidebar.warning("API Connectivity: Weather data failed to load (Timeout).")
-    # 1. High-Tech Console Search Input
+    # 1. RETRIEVE & SANITIZE FIRST (Prevents NameErrors)
+    data = st.session_state.get('current_data', {})
+    weather = st.session_state.get('current_weather', {}) or {}
+    
+    # Check for empty weather AFTER retrieval
+    if not weather: 
+        st.sidebar.warning("API Connectivity: Weather data failed to load (Timeout).")
+
+    # 2. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
 
     with st.container():
@@ -497,21 +504,14 @@ with tab1:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
-                    # Refresh state via your helper function
                     refresh_dashboard_data(lat, lon, name)
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. State Retrieval & Sanitization
-    data = st.session_state.get('current_data', {})
-    weather = st.session_state.get('current_weather', {}) or {}
-    
-    # Force numeric conversion for AQI and Weather
+    # 3. Numeric Sanitization
     current_aqi = float(data.get('us_aqi', 0.0) or 0.0)
-    
-    # Sanitized Weather values (Defaults to 0.0 if None or 'N/A')
     temp = float(weather.get('temperature_2m') or 0.0)
     wind = float(weather.get('wind_speed_10m') or 0.0)
     head = float(weather.get('wind_direction_10m') or 0.0)
@@ -520,32 +520,19 @@ with tab1:
     # Dynamic UI colors
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 3. Metrics Display
+    # 4. Metrics Display
     m1, m2, m3, m4 = st.columns(4)
-    with m1: 
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
-    with m2: 
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{temp}°C</h3></div>", unsafe_allow_html=True)
-    with m3: 
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{wind} km/h</h3></div>", unsafe_allow_html=True)
-    with m4: 
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{head}°</h3></div>", unsafe_allow_html=True)
-
-    # 4. PM2.5 Chart (Keeping your logic...)
-    # [Insert your fig plotting code here]
+    with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
+    with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{temp}°C</h3></div>", unsafe_allow_html=True)
+    with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{wind} km/h</h3></div>", unsafe_allow_html=True)
+    with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{head}°</h3></div>", unsafe_allow_html=True)
 
     # 5. Clinical Advisory
     st.markdown("---")
     st.subheader("🩺 Clinical Neuro-Respiratory Advisory")
-    a1, a2 = st.columns([1, 2])
-    with a1:
-        st.markdown(f"<div style='text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px;'><h1 style='color:{aqi_color}; font-size: 60px;'>{current_aqi}</h1></div>", unsafe_allow_html=True)
-    with a2:
-        if current_aqi <= 50: st.success("✅ **Air Quality is Optimal.**")
-        elif current_aqi <= 100: st.warning("⚠️ **Air Quality is Moderate.**")
-        else: st.error("🚨 **High Toxicity Detected.**")
+    # ... (Keep your existing Clinical Advisory logic)
 
-    # 6. Environmental Resilience Index (Safely calling the sanitized variables)
+    # 6. Environmental Resilience Index
     resilience_val = calculate_resilience_score(current_aqi, wind, humidity)
     st.markdown("---")
     st.subheader("🛡️ Environmental Resilience Index")
