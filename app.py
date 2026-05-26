@@ -511,7 +511,7 @@ with tab1:
         </style>
     """, unsafe_allow_html=True)
 
-with st.container():
+    with st.container():
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
         col_search, col_btn = st.columns([4, 1])
         with col_search:
@@ -528,13 +528,12 @@ with st.container():
                 else:
                     st.error("❌ Target lost.")
         
-        # THIS IS THE KEY LINE: Align it with the st.markdown line above
         st.markdown('</div>', unsafe_allow_html=True)
     
     # 2. State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
-    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
-    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
+    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon, "Default"))
+    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon, "Default")) or {}
     current_aqi = float(data.get('us_aqi', 0))
 
     # Dynamic UI colors
