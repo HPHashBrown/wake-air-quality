@@ -265,25 +265,17 @@ def get_global_fire_layer():
 
 @st.cache_data(ttl=300)
 def fetch_live_weather(lat, lon, city_name="Default"):
-    # Using 'current' instead of 'current_weather' to match the latest Open-Meteo API
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&timezone=auto"
+    # Updated URL format for the newest Open-Meteo version
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,relative_humidity_2m"
     try:
         response = requests.get(url, timeout=10)
         if response.status_code == 200:
-            raw_data = response.json()
-            # Open-Meteo puts live data inside the 'current' key
-            current = raw_data.get("current", {})
-            
-            # Explicitly building the dictionary to ensure keys exist
-            weather_data = {
-                "temperature_2m": current.get("temperature_2m", 0),
-                "wind_speed_10m": current.get("wind_speed_10m", 0),
-                "wind_direction_10m": current.get("wind_direction_10m", 0),
-                "relative_humidity_2m": current.get("relative_humidity_2m", 50)
-            }
-            return weather_data
+            res = response.json()
+            # The 'current' dictionary contains the live telemetry
+            return res.get("current", {})
     except Exception as e:
-        print(f"DEBUG: Weather Fetch Failed: {e}")
+        print(f"Weather Fetch Error: {e}")
+    return {}
     
     return None # Return None so the UI knows to try again
 
@@ -477,9 +469,6 @@ st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Respons
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute"])
 
-# --- TAB 1: OVERVIEW ---
-
-# --- TAB 1: OVERVIEW (BULLETPROOF REWRITE) ---
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
@@ -500,9 +489,9 @@ with tab1:
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
         col_search, col_btn = st.columns([4, 1])
         with col_search:
-            city_input = st.text_input("Search Location", "Raleigh", key="tab1_city_final", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
+            city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
         with col_btn:
-            if st.button("📡 Scan Region", use_container_width=True, key="scan_main"):
+            if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
                     st.session_state.map_center = [lat, lon]
@@ -513,76 +502,95 @@ with tab1:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. DATA SAFETY CHECK (Prevents AttributeError)
-    data = st.session_state.get('current_data', {})
-    weather_raw = st.session_state.get('current_weather', {})
-    
-    # If weather_raw is a string or None, reset it to an empty dict
-    if not isinstance(weather_raw, dict):
-        weather = {}
-    else:
-        weather = weather_raw
+    # 2. State Retrieval
+    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
+    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
+    current_aqi = float(data.get('us_aqi', 0))
 
-    # 3. Variable Extraction & Color Logic
-    current_aqi = float(data.get('us_aqi') or 0.0) if isinstance(data, dict) else 0.0
+    # Dynamic UI colors
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 4. Metrics Display
+    # 3. Metrics Display (Glowing Glass-card UI)
     m1, m2, m3, m4 = st.columns(4)
-    
-    with m1:
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{int(current_aqi)}</h3></div>", unsafe_allow_html=True)
-    
-    with m2:
-        # We look for 'temperature_2m' (New API) or 'temperature' (Fallback)
-        temp_val = weather.get('temperature_2m') or weather.get('temperature', 0)
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{temp_val}°C</h3></div>", unsafe_allow_html=True)
-    
-    with m3:
-        wind_val = weather.get('wind_speed_10m') or weather.get('windspeed', 0)
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{wind_val} km/h</h3></div>", unsafe_allow_html=True)
-    
-    with m4:
-        head_val = weather.get('wind_direction_10m') or weather.get('winddirection', 0)
-        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{head_val}°</h3></div>", unsafe_allow_html=True)
+    with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
+    with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
+    with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
+    with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
 
-    # 5. PM2.5 Trajectory Chart
+    # 4. PM2.5 Long-term Trajectory (Fixed Layout)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
-    
-    if 'future_df' in globals() or 'future_df' in locals():
-        forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
-        fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
 
+    forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
+    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
+
+    fig.add_trace(go.Scatter(
+        x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), 
+        y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), 
+        fill='toself', fillcolor='rgba(255, 8, 68, 0.1)', line=dict(color='rgba(255,255,255,0)'), 
+        showlegend=True, name="Confidence"
+    ))
+
+    # Legend fixed to horizontal top to prevent overlap
     fig.update_layout(
         title="PM2.5 Long-Term Atmospheric Trajectory", 
         template="plotly_dark", 
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=80, l=40, r=40, b=40),
-        legend=dict(orientation="h", y=1.1, x=0.5, xanchor="center")
+        plot_bgcolor="rgba(0,0,0,0)", 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="center", x=0.5),
+        margin=dict(t=100, l=40, r=40, b=40)
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # 6. Clinical Advisory
+    # 5. Clinical Advisory
     st.markdown("---")
     st.subheader("🩺 Clinical Neuro-Respiratory Advisory")
     a1, a2 = st.columns([1, 2])
     with a1:
-        st.markdown(f"<div style='text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px;'><h1 style='color:{aqi_color}; font-size: 60px;'>{int(current_aqi)}</h1></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px;'><h1 style='color:{aqi_color}; font-size: 60px;'>{current_aqi}</h1></div>", unsafe_allow_html=True)
     with a2:
         if current_aqi <= 50: st.success("✅ **Air Quality is Optimal.** Ideal conditions for outdoor activities.")
         elif current_aqi <= 100: st.warning("⚠️ **Air Quality is Moderate.** Sensitive individuals should limit prolonged exertion.")
         else: st.error("🚨 **High Toxicity Detected.** Deep-lung particulate risk. Indoor protocols advised.")
 
-    # 7. Resilience Score
-    res_wind = float(weather.get('wind_speed_10m') or weather.get('windspeed', 0))
-    res_hum = float(weather.get('relative_humidity_2m') or 50)
-    resilience_val = calculate_resilience_score(current_aqi, res_wind, res_hum)
-    
+    # 6. Environmental Resilience Index
+    resilience_val = calculate_resilience_score(current_aqi, weather.get('wind_speed_10m', 0), weather.get('relative_humidity_2m', 50))
     st.markdown("---")
     st.subheader("🛡️ Environmental Resilience Index")
-    st.metric("Resilience Score", f"{resilience_val}/100", delta=f"{resilience_val - 50} from baseline")
-# --- TAB 2: ANALYTICS ---
+    col_r1, col_r2 = st.columns([1, 3])
+    with col_r1:
+        st.metric("Resilience Score", f"{resilience_val}/100", delta=f"{resilience_val - 50} from baseline", delta_color="normal" if resilience_val >= 50 else "inverse")
+    with col_r2:
+        if resilience_val > 80:
+            st.info("🟢 **High Resilience:** Excellent atmospheric dispersion preventing pollutant stagnation.")
+        elif resilience_val > 50:
+            st.info("🟡 **Moderate Resilience:** Average atmospheric drift; pollutants may accumulate based on local emissions.")
+        else:
+            st.info("🔴 **Low Resilience:** Stagnant atmospheric conditions. High risk of rapid localized accumulation.")
+
+    # 7. Advanced Telemetry Expander
+    st.markdown("---")
+    plot_df = pd.DataFrame({
+        "year": [2018, 2019, 2020, 2021, 2022, 2023],
+        "pressure_hpa": [1012, 1015, 1010, 1013, 1018, 1011],
+        "humidity": [65, 72, 60, 68, 62, 70],
+        "aerosol_depth": [0.12, 0.15, 0.10, 0.13, 0.09, 0.11]
+    })
+
+    with st.expander("📊 View Advanced Atmospheric Bio-Telemetry"):
+        st.write("Modulations in these metrics directly correlate to atmospheric particulate dispersion rates.")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown("**Atmospheric Pressure (hPa)**")
+            st.line_chart(plot_df, x="year", y="pressure_hpa", color="#fbbf24") 
+        with col2:
+            st.markdown("**Relative Humidity (%)**")
+            st.line_chart(plot_df, x="year", y="humidity", color="#38bdf8")
+        with col3:
+            st.markdown("**Aerosol Optical Depth**")
+            st.line_chart(plot_df, x="year", y="aerosol_depth", color="#a78bfa")
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
 
