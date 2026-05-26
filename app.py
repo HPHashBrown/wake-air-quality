@@ -497,16 +497,22 @@ with tab1:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. State Retrieval
+   # 2. State Retrieval (Ensure we pull the updated state)
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
-    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
-    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
+    data = st.session_state.get('current_data', {})
+    
+    # Force a refresh if the weather state somehow became None
+    weather = st.session_state.get('current_weather')
+    if weather is None:
+        weather = fetch_live_weather(curr_lat, curr_lon)
+        st.session_state.current_weather = weather
+    
+    # Use a safe dictionary if still None
+    weather = weather or {}
+
     current_aqi = float(data.get('us_aqi', 0))
 
-    # Dynamic UI colors
-    aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
-
-    # 3. Metrics Display (Glowing Glass-card UI)
+    # 3. Metrics Display (Pulling directly from the sanitized 'weather' dict)
     m1, m2, m3, m4 = st.columns(4)
     with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
     with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
