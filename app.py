@@ -758,6 +758,9 @@ with tab5:
     col1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
     col2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
 
+# ============================================
+# TAB 6: CLEAN-AIR COMMUTE (FIXED)
+# ============================================
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
@@ -773,12 +776,14 @@ with tab6:
             geolocator = Nominatim(user_agent="wake_air_quality_app")
             s_loc = geolocator.geocode(start_addr)
             e_loc = geolocator.geocode(end_addr)
+            
             if not s_loc or not e_loc:
                 st.error("Could not find addresses. Please be more specific.")
             else:
                 s_lat, s_lon = s_loc.latitude, s_loc.longitude
                 e_lat, e_lon = e_loc.latitude, e_loc.longitude
                 dist_km = geodesic((s_lat, s_lon), (e_lat, e_lon)).km
+                
                 if dist_km > 50:
                     st.error("Distance too large (max 50km).")
                 else:
@@ -790,8 +795,11 @@ with tab6:
                             route = nx.shortest_path(graph, start_node, end_node, weight='travel_time')
                             route_coords = [(graph.nodes[node]['y'], graph.nodes[node]['x']) for node in route]
                             total_time_min = sum(graph.edges[(u, v, 0)].get('travel_time', 0) for u, v in zip(route[:-1], route[1:])) / 60
+                            
+                            # STORE IN SESSION STATE
                             st.session_state.route_data = {
-                                "route": route_coords, "s_lat": s_lat, "s_lon": s_lon,
+                                "route": route_coords, 
+                                "s_lat": s_lat, "s_lon": s_lon,
                                 "e_lat": e_lat, "e_lon": e_lon,
                                 "exposure": get_healthiest_route(s_lat, s_lon, e_lat, e_lon),
                                 "time_est": round(total_time_min, 1)
@@ -801,19 +809,23 @@ with tab6:
         except Exception as e:
             st.error(f"Address error: {e}")
 
+    # FIXED SECTION: Using 'route_results' instead of 'data' to avoid naming conflicts
     if 'route_data' in st.session_state:
-        data = st.session_state.route_data
-        col1, col2 = st.columns(2)
-        aqi_val = round(data.get('exposure', 0), 1)
-        col1.metric("Route AQI", aqi_val)
-        col2.metric("Est. Travel Time", f"{data.get('time_est', 'N/A')} min")
+        route_results = st.session_state.route_data
+        col_m1, col_m2 = st.columns(2)
+        
+        # This is where your error was:
+        route_aqi_val = round(route_results.get('exposure', 0), 1)
+        
+        col_m1.metric("Route AQI", route_aqi_val)
+        col_m2.metric("Est. Travel Time", f"{route_results.get('time_est', 'N/A')} min")
 
         m = folium.Map(tiles="CartoDB dark_matter")
-        folium.PolyLine(data['route'], color="#4facfe", weight=5).add_to(m)
-        folium.Marker([data['s_lat'], data['s_lon']], icon=folium.Icon(color='green')).add_to(m)
-        folium.Marker([data['e_lat'], data['e_lon']], icon=folium.Icon(color='red')).add_to(m)
-        m.fit_bounds(data['route'])
-        st_folium(m, width="100%", height=400)
+        folium.PolyLine(route_results['route'], color="#4facfe", weight=5).add_to(m)
+        folium.Marker([route_results['s_lat'], route_results['s_lon']], icon=folium.Icon(color='green')).add_to(m)
+        folium.Marker([route_results['e_lat'], route_results['e_lon']], icon=folium.Icon(color='red')).add_to(m)
+        m.fit_bounds(route_results['route'])
+        st_folium(m, width="100%", height=400, key="route_map_display")
 
         st.markdown("---")
         st.markdown("### 🩺 Daily Clinical Briefing")
