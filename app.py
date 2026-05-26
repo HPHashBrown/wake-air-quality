@@ -265,11 +265,15 @@ def get_global_fire_layer():
 
 @st.cache_data(ttl=300)
 def fetch_live_weather(lat, lon, city_name="Default"):
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,relative_humidity_2m"
     try:
-        r = requests.get(url, timeout=5).json()
-        return r.get("current", {})
-    except:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        current = data.get("current", {})
+        return current
+    except Exception as e:
+        st.warning(f"Weather fetch failed: {e}")
         return {}
 
 @st.cache_data(ttl=3600)
@@ -483,18 +487,18 @@ with tab1:
     # 2. Data Retrieval
     data = st.session_state.get('current_data', {})
     weather = st.session_state.get('current_weather', {})
-    
-    # Validation: If session state is empty or returns 0, force a fetch
-    if not weather or weather.get('temperature_2m', 0) == 0:
+
+    # Validation: Re-fetch only if weather dict is truly empty (missing keys entirely)
+    if not weather or 'temperature_2m' not in weather:
         curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
         weather = fetch_live_weather(curr_lat, curr_lon)
         st.session_state.current_weather = weather
 
-    # 3. Variable Extraction
-    aqi_val = float(data.get('us_aqi', 0))
-    temp = weather.get('temperature_2m', 0)
-    wind = weather.get('wind_speed_10m', 0)
-    head = weather.get('wind_direction_10m', 0)
+    # 3. Variable Extraction — use None-safe defaults
+    aqi_val = float(data.get('us_aqi') or 0)
+    temp = weather.get('temperature_2m', 'N/A')
+    wind = weather.get('wind_speed_10m', 'N/A')
+    head = weather.get('wind_direction_10m', 'N/A')
     
     aqi_color = "#10b981" if aqi_val <= 50 else ("#f59e0b" if aqi_val <= 100 else "#ef4444")
 
@@ -541,7 +545,7 @@ with tab1:
         else: st.error("🚨 **High Toxicity Detected.** Deep-lung particulate risk. Indoor protocols advised.")
 
     # 6. Environmental Resilience Index (FIXED: Changed current_aqi to aqi_val)
-    resilience_val = calculate_resilience_score(aqi_val, float(wind), float(weather.get('relative_humidity_2m', 50)))
+    resilience_val = calculate_resilience_score(aqi_val, float(wind) if wind != 'N/A' else 0.0, float(weather.get('relative_humidity_2m') or 50))
     st.markdown("---")
     st.subheader("🛡️ Environmental Resilience Index")
     col_r1, col_r2 = st.columns([1, 3])
