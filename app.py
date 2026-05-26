@@ -777,90 +777,93 @@ with tab4:
 # ============================================================
 # TAB 5 — GLOBAL SATELLITE INTELLIGENCE FOR FOREST FIRES
 # ============================================================
+# ============================================================
+# TAB 5: NASA FOREST FIRE & SMOKE INTELLIGENCE
+# ============================================================
 with tab5:
-    st.markdown("### 🌍 Global Satellite Intelligence For Forest Fires")
-    st.caption("Real-time thermal anomaly detection via NASA VIIRS (Visible Infrared Imaging Radiometer Suite).")
+    st.markdown("### 🌍 NASA Forest Fire & Smoke Intelligence")
+    st.caption("Layered satellite intelligence combining visual smoke tracking (MODIS) and thermal heat detection (VIIRS).")
 
-    # 1. Satellite Imagery Configuration
-    # Using yesterday's date for maximum data completeness
-    yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    
-    # NASA GIBS Tile URL for Thermal Anomalies (Active Fires)
-    tile_url = (
-        f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
-        f"VIIRS_SNPP_Thermal_Anomalies_375m_All/default/{yesterday_str}/"
-        f"GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png"
-    )
+    # 1. Target Date Setup
+    # NASA GIBS updates daily. We pull yesterday's date to guarantee a complete global orbit pass.
+    nasa_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    st.info(f"📅 Displaying NASA Satellite Data Feed for: **{nasa_date}**")
 
-    # 2. PyDeck Visualization
-    # We use PyDeck for the global projection view
-    view_state = pdk.ViewState(
-        latitude=35.7796, 
-        longitude=-78.6382, 
-        zoom=2, 
-        pitch=0
-    )
+    # 2. Control Toggles for Layers
+    col_layer1, col_layer2 = st.columns(2)
+    with col_layer1:
+        show_smoke_layer = st.checkbox("☁️ Enable NASA True Color (Visual Smoke Plumes)", value=True)
+    with col_layer2:
+        show_fire_layer = st.checkbox("🔥 Enable VIIRS Thermal Anomalies (Active Fires)", value=True)
 
-    st.pydeck_chart(pdk.Deck(
-        map_style="mapbox://styles/mapbox/dark-v10",
-        initial_view_state=view_state,
-        layers=[
-            pdk.Layer(
-                "TileLayer",
-                tile_url,
-                opacity=0.9
-            ),
-        ],
-    ))
-    st.caption(f"Map Source: NASA GIBS Thermal Anomalies (SNPP/VIIRS) for {yesterday_str}.")
-
-    # 3. Climate Metrics Section
-    st.markdown("---")
-    st.markdown("### 🛰️ NASA POWER Climate Metrics")
-    st.info("Direct satellite measurements for your current coordinates.")
-
-    # Get center from session state or default to Raleigh
+    # 3. Base Map Generation
+    # Dynamically reads from your global map_center state to position the view frame
     lat_c, lon_c = st.session_state.get('map_center', [35.7796, -78.6382])
-    
-    with st.spinner("Fetching NASA Climate Data..."):
-        nasa_stats = get_nasa_climate_data(lat_c, lon_c)
-    
-    m1, m2, m3 = st.columns(3)
-    
-    # Solar Irradiance
-    m1.metric(
-        label="Surface Solar Irradiance", 
-        value=f"{nasa_stats['solar_radiation']} kW/m²",
-        help="Energy received from the sun per unit area."
-    )
-    
-    # Wind Velocity
-    m2.metric(
-        label="Satellite Wind Velocity", 
-        value=f"{nasa_stats['satellite_wind_speed']} m/s",
-        help="Wind speed measured at 2 meters above ground level."
-    )
-    
-    # Data Latency
-    m3.metric(
-        label="Data Latency",
-        value="24 Hours",
-        delta="Verified",
-        delta_color="normal"
-    )
+    m_intel = folium.Map(location=[lat_c, lon_c], zoom_start=5, tiles="CartoDB dark_matter")
 
-    st.write("""
-    **Intelligence Note:** Thermal anomalies (the red dots on the map) indicate heat signatures 
-    significantly higher than the surrounding area, used to identify active forest fires, 
-    volcanic activity, or industrial gas flaring.
+    # LAYER A: NASA MODIS Corrected Reflectance (True Color)
+    # Excellent for spotting grey/white dust and smoke tracks blowing across regions.
+    if show_smoke_layer:
+        smoke_tile_url = (
+            "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+            "MODIS_Terra_CorrectedReflectance_TrueColor/default/"
+            f"{nasa_date}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
+        )
+        folium.TileLayer(
+            tiles=smoke_tile_url,
+            attr="NASA Global Imagery Browse Services (GIBS)",
+            name="NASA True Color Smoke",
+            overlay=True,
+            control=True,
+            opacity=0.65
+        ).add_to(m_intel)
+
+    # LAYER B: NASA VIIRS Thermal Anomalies / Active Fires
+    # Places bright fire detection points directly over the landscape.
+    if show_fire_layer:
+        fire_tile_url = (
+            "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+            "VIIRS_SNPP_Thermal_Anomalies_375m_All/default/"
+            f"{nasa_date}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png"
+        )
+        folium.TileLayer(
+            tiles=fire_tile_url,
+            attr="NASA FIRMS Intelligence",
+            name="Active Fire Points",
+            overlay=True,
+            control=True,
+            opacity=0.9
+        ).add_to(m_intel)
+
+    # Place a target crosshair marker over your searched region context
+    folium.Marker(
+        [lat_c, lon_c], 
+        popup=f"Scan Focus: Node Coordinates ({lat_c:.2f}, {lon_c:.2f})", 
+        icon=folium.Icon(color='blue', icon='screenshot', prefix='glyphicon')
+    ).add_to(m_intel)
+
+    # Render the combined map to the UI
+    st_folium(m_intel, width="100%", height=550, key="combined_nasa_intel_map")
+
+    # 4. Climate Metrics Section
+    st.markdown("---")
+    st.markdown("### 🛰️ Ambient Climate Telemetry")
+    
+    with st.spinner("Fetching auxiliary satellite calculations..."):
+        # Utilizing your pre-defined project function
+        nasa_data = get_nasa_climate_data(lat_c, lon_c)
+        
+    col_m1, col_m2 = st.columns(2)
+    col_m1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
+    col_m2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
+
+    st.markdown("""
+    💡 **Telemetry Key:**
+    * **Visual Smoke Layer:** Appears as hazy, sweeping white or light grey streaks passing over land masses. 
+    * **Thermal Anomalies:** High-intensity heat sources plotted directly on the terrain grid indicating active wildfires, controlled burns, or intense thermal output.
     """)
 
-# ============================================
-# TAB 6: CLEAN-AIR COMMUTE (FIXED)
-# ============================================
-# ============================================
-# TAB 6: CLEAN-AIR COMMUTE (STRICT FIX)
-# ============================================
+
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
