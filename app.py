@@ -841,6 +841,20 @@ with tab5:
     c1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
     c2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
 
+# Create a Global Fire Heatmap from the satellite points
+if fire_geo and 'features' in fire_geo:
+    # Extract coordinates for the heatmap
+    heat_data = []
+    for feature in fire_geo['features']:
+        # This assumes your global satellite feed is in GeoJSON format
+        coords = feature['geometry']['coordinates']
+        # GeoJSON is [lon, lat], Folium Heatmap needs [lat, lon]
+        heat_data.append([coords[1], coords[0]])
+    
+    if heat_data:
+        from folium.plugins import HeatMap
+        HeatMap(heat_data, radius=10, blur=15, gradient={0.4: 'blue', 0.65: 'lime', 1: 'red'}).add_to(m_fire)
+
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
