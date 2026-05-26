@@ -626,16 +626,13 @@ with tab2:
         gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=30, b=30, l=30, r=30))
         st.plotly_chart(gauge, use_container_width=True)
 
-with col_sim_slider:
+    with col_sim_slider:
         st.markdown("**Emission Mitigation Simulator**")
         st.write("Adjust the reduction percentage to visualize projected health improvements.")
         reduction = st.slider("Target Mitigation (%)", 0, 50, 0, help="Simulate a reduction in local particulate output.")
 
-        # Updated logic: Use current_aqi as the baseline for the simulation 
-        # since we no longer have the long-term forecast dataframe
         sim_val = current_aqi * (1 - (reduction/100))
 
-        # Display Metric
         st.markdown(f"""
             <div class='glass-card' style='margin-top: 20px; text-align: center;'>
                 <h5 style='color: #8b9bb4;'>Projected PM2.5 Level</h5>
@@ -644,47 +641,38 @@ with col_sim_slider:
             </div>
         """, unsafe_allow_html=True)
 
-st.subheader("🧬 Biological Impact: Your Lung Age")
+    st.subheader("🧬 Biological Impact: Your Lung Age")
 
-if 'map_center' in st.session_state:
-    # Get the real-time AQI from your sensor data
-    # We use a base_aqi of 50 as the "Clean Air Standard"
-    local_aqi = current_aqi if 'current_aqi' in globals() else 50
-    
-    col_a, col_b = st.columns(2)
-    user_age = col_a.number_input("Your Actual Age", 18, 100, 30, key="age_in")
-    years_resident = col_b.number_input("Years living in this city", 0, 80, 5, key="years_in")
-    
-    # NEW LOGIC: Cumulative Exposure Burden (CEB)
-    # 1. Base Impact: (AQI/100) * 0.5 years per year of residency
-    # 2. Threshold Penalty: If AQI > 100 (Unhealthy), multiply impact by 1.5x
-    threshold_multiplier = 1.5 if local_aqi > 100 else 1.0
-    exposure_impact = (local_aqi / 100) * 0.5 * threshold_multiplier
-    
-    lung_age = user_age + (years_resident * exposure_impact)
-    
-    st.markdown("---")
-    res_col1, res_col2 = st.columns(2)
-    res_col1.metric("Calculated Biological Lung Age", f"{lung_age:.1f} years")
-    
-    # More realistic 'danger' logic
-    age_gap = lung_age - user_age
-    if age_gap > 10:
-        res_col2.error(f"🚨 ALERT: Chronic exposure has aged your lungs by {age_gap:.1f} years.")
-    elif age_gap > 5:
-        res_col2.warning(f"⚠️ CAUTION: Your lung health is {age_gap:.1f} years older than your actual age.")
-    else:
-        res_col2.success("✅ Exposure index within acceptable clinical range.")
+    if 'map_center' in st.session_state:
+        local_aqi = current_aqi
         
-    st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
+        col_a, col_b = st.columns(2)
+        user_age = col_a.number_input("Your Actual Age", 18, 100, 30, key="age_in")
+        years_resident = col_b.number_input("Years living in this city", 0, 80, 5, key="years_in")
+        
+        threshold_multiplier = 1.5 if local_aqi > 100 else 1.0
+        exposure_impact = (local_aqi / 100) * 0.5 * threshold_multiplier
+        
+        lung_age = user_age + (years_resident * exposure_impact)
+        
+        st.markdown("---")
+        res_col1, res_col2 = st.columns(2)
+        res_col1.metric("Calculated Biological Lung Age", f"{lung_age:.1f} years")
+        
+        age_gap = lung_age - user_age
+        if age_gap > 10:
+            res_col2.error(f"🚨 ALERT: Chronic exposure has aged your lungs by {age_gap:.1f} years.")
+        elif age_gap > 5:
+            res_col2.warning(f"⚠️ CAUTION: Your lung health is {age_gap:.1f} years older than your actual age.")
+        else:
+            res_col2.success("✅ Exposure index within acceptable clinical range.")
+            
+        st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
 
-# 7-Day Atmospheric Outlook
+    # 7-Day Atmospheric Outlook
     st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-    # Create a container so we can clear it if needed
     placeholder = st.empty()
-    
-    # Force the fetch from state
     forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
     with placeholder.container():
