@@ -263,13 +263,7 @@ def get_global_fire_layer():
         opacity=0.8
     )
 
-@st.cache_data(ttl=3600)
-def fetch_live_weather(lat, lon):
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
-    try:
-        return requests.get(url, timeout=10).json().get("current", None)
-    except Exception: 
-        return None
+etch_live_weather
 # --- END CLEANED UP SECTION ---
 
 @st.cache_data(ttl=3600)
@@ -503,11 +497,26 @@ with tab1:
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
     # 3. Metrics Display (Glowing Glass-card UI)
+# 4. Metrics Display
     m1, m2, m3, m4 = st.columns(4)
-    with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
-    with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
-    with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
-    with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
+    
+    # Debug: Uncomment the line below to see the raw weather data if it's N/A
+    # st.write("Weather Data Debug:", weather) 
+
+    with m1: 
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
+    with m2: 
+        temp = weather.get('temperature_2m')
+        val = f"{temp}°C" if temp is not None else "N/A"
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{val}</h3></div>", unsafe_allow_html=True)
+    with m3: 
+        wind = weather.get('wind_speed_10m')
+        val = f"{wind} km/h" if wind is not None else "N/A"
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{val}</h3></div>", unsafe_allow_html=True)
+    with m4: 
+        head = weather.get('wind_direction_10m')
+        val = f"{head}°" if head is not None else "N/A"
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{val}</h3></div>", unsafe_allow_html=True)
 
     # 4. PM2.5 Long-term Trajectory (Fixed Layout)
     fig = go.Figure()
