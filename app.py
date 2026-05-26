@@ -285,6 +285,8 @@ def fetch_pollutant_data(lat, lon, pollutant_key):
     except: 
         return {}
 
+
+
 @st.cache_data(ttl=86400)
 def get_city_coords(city_name):
     # Failsafe for New Delhi
@@ -302,6 +304,32 @@ def get_city_coords(city_name):
         return None, None, None
     except Exception:
         return None, None, None
+
+def fetch_30day_correlation(lat, lon):
+    try:
+        # Define the 30-day window
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=30)
+        
+        # Open-Meteo Historical Air Quality & Weather API
+        aq_url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&hourly=pm2_5&start_date={start_date}&end_date={end_date}"
+        w_url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={start_date}&end_date={end_date}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m"
+        
+        aq_res = requests.get(aq_url).json()
+        w_res = requests.get(w_url).json()
+        
+        # Combine into a single DataFrame
+        df = pd.DataFrame({
+            'time': pd.to_datetime(aq_res['hourly']['time']),
+            'pm25': aq_res['hourly']['pm2_5'],
+            'temp': w_res['hourly']['temperature_2m'],
+            'humidity': w_res['hourly']['relative_humidity_2m'],
+            'wind': w_res['hourly']['wind_speed_10m']
+        })
+        return df
+    except Exception as e:
+        st.error(f"Error fetching historical data: {e}")
+        return None
 
 def generate_pdf_report(df_yearly, future_df, current_aqi):
     pdf = FPDF()
@@ -464,7 +492,7 @@ else:
 st.markdown('<p class="title-gradient">Project AIR</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Response) is a Global Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute", "📈Monthly PM2.5 Prediction"])
 
 # --- TAB 1: OVERVIEW (STABLE BUILD) ---
 with tab1:
@@ -873,3 +901,80 @@ with tab6:
         alveoli where gas exchange occurs. Once they cross this barrier, they can cause 
         systemic inflammation throughout the body.
         """)
+
+# ============================================================
+# TAB 7 — HISTORICAL CLIMATE CORRELATION DASHBOARD
+# ============================================================
+with tab7:
+    st.markdown("### 🌡️ Historical Climate Correlation Dashboard")
+    st.caption("Analyzing the relationship between local weather patterns and PM2.5 levels over the last 30 days.")
+
+    c_s, c_b = st.columns([4, 1])
+    with c_s:
+        corr_city = st.text_input("City for Correlation", "Raleigh, NC", key="city_input_tab7", label_visibility="collapsed")
+    with c_b:
+        corr_btn = st.button("📈 Load Data", use_container_width=True, key="btn_tab7")
+
+    # Use existing map center if no search has been performed
+    current_lat, current_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+
+    if corr_btn:
+        lat, lon, name = get_city_coords(corr_city)
+        if lat:
+            current_lat, current_lon = lat, lon
+            st.session_state['corr_city_name'] = name
+        else:
+            st.error("City not found.")
+
+    with st.spinner("Analyzing atmospheric correlations..."):
+        corr_df = fetch_30day_correlation(current_lat, current_lon)
+
+    if corr_df is not None and not corr_df.empty:
+        city_label = st.session_state.get('corr_city_name', "Selected Area")
+        st.markdown(f"#### 📊 30-Day Analysis: {city_label}")
+
+        # Resample to daily to reduce chart noise
+        daily_corr = corr_df.resample('D', on='time').mean().reset_index()
+
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**PM2.5 vs Humidity**")
+            fig1 = go.Figure()
+            fig1.add_trace(go.Scatter(x=daily_corr['time'], y=daily_corr['pm25'], name="PM2.5", line=dict(color="#00f2fe"), yaxis='y1'))
+            fig1.add_trace(go.Scatter(x=daily_corr['time'], y=daily_corr['humidity'], name="Humidity (%)", line=dict(color="#a78bfa", dash='dot'), yaxis='y2'))
+            fig1.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              yaxis=dict(title="PM2.5", color="#00f2fe"), yaxis2=dict(title="%", overlaying='y', side='right', color="#a78bfa"),
+                              legend=dict(orientation='h', y=1.1))
+            st.plotly_chart(fig1, use_container_width=True)
+
+        with col2:
+            st.markdown("**PM2.5 vs Wind Speed**")
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=daily_corr['time'], y=daily_corr['pm25'], name="PM2.5", line=dict(color="#00f2fe"), yaxis='y1'))
+            fig2.add_trace(go.Scatter(x=daily_corr['time'], y=daily_corr['wind'], name="Wind (km/h)", line=dict(color="#fbbf24", dash='dot'), yaxis='y2'))
+            fig2.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                              yaxis=dict(title="PM2.5", color="#00f2fe"), yaxis2=dict(title="km/h", overlaying='y', side='right', color="#fbbf24"),
+                              legend=dict(orientation='h', y=1.1))
+            st.plotly_chart(fig2, use_container_width=True)
+
+        # Scatter Analysis with Trendline
+        import plotly.express as px
+        st.markdown("**Temperature vs PM2.5 (Pearson Trend)**")
+        fig3 = px.scatter(daily_corr, x='temp', y='pm25', color='pm25', size='pm25', 
+                         color_continuous_scale='RdYlGn_r', trendline='ols', template='plotly_dark')
+        fig3.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig3, use_container_width=True)
+
+        # Statistical Summary Cards
+        st.markdown("### Pearson Correlation Breakdown")
+        c1, c2, c3 = st.columns(3)
+        metrics = [
+            ("Humidity", daily_corr['pm25'].corr(daily_corr['humidity'])),
+            ("Wind Speed", daily_corr['pm25'].corr(daily_corr['wind'])),
+            ("Temp", daily_corr['pm25'].corr(daily_corr['temp']))
+        ]
+        
+        for col, (label, val) in zip([c1, c2, c3], metrics):
+            status = "Strong" if abs(val) > 0.6 else ("Moderate" if abs(val) > 0.3 else "Weak")
+            col.metric(label, f"{val:+.3f}", delta=status, delta_color="off")
