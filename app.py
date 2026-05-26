@@ -78,24 +78,19 @@ def get_ai_health_briefing(pm25_val, aqi_val):
 
 def calculate_resilience_score(aqi, wind_speed, humidity):
     """
-    Safely calculates a 0-100 score. 
-    Handles None/NA by converting them to safe floats.
+    Calculates a 0-100 score:
+    - Higher is better (more resilient/cleaner/stable)
+    - AQI is the primary detractor
+    - Wind is a bonus (dispersion)
+    - Humidity is a stabilizer (low impact)
     """
-    # 1. Sanitize Inputs: Convert anything that isn't a number to 0.0
-    try:
-        aqi_val = float(aqi) if aqi is not None and str(aqi) != 'N/A' else 0.0
-        wind_val = float(wind_speed) if wind_speed is not None and str(wind_speed) != 'N/A' else 0.0
-        # Humidity isn't used in your current math but we'll sanitize it anyway
-        hum_val = float(humidity) if humidity is not None and str(humidity) != 'N/A' else 50.0
-    except (ValueError, TypeError):
-        # If conversion fails entirely, default to 0
-        aqi_val, wind_val = 0.0, 0.0
+    # Normalize AQI: 0 is perfect, 300 is hazardous
+    aqi_impact = max(0, 100 - (aqi / 3)) 
 
-    # 2. Perform Math safely
-    aqi_impact = max(0, 100 - (aqi_val / 3)) 
-    wind_bonus = min(15, wind_val * 1.5)
+    # Wind bonus: Up to 15 points if wind is strong (helps dispersion)
+    wind_bonus = min(15, wind_speed * 1.5)
 
-    # 3. Final Score
+    # Resilience score
     score = aqi_impact + wind_bonus
     return min(100, max(0, round(score)))
 
@@ -178,17 +173,8 @@ def fetch_global_aqi(lat, lon, metric="pm2_5"):
         return {}
 
 # Safe Initialization
-# Safe Initialization for both AQI and Weather
 if 'current_data' not in st.session_state:
     st.session_state.current_data = fetch_global_aqi(35.7796, -78.6382)
-
-if 'current_weather' not in st.session_state:
-    # Initialize weather state so Tab 1 isn't empty on first load
-    st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
-
-# Safe Initialization for Weather
-if 'current_weather' not in st.session_state:
-    st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
 
 current_data = st.session_state.get('current_data', {})
 # SAFELY convert to float, default to 0 if it's 'N/A' or missing
@@ -250,13 +236,6 @@ def get_healthiest_route(start_lat, start_lon, end_lat, end_lon):
     avg_aqi = total_aqi / 3
     return avg_aqi
 
-def refresh_dashboard_data(lat, lon, name):
-    st.session_state.map_center = [lat, lon]
-    st.session_state.current_data = fetch_global_aqi(lat, lon)
-    # This line is crucial for the "Scan Region" button to work!
-    st.session_state.current_weather = fetch_live_weather(lat, lon)
-# ---------------------------------------------------------
-
 
 def get_nasa_climate_data(lat, lon):
     target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
@@ -284,25 +263,14 @@ def get_global_fire_layer():
         opacity=0.8
     )
 
-import time
-
-@st.cache_data(ttl=300)
-def fetch_live_weather(lat, lon, city_name="Default"):
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
+@st.cache_data(ttl=3600)
+def fetch_live_weather(lat, lon):
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
     try:
-        response = requests.get(url, timeout=15)
-        if response.status_code == 200:
-            data = response.json()
-            current = data.get("current", {})
-            # We return exactly what the UI needs
-            return {
-                "temperature_2m": current.get("temperature_2m", 0),
-                "wind_speed_10m": current.get("wind_speed_10m", 0),
-                "wind_direction_10m": current.get("wind_direction_10m", 0)
-            }
-    except Exception:
-        pass
-    return {"temperature_2m": 0, "wind_speed_10m": 0, "wind_direction_10m": 0}
+        return requests.get(url, timeout=10).json().get("current", None)
+    except Exception: 
+        return None
+# --- END CLEANED UP SECTION ---
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
@@ -449,11 +417,11 @@ with st.sidebar:
 # PROCESSING & MODELING
 # ============================================
 
-# --- FIX: Update Session State instead of local variables ---
+# --- FIX: Ensure live_weather is always a dictionary ---
 with st.spinner("Initializing Atmospheric Sensors..."):
-    # If the state is empty (first load), fetch the data
-    if st.session_state.get('current_weather') is None:
-        st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
+    # This ensures live_weather is never None, but a safe empty dict instead
+    live_weather_raw = fetch_live_weather(35.7796, -78.6382)
+    live_weather = live_weather_raw if live_weather_raw is not None else {}
 
 if PROPHET_AVAILABLE:
     prophet_df = df_yearly.copy()
@@ -493,19 +461,20 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-    weather = st.session_state.get('current_weather', {})
-    
-    # Ensure we have floats even if the API is slow
-    temp = float(weather.get('temperature_2m', 0.0))
-    wind = float(weather.get('wind_speed_10m', 0.0))
-    head = float(weather.get('wind_direction_10m', 0.0))
-
-    # Check for empty weather AFTER retrieval
-    if not weather: 
-        st.sidebar.warning("API Connectivity: Weather data failed to load (Timeout).")
-
-    # 2. High-Tech Console Search Input
+    # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
+
+    st.markdown("""
+        <style>
+        .search-box {
+            background: linear-gradient(90deg, rgba(16,25,43,0.8) 0%, rgba(11,15,25,0.8) 100%);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid #00f2fe;
+            margin-bottom: 25px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     with st.container():
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
@@ -516,36 +485,69 @@ with tab1:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
-                    refresh_dashboard_data(lat, lon, name)
+                    st.session_state.map_center = [lat, lon]
+                    st.session_state.current_data = fetch_global_aqi(lat, lon)
+                    st.session_state.current_weather = fetch_live_weather(lat, lon)
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3. Numeric Sanitization
-    current_aqi = float(data.get('us_aqi', 0.0) or 0.0)
-    temp = float(weather.get('temperature_2m') or 0.0)
-    wind = float(weather.get('wind_speed_10m') or 0.0)
-    head = float(weather.get('wind_direction_10m') or 0.0)
-    humidity = float(weather.get('relative_humidity_2m') or 50.0)
+    # 2. State Retrieval
+    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
+    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
+    current_aqi = float(data.get('us_aqi', 0))
 
     # Dynamic UI colors
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 4. Metrics Display
+    # 3. Metrics Display (Glowing Glass-card UI)
     m1, m2, m3, m4 = st.columns(4)
     with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
-    with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{temp}°C</h3></div>", unsafe_allow_html=True)
-    with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{wind} km/h</h3></div>", unsafe_allow_html=True)
-    with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{head}°</h3></div>", unsafe_allow_html=True)
+    with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
+    with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
+    with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
+
+    # 4. PM2.5 Long-term Trajectory (Fixed Layout)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
+
+    forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
+    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
+
+    fig.add_trace(go.Scatter(
+        x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), 
+        y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), 
+        fill='toself', fillcolor='rgba(255, 8, 68, 0.1)', line=dict(color='rgba(255,255,255,0)'), 
+        showlegend=True, name="Confidence"
+    ))
+
+    # Legend fixed to horizontal top to prevent overlap
+    fig.update_layout(
+        title="PM2.5 Long-Term Atmospheric Trajectory", 
+        template="plotly_dark", 
+        plot_bgcolor="rgba(0,0,0,0)", 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="center", x=0.5),
+        margin=dict(t=100, l=40, r=40, b=40)
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
     # 5. Clinical Advisory
     st.markdown("---")
     st.subheader("🩺 Clinical Neuro-Respiratory Advisory")
-    # ... (Keep your existing Clinical Advisory logic)
+    a1, a2 = st.columns([1, 2])
+    with a1:
+        st.markdown(f"<div style='text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px;'><h1 style='color:{aqi_color}; font-size: 60px;'>{current_aqi}</h1></div>", unsafe_allow_html=True)
+    with a2:
+        if current_aqi <= 50: st.success("✅ **Air Quality is Optimal.** Ideal conditions for outdoor activities.")
+        elif current_aqi <= 100: st.warning("⚠️ **Air Quality is Moderate.** Sensitive individuals should limit prolonged exertion.")
+        else: st.error("🚨 **High Toxicity Detected.** Deep-lung particulate risk. Indoor protocols advised.")
 
     # 6. Environmental Resilience Index
-    resilience_val = calculate_resilience_score(current_aqi, wind, humidity)
+    resilience_val = calculate_resilience_score(current_aqi, weather.get('wind_speed_10m', 0), weather.get('relative_humidity_2m', 50))
     st.markdown("---")
     st.subheader("🛡️ Environmental Resilience Index")
     col_r1, col_r2 = st.columns([1, 3])
@@ -657,40 +659,6 @@ with tab2:
             </div>
         """, unsafe_allow_html=True)
 
-st.subheader("🧬 Biological Impact: Your Lung Age")
-
-if 'map_center' in st.session_state:
-    # Get the real-time AQI from your sensor data
-    # We use a base_aqi of 50 as the "Clean Air Standard"
-    local_aqi = current_aqi if 'current_aqi' in globals() else 50
-
-    col_a, col_b = st.columns(2)
-    user_age = col_a.number_input("Your Actual Age", 18, 100, 30, key="age_in")
-    years_resident = col_b.number_input("Years living in this city", 0, 80, 5, key="years_in")
-
-    # NEW LOGIC: Cumulative Exposure Burden (CEB)
-    # 1. Base Impact: (AQI/100) * 0.5 years per year of residency
-    # 2. Threshold Penalty: If AQI > 100 (Unhealthy), multiply impact by 1.5x
-    threshold_multiplier = 1.5 if local_aqi > 100 else 1.0
-    exposure_impact = (local_aqi / 100) * 0.5 * threshold_multiplier
-
-    lung_age = user_age + (years_resident * exposure_impact)
-
-    st.markdown("---")
-    res_col1, res_col2 = st.columns(2)
-    res_col1.metric("Calculated Biological Lung Age", f"{lung_age:.1f} years")
-
-    # More realistic 'danger' logic
-    age_gap = lung_age - user_age
-    if age_gap > 10:
-        res_col2.error(f"🚨 ALERT: Chronic exposure has aged your lungs by {age_gap:.1f} years.")
-    elif age_gap > 5:
-        res_col2.warning(f"⚠️ CAUTION: Your lung health is {age_gap:.1f} years older than your actual age.")
-    else:
-        res_col2.success("✅ Exposure index within acceptable clinical range.")
-
-    st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
-
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
@@ -728,7 +696,7 @@ with tab3:
 with tab4:
     st.markdown("### 🔍 Global Sensor Search")
 
-    # 1. Search Bar
+    # 1. ADDED SEARCH BAR HERE
     city_input = st.text_input(
         "Search Location (e.g., Tokyo, Raleigh)", 
         placeholder="Enter city name...", 
@@ -746,33 +714,15 @@ with tab4:
     # 2. Map Rendering
     m = folium.Map(location=st.session_state.map_center, zoom_start=8, tiles="CartoDB dark_matter")
 
-    # Active Sensor Marker
     folium.Marker(
         st.session_state.map_center, 
         tooltip="Active Sensor Hub",
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
 
-    # 3. Community Hazard Reporting
-    st.subheader("🚩 Community Hazards")
-    if 'hazard_reports' not in st.session_state:
-        st.session_state.hazard_reports = []
-
-    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
-        st.session_state.hazard_reports.append(st.session_state.map_center)
-        st.toast("Report submitted! Your community thanks you.", icon="✅")
-
-    # Draw Hazard Pins
-    for report in st.session_state.hazard_reports:
-        folium.Marker(
-            report,
-            popup="Community Reported Hazard",
-            icon=folium.Icon(color='red', icon='warning-sign')
-        ).add_to(m)
-
     st_folium(m, width="100%", height=400, key="tab4_map")
 
-    # 4. Atmospheric Report
+    # 3. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
     active_pollutant_key = st.session_state.get('selected_pollutant_key', 'pm2_5')
@@ -787,32 +737,6 @@ with tab4:
             col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
         else:
             st.error("Could not retrieve data for this node.")
-
-st.subheader("🚩 Community Hazards Map")
-st.write("Report a local pollution spike (e.g., heavy smoke, idling trucks) to warn others.")
-
-# 1. Initialize the storage list if it doesn't exist
-if 'hazard_reports' not in st.session_state:
-    st.session_state.hazard_reports = []
-
-# 2. Add button to report current location
-if st.button("🚩 Report Poor Air at Current Location"):
-    # Save the current map center as a report
-    new_report = st.session_state.map_center
-    st.session_state.hazard_reports.append(new_report)
-    st.toast("Report submitted! Your community thanks you.", icon="✅")
-
-# 3. Render the Map with Hazard Pins
-# We use your existing 'm' map object from tab4
-for report in st.session_state.hazard_reports:
-    folium.Marker(
-        report,
-        popup="Community Reported Hazard",
-        icon=folium.Icon(color='red', icon='warning-sign')
-    ).add_to(m)
-
-# 4. Display the map again (ensuring it shows the new pins)
-st_folium(m, width="100%", height=400, key="hazard_map")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence For Forest Fires")
