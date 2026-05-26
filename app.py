@@ -498,10 +498,12 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 
 # --- TAB 1: OVERVIEW ---
 # --- TAB 1: OVERVIEW ---
+# --- TAB 1: OVERVIEW ---
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
 
+    # [Ensure there is NO space before 'with tab1:' and exactly 4 spaces before 'st.markdown']
     st.markdown("""
         <style>
         .search-box {
@@ -514,7 +516,7 @@ with tab1:
         </style>
     """, unsafe_allow_html=True)
 
-with st.container():
+    with st.container():
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
         col_search, col_btn = st.columns([4, 1])
         with col_search:
@@ -530,11 +532,9 @@ with st.container():
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
-        
-        # This line must be indented to the SAME level as the code inside the container
         st.markdown('</div>', unsafe_allow_html=True)
 
-# 2. State Retrieval
+    # 2. State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
