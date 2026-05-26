@@ -522,14 +522,16 @@ with tab1:
         with col_search:
             city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
         with col_btn:
+with col_btn:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
+                    # 1. Update state
                     st.session_state.map_center = [lat, lon]
-                    st.session_state.current_data = fetch_global_aqi(lat, lon)
-                    st.session_state.current_weather = fetch_live_weather(lat, lon)
                     st.session_state.forecast_data = fetch_7day_forecast(lat, lon)
-                    st.rerun()
+                    
+                    # 2. Force immediate update
+                    st.rerun() 
                 else:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -669,26 +671,27 @@ with tab2:
             
         st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
 
-    # 7-Day Atmospheric Outlook
+# 7-Day Atmospheric Outlook
     st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-    placeholder = st.empty()
-    forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
-
-    with placeholder.container():
-        if not forecast_df.empty:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=forecast_df["date"], y=forecast_df["aqi"], 
-                mode="lines+markers", 
-                name="AQI Forecast",
-                line=dict(color="#00f2fe", width=4),
-                fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
-            ))
-            fig.update_layout(template="plotly_dark", hovermode="x unified")
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.write("No forecast data available. Please scan a region.")
+    # Force a fresh pull from session state at the moment the tab is rendered
+    if 'forecast_data' in st.session_state and not st.session_state.forecast_data.empty:
+        forecast_df = st.session_state.forecast_data
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=forecast_df["date"], y=forecast_df["aqi"], 
+            mode="lines+markers", 
+            name="AQI Forecast",
+            line=dict(color="#00f2fe", width=4),
+            fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
+        ))
+        fig.update_layout(template="plotly_dark", hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
+        
+    else:
+        st.warning("⚠️ Data Sync Required: Please click 'Scan Region' in the Overview tab to load forecast data.")
+        st.write(f"Current State Key: {'forecast_data' in st.session_state}") # Debugging line
     
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
