@@ -469,42 +469,48 @@ st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Respons
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute"])
 
+# --- TAB 1: OVERVIEW (STABLE BUILD) ---
 with tab1:
-    # 1. Location Search Input
-    st.markdown("### 🌍 Regional Atmospheric Analysis")
-    col_search, col_btn = st.columns([4, 1])
-    with col_search:
-        city_input = st.text_input("Enter City/Country for live telemetry", "Raleigh", key="tab1_city")
-        city_input = st.text_input("Enter City/Country for live telemetry", "Raleigh", key="tab1_city")
-    with col_btn:
-        st.write("##") # Spacer to align with input box
-        if st.button("Search"):
-            lat, lon, name = get_city_coords(city_input)
-            if lat:
-                st.session_state.map_center = [lat, lon]
-                # Update session state with new data
-                st.session_state.current_data = fetch_global_aqi(lat, lon)
-                st.session_state.current_weather = fetch_live_weather(lat, lon)
-                st.rerun()
-            else:
-                st.error("Location not found.")
+    # 1. Layout & Search
+    st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
+    
+    with st.container():
+        col_search, col_btn = st.columns([4, 1])
+        with col_search:
+            city_input = st.text_input("Search Location", "Raleigh", key="tab1_search", label_visibility="collapsed")
+        with col_btn:
+            if st.button("📡 Scan Region", use_container_width=True):
+                lat, lon, name = get_city_coords(city_input)
+                if lat:
+                    st.session_state.map_center = [lat, lon]
+                    st.session_state.current_data = fetch_global_aqi(lat, lon)
+                    st.session_state.current_weather = fetch_live_weather(lat, lon)
+                    st.rerun()
 
-    # 2. State Retrieval
-    curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
-    data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
-    weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
-    current_aqi = float(data.get('us_aqi', 0))
+    # 2. Data Retrieval
+    data = st.session_state.get('current_data', {})
+    weather = st.session_state.get('current_weather', {})
+    
+    # Validation: If session state is empty, try to fill it once
+    if not weather:
+        curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+        weather = fetch_live_weather(curr_lat, curr_lon)
+        st.session_state.current_weather = weather
 
-    # Dynamic UI colors
-    aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
+    # 3. Variable Extraction
+    aqi_val = float(data.get('us_aqi', 0))
+    temp = weather.get('temperature_2m', 0)
+    wind = weather.get('wind_speed_10m', 0)
+    head = weather.get('wind_direction_10m', 0)
+    
+    aqi_color = "#10b981" if aqi_val <= 50 else ("#f59e0b" if aqi_val <= 100 else "#ef4444")
 
-    # 3. Metrics Display (Glowing Glass-card UI)
+    # 4. Metrics Display
     m1, m2, m3, m4 = st.columns(4)
-    with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
-    with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
-    with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
-    with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
-
+    with m1: st.markdown(f"<div class='glass-card' style='border-top:3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{int(aqi_val)}</h3></div>", unsafe_allow_html=True)
+    with m2: st.markdown(f"<div class='glass-card' style='border-top:3px solid #fbbf24;'><h5>Temp</h5><h3>{temp}°C</h3></div>", unsafe_allow_html=True)
+    with m3: st.markdown(f"<div class='glass-card' style='border-top:3px solid #a78bfa;'><h5>Wind</h5><h3>{wind} km/h</h3></div>", unsafe_allow_html=True)
+    with m4: st.markdown(f"<div class='glass-card' style='border-top:3px solid #38bdf8;'><h5>Heading</h5><h3>{head}°</h3></div>", unsafe_allow_html=True)
     # 4. PM2.5 Long-term Trajectory (Fixed Layout)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
