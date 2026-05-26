@@ -227,10 +227,10 @@ except ImportError:
     PROPHET_AVAILABLE = False
 
 @st.cache_data(ttl=3600)
-def fetch_7day_forecast(lat, lon):
+def fetch_7day_forecast(lat, lon, city_name="Default"): # Added city_name argument
     url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi_max&timezone=auto&forecast_days=7"
     try:
-        response = requests.get(url, timeout=5) # Added timeout
+        response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             daily = data.get("daily", {})
@@ -239,9 +239,9 @@ def fetch_7day_forecast(lat, lon):
                     "date": pd.to_datetime(daily["time"]),
                     "aqi": daily["us_aqi_max"]
                 })
-        return pd.DataFrame() # Returns empty if API fails
+        return pd.DataFrame()
     except Exception:
-        return pd.DataFrame() # Returns empty if connection fails
+        return pd.DataFrame()
 
 @st.cache_data(show_spinner=True)
 def get_map_graph(lat1, lon1, lat2, lon2):
