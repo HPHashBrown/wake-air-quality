@@ -796,84 +796,81 @@ with tab4:
         else:
             st.error("Could not retrieve data for this node.")
 # ============================================================
-# TAB 5: GLOBAL SATELLITE & FIRE INTELLIGENCE
+# TAB 5: SATELLITE COMMAND CENTER (SMOKE & FIRE)
 # ============================================================
 with tab5:
-    st.markdown("### 🌍 Global Satellite & Fire Intelligence")
-    st.caption("Tracking live thermal anomalies detected by NASA's VIIRS satellite over the last 24 hours.")
+    st.markdown("### 🛰️ Global Satellite Command Center")
+    
+    # 1. SIDEBAR CONTROLS (Within the Tab)
+    with st.expander("🛠️ Map Display Settings", expanded=True):
+        col_c1, col_c2, col_c3 = st.columns(3)
+        map_mode = col_c1.radio("Base Style", ["Dark Matter", "Satellite View"])
+        active_layers = col_c2.multiselect(
+            "Intelligence Layers", 
+            ["🔥 Active Fires (24h)", "☁️ Visual Smoke Plumes"], 
+            default=["🔥 Active Fires (24h)"]
+        )
+        refresh_rate = col_c3.selectbox("Auto-Refresh", ["Every 24h (Default)", "Live NRT Feed"])
 
-    # 1. Fetch Live 24-Hour NASA FIRMS Data
-    @st.cache_data(ttl=3600)  # Caches data for 1 hour so it's blazing fast but stays live
-    def fetch_nasa_firms_24h():
-        """Fetches the last 24 hours of global fire locations from NASA FIRMS."""
-        # NASA's open TXT/CSV data feed for the past 24 hours of VIIRS data
-        url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv"
-        try:
-            import pandas as pd
-            df = pd.read_csv(url)
-            return df
-        except Exception as e:
-            return None
-
-    with st.spinner("Scanning global satellite feeds for active fires..."):
-        fire_df = fetch_nasa_firms_24h()
-
-    # 2. Map Configuration
-    # We default the view high enough to see the world, but center near the user's focus
+    # 2. DATA ORCHESTRATION
+    # NASA dates for 'Best' imagery (yesterday) and 'NRT' (today)
+    date_today = datetime.now().strftime('%Y-%m-%d')
+    date_yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # Fetch coordinates from state
     lat_c, lon_c = st.session_state.get('map_center', [35.7796, -78.6382])
+
+    # 3. BASE MAP GENERATION
+    tileset = "CartoDB dark_matter" if map_mode == "Dark Matter" else "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    attr = "CartoDB" if map_mode == "Dark Matter" else "Esri World Imagery"
     
-    # Using a clean dark map so the glowing red fire dots stand out brilliantly
-    m_fire = folium.Map(location=[20.0, 0.0], zoom_start=2, tiles="CartoDB dark_matter")
+    m_cmd = folium.Map(location=[lat_c, lon_c], zoom_start=5, tiles=tileset, attr=attr)
 
-    # 3. Plot Red Fire Dots Globallly
-    if fire_df is not None and not fire_df.empty:
-        # To prevent browser lag from rendering 10,000+ points simultaneously, 
-        # we pull a heavy sample of the most intense active fire spots
-        high_confidence_fires = fire_df[fire_df['confidence'] != 'low'].head(1500)
-        
-        for idx, row in high_confidence_fires.iterrows():
-            # Get location metrics
-            f_lat = float(row['latitude'])
-            f_lon = float(row['longitude'])
-            bright = float(row['bright_ti4'])  # Brightness temperature
-            
-            # Create a glowing red circle marker for every active fire
-            folium.CircleMarker(
-                location=[f_lat, f_lon],
-                radius=4,
-                color='#ff1a1a',      # Bright Red Outer Ring
-                fill=True,
-                fill_color='#ff4d4d', # Neon Red Core
-                fill_opacity=0.7,
-                popup=folium.Popup(f"🔥 <b>Active Fire Detected</b><br>Brightness: {bright} K<br>Lat: {f_lat}<br>Lon: {f_lon}", max_width=200)
-            ).add_to(m_fire)
-            
-        st.success(f"🔥 Successfully mapped the highest-intensity global fires detected over the last 24 hours!")
-    else:
-        st.warning("⚠️ Live satellite feed temporarily offline. Falling back to regional scan views.")
+    # 4. LAYER: SMOKE VIEWING (NASA MODIS/VIIRS True Color)
+    if "☁️ Visual Smoke Plumes" in active_layers:
+        smoke_url = (
+            f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+            f"VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date_yesterday}/"
+            f"GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
+        )
+        folium.TileLayer(
+            tiles=smoke_url, 
+            attr="NASA GIBS", 
+            name="Smoke Plumes", 
+            overlay=True, 
+            opacity=0.6
+        ).add_to(m_cmd)
 
-    # 4. Focus Anchor Marker (User's Searched City)
-    folium.Marker(
-        [lat_c, lon_c], 
-        popup="Your Selected Focus Location",
-        icon=folium.Icon(color='blue', icon='home')
-    ).add_to(m_fire)
+    # 5. LAYER: FIRE MODE (Red Circles from Live CSV)
+    if "🔥 Active Fires (24h)" in active_layers:
+        @st.cache_data(ttl=3600)
+        def get_fire_dots():
+            url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv"
+            try:
+                return pd.read_csv(url)
+            except:
+                return None
 
-    # Render out the map canvas
-    st_folium(m_fire, width="100%", height=600, key="nasa_global_live_fire_dots")
+        fire_df = get_fire_dots()
+        if fire_df is not None:
+            # We filter for confidence to ensure "Accuracy"
+            reliable_fires = fire_df[fire_df['confidence'] != 'low'].head(1000)
+            for _, row in reliable_fires.iterrows():
+                folium.CircleMarker(
+                    location=[row['latitude'], row['longitude']],
+                    radius=3,
+                    color="#FF0000",
+                    fill=True,
+                    fill_color="#FF4500",
+                    fill_opacity=0.8,
+                    popup=f"Fire Confidence: {row['confidence']}"
+                ).add_to(m_cmd)
 
-    # 5. Satellite Telemetry Metrics Block
-    st.markdown("---")
-    st.markdown("### 🛰️ Local Atmospheric Boundary Measurements")
-    
-    try:
-        nasa_data = get_nasa_climate_data(lat_c, lon_c)
-        col_m1, col_m2 = st.columns(2)
-        col_m1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
-        col_m2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
-    except Exception:
-        st.caption("Telemetry feeds currently processing updates.")
+    # Render
+    st_folium(m_cmd, width="100%", height=600, key="satellite_cmd_map")
 
+    # 6. BIOLOGICAL CONTEXT (For your spiky profile)
+    st.info("💡 **Science Note:** Fire detection uses the I-4 (3.74 μm) and I-5 (11.45 μm) bands. By comparing the 'Brightness Temperature' of a pixel to its neighbors, we can identify anomalies that signify combustion even if the fire is small.")
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
