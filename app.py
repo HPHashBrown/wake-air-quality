@@ -470,37 +470,24 @@ st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Respons
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute"])
 
 with tab1:
-    # 1. High-Tech Console Search Input
-    st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
-
-    st.markdown("""
-        <style>
-        .search-box {
-            background: linear-gradient(90deg, rgba(16,25,43,0.8) 0%, rgba(11,15,25,0.8) 100%);
-            padding: 20px;
-            border-radius: 15px;
-            border-left: 5px solid #00f2fe;
-            margin-bottom: 25px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    with st.container():
-        st.markdown('<div class="search-box">', unsafe_allow_html=True)
-        col_search, col_btn = st.columns([4, 1])
-        with col_search:
-            city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
-        with col_btn:
-            if st.button("📡 Scan Region", use_container_width=True):
-                lat, lon, name = get_city_coords(city_input)
-                if lat:
-                    st.session_state.map_center = [lat, lon]
-                    st.session_state.current_data = fetch_global_aqi(lat, lon)
-                    st.session_state.current_weather = fetch_live_weather(lat, lon)
-                    st.rerun()
-                else:
-                    st.error("❌ Target lost.")
-        st.markdown('</div>', unsafe_allow_html=True)
+    # 1. Location Search Input
+    st.markdown("### 🌍 Regional Atmospheric Analysis")
+    col_search, col_btn = st.columns([4, 1])
+    with col_search:
+        city_input = st.text_input("Enter City/Country for live telemetry", "Raleigh", key="tab1_city")
+        city_input = st.text_input("Enter City/Country for live telemetry", "Raleigh", key="tab1_city")
+    with col_btn:
+        st.write("##") # Spacer to align with input box
+        if st.button("Search"):
+            lat, lon, name = get_city_coords(city_input)
+            if lat:
+                st.session_state.map_center = [lat, lon]
+                # Update session state with new data
+                st.session_state.current_data = fetch_global_aqi(lat, lon)
+                st.session_state.current_weather = fetch_live_weather(lat, lon)
+                st.rerun()
+            else:
+                st.error("Location not found.")
 
     # 2. State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
