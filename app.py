@@ -798,6 +798,9 @@ with tab4:
 # ============================================================
 # TAB 5: GLOBAL SATELLITE & FIRE INTELLIGENCE
 # ============================================================
+# ============================================================
+# TAB 5: GLOBAL SATELLITE & FIRE INTELLIGENCE
+# ============================================================
 with tab5:
     st.markdown("### 🌍 Global Satellite & Fire Intelligence")
     st.caption("Real-time global thermal detection via NASA VIIRS & NIFC incident maps.")
