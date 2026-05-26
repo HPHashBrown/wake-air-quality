@@ -504,7 +504,8 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 with tab1:
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
 
-with st.container():
+    # 1. Search Console (Indented 4 spaces)
+    with st.container():
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
         col_search, col_btn = st.columns([4, 1])
         with col_search:
@@ -516,7 +517,6 @@ with st.container():
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon, name)
                     st.session_state.current_weather = fetch_live_weather(lat, lon, name)
-                    # We removed the forecast call to prevent the TypeError crashes
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
@@ -530,7 +530,6 @@ with st.container():
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon, "Default")) or {}
     
     current_aqi = float(data.get('us_aqi', 0))
-    # Define threshold if not present in your app
     alert_threshold = st.session_state.get('alert_threshold', 100) 
     
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
