@@ -535,6 +535,18 @@ with tab1:
                     st.error("❌ Target lost.")
         
         st.markdown('</div>', unsafe_allow_html=True)
+
+    curr_lat = float(st.session_state.get('map_center', [35.7796, -78.6382])[0])
+    curr_lon = float(st.session_state.get('map_center', [35.7796, -78.6382])[1])
+    
+    try:
+        data = fetch_global_aqi(curr_lat, curr_lon, "Default")
+        weather = fetch_live_weather(curr_lat, curr_lon, "Default") or {}
+    except Exception as e:
+        st.error(f"Data Fetch Error: {e}")
+        data, weather = {}, {}
+
+    current_aqi = float(data.get('us_aqi', 0))
     
     # 2. State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
