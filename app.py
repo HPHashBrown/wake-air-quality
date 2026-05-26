@@ -227,7 +227,8 @@ except ImportError:
     PROPHET_AVAILABLE = False
 
 @st.cache_data(ttl=3600)
-def fetch_7day_forecast(lat, lon, city_name="Default"): # Added city_name argument
+# Add 'city_name' as a third argument to match your function calls
+def fetch_7day_forecast(lat, lon, city_name="Default"):
     url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi_max&timezone=auto&forecast_days=7"
     try:
         response = requests.get(url, timeout=5)
@@ -236,8 +237,8 @@ def fetch_7day_forecast(lat, lon, city_name="Default"): # Added city_name argume
             daily = data.get("daily", {})
             if "time" in daily and "us_aqi_max" in daily:
                 return pd.DataFrame({
-                    "date": pd.to_datetime(daily["time"]),
-                    "aqi": daily["us_aqi_max"]
+                    "date": pd.to_datetime(daily.get("time")),
+                    "aqi": daily.get("us_aqi_max")
                 })
         return pd.DataFrame()
     except Exception:
