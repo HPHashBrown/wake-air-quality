@@ -284,28 +284,21 @@ import time
 
 @st.cache_data(ttl=300)
 def fetch_live_weather(lat, lon, city_name="Default"):
-    # Try Open-Meteo first
-    urls = [
-        f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m",
-        f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m" # You can add a different API here if needed
-    ]
-    
-    for url in urls:
-        try:
-            response = requests.get(url, timeout=15) # Increased to 15 seconds
-            if response.status_code == 200:
-                data = response.json()
-                current = data.get("current", {})
-                return {
-                    "temperature_2m": current.get("temperature_2m"),
-                    "wind_speed_10m": current.get("wind_speed_10m"),
-                    "wind_direction_10m": current.get("wind_direction_10m")
-                }
-        except Exception:
-            continue
-            
-    return None # Return None to signal it really failed
-# --- END CLEANED UP SECTION ---
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
+    try:
+        response = requests.get(url, timeout=15)
+        if response.status_code == 200:
+            data = response.json()
+            current = data.get("current", {})
+            # We return exactly what the UI needs
+            return {
+                "temperature_2m": current.get("temperature_2m", 0),
+                "wind_speed_10m": current.get("wind_speed_10m", 0),
+                "wind_direction_10m": current.get("wind_direction_10m", 0)
+            }
+    except Exception:
+        pass
+    return {"temperature_2m": 0, "wind_speed_10m": 0, "wind_direction_10m": 0}
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
