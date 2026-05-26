@@ -516,13 +516,16 @@ with tab1:
         col_search, col_btn = st.columns([4, 1])
         with col_search:
             city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
-        with col_btn:
+with col_btn:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
-                    # 1. Update state
                     st.session_state.map_center = [lat, lon]
-                    st.session_state.forecast_data = fetch_7day_forecast(lat, lon)
+                    # Pass the name to bust the cache
+                    st.session_state.current_data = fetch_global_aqi(lat, lon, name)
+                    st.session_state.current_weather = fetch_live_weather(lat, lon, name)
+                    st.session_state.forecast_data = fetch_7day_forecast(lat, lon, name)
+                    st.rerun()
                     # 2. Force immediate update
                     st.rerun() 
                 else:
