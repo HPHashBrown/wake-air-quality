@@ -497,28 +497,21 @@ with tab1:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-   # 2. State Retrieval (Ensure we pull the updated state)
+# 2. State Retrieval & Variable Setup
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', {})
-    
-    # Force a refresh if the weather state somehow became None
-    weather = st.session_state.get('current_weather')
-    if weather is None:
-        weather = fetch_live_weather(curr_lat, curr_lon)
-        st.session_state.current_weather = weather
-    
-    # Use a safe dictionary if still None
-    weather = weather or {}
-
+    weather = st.session_state.get('current_weather', {}) or {}
     current_aqi = float(data.get('us_aqi', 0))
 
-    # 3. Metrics Display (Pulling directly from the sanitized 'weather' dict)
+    # --- CRITICAL FIX: Define aqi_color BEFORE the metrics use it ---
+    aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
+
+    # 3. Metrics Display (Now aqi_color is defined and safe to use)
     m1, m2, m3, m4 = st.columns(4)
     with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
     with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
     with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
     with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
-
     # 4. PM2.5 Long-term Trajectory (Fixed Layout)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
