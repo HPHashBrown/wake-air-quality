@@ -672,9 +672,10 @@ if 'map_center' in st.session_state:
         
     st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
 
-st.markdown("### 📅 7-Day Atmospheric Outlook")
+# 7-Day Atmospheric Outlook
+    st.markdown("### 📅 7-Day Atmospheric Outlook")
     
-# Retrieve forecast from state
+    # This line MUST start with exactly 4 spaces
     forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
 
     # Fallback Logic
