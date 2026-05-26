@@ -263,14 +263,24 @@ def get_global_fire_layer():
         opacity=0.8
     )
 
-@st.cache_data(ttl=3600)
-def fetch_live_weather(lat, lon):
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m"
+@st.cache_data(ttl=300)
+def fetch_live_weather(lat, lon, city_name="Default"):
+    # The URL needs to request these specific parameters in the 'current' group
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
     try:
-        return requests.get(url, timeout=10).json().get("current", None)
-    except Exception: 
-        return None
-# --- END CLEANED UP SECTION ---
+        response = requests.get(url, timeout=15)
+        if response.status_code == 200:
+            data = response.json()
+            current = data.get("current", {})
+            # We map the API keys directly to the dictionary we return
+            return {
+                "temperature_2m": current.get("temperature_2m", 0),
+                "wind_speed_10m": current.get("wind_speed_10m", 0),
+                "wind_direction_10m": current.get("wind_direction_10m", 0)
+            }
+    except Exception as e:
+        st.sidebar.error(f"Weather Fetch Error: {e}")
+    return {"temperature_2m": 0, "wind_speed_10m": 0, "wind_direction_10m": 0}
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
