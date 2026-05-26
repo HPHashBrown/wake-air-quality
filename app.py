@@ -270,30 +270,25 @@ def get_global_fire_layer():
 
 import time
 
-@st.cache_data(ttl=300) # Increased TTL to reduce API hits
+@st.cache_data(ttl=300)
 def fetch_live_weather(lat, lon, city_name="Default"):
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
-    
-    # Try the request up to 3 times if it times out
-    for attempt in range(3):
-        try:
-            response = requests.get(url, timeout=10) # Increased timeout to 10 seconds
-            if response.status_code == 200:
-                data = response.json()
-                current = data.get("current", {})
-                return {
-                    "temperature_2m": current.get("temperature_2m"),
-                    "wind_speed_10m": current.get("wind_speed_10m"),
-                    "wind_direction_10m": current.get("wind_direction_10m")
-                }
-        except requests.exceptions.Timeout:
-            time.sleep(1) # Wait a second before retrying
-            continue
-        except Exception:
-            break
-            
-    # Return a "Disconnected" state if all retries fail
-    return {"temperature_2m": None, "wind_speed_10m": None, "wind_direction_10m": None}
+    try:
+        # Increased timeout to 10s to give the API more time
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            current = data.get("current", {})
+            return {
+                "temperature_2m": current.get("temperature_2m", 0.0),
+                "wind_speed_10m": current.get("wind_speed_10m", 0.0),
+                "wind_direction_10m": current.get("wind_direction_10m", 0.0)
+            }
+    except Exception:
+        pass # If anything fails, we fall through to the return below
+        
+    # FALLBACK: Return zeros if API is down or times out
+    return {"temperature_2m": 0.0, "wind_speed_10m": 0.0, "wind_direction_10m": 0.0}
 # --- END CLEANED UP SECTION ---
 
 @st.cache_data(ttl=3600)
