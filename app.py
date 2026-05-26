@@ -26,6 +26,10 @@ from google.oauth2.service_account import Credentials
 # INITIALIZATION & STATE
 # ============================================
 
+# --- GLOBAL STATE INITIALIZATION ---
+if 'forecast_data' not in st.session_state:
+    st.session_state.forecast_data = pd.DataFrame() # Empty by default
+
 
 def create_base_map(lat, lon, zoom=12):
     return folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB dark_matter")
@@ -515,14 +519,18 @@ with tab1:
         col_search, col_btn = st.columns([4, 1])
         with col_search:
             city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
-        with col_btn:
+with col_btn:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
+                    # Update all state
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon)
                     st.session_state.current_weather = fetch_live_weather(lat, lon)
+                    
+                    # Update forecast data directly in session_state
                     st.session_state.forecast_data = fetch_7day_forecast(lat, lon)
+                    
                     st.rerun()
                 else:
                     st.error("❌ Target lost.")
