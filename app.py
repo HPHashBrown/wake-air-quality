@@ -30,6 +30,14 @@ def add_heatmap_to_map(m, hotspots):
     HeatMap(hotspots, radius=20, blur=15).add_to(m)
     return m
 
+def refresh_dashboard_data(lat, lon, name):
+    st.session_state.map_center = [lat, lon]
+    # Fetch all data at once when searching
+    st.session_state.current_data = fetch_global_aqi(lat, lon)
+    st.session_state.current_weather = fetch_live_weather(lat, lon)
+    st.session_state.forecast_data = fetch_7day_aqi_forecast(lat, lon) # <--- THIS IS THE MISSING PIECE
+    st.rerun()
+
 
 # Ensure this is defined exactly once at the top of your script
 df_yearly = pd.DataFrame({
@@ -499,6 +507,7 @@ with tab1:
                     st.session_state.map_center = [lat, lon]
                     st.session_state.current_data = fetch_global_aqi(lat, lon)
                     st.session_state.current_weather = fetch_live_weather(lat, lon)
+                    refresh_dashboard_data(lat, lon, name)
                     st.rerun()
 
     # 2. Data Retrieval
