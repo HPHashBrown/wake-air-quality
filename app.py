@@ -525,17 +525,23 @@ with tab1:
 
     # 2. Retrieve the now-updated data from session state
     # We use .get() to provide a fallback, but it will prefer the data from the button click
+# 2. Retrieve the data
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    
+    # Force a re-fetch if session state is missing or empty
     data = st.session_state.get('current_data', {})
     weather = st.session_state.get('current_weather', {})
-    
-    # If the button hasn't been clicked yet, grab some default data
-    if not data:
-        data = fetch_global_aqi(curr_lat, curr_lon, "Default")
-    if not weather:
-        weather = fetch_live_weather(curr_lat, curr_lon, "Default")
 
-    current_aqi = float(data.get('us_aqi', 0))
+    # DEBUG: Check if we actually have data
+    if not data or 'us_aqi' not in data:
+        st.warning("Fetching fresh data...")
+        data = fetch_global_aqi(curr_lat, curr_lon, "pm2_5")
+        weather = fetch_live_weather(curr_lat, curr_lon, "Default")
+        st.session_state.current_data = data
+        st.session_state.current_weather = weather
+
+    # Safe float conversion
+    current_aqi = float(data.get('us_aqi', 0)) if data and 'us_aqi' in data else 0.0
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
     # 3. Map View
