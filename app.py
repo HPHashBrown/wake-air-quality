@@ -484,7 +484,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 # --- TAB 1: OVERVIEW ---
 
 with tab1:
-if not weather: st.sidebar.warning("API Connectivity: Weather data failed to load (Timeout).")
+    if not weather: st.sidebar.warning("API Connectivity: Weather data failed to load (Timeout).")
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
 
