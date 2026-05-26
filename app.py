@@ -518,21 +518,26 @@ with tab1:
                     st.session_state.current_weather = fetch_live_weather(lat, lon, name)
                     st.session_state.forecast_data = fetch_7day_forecast(lat, lon, name)
                     st.rerun()
+                else:
+                    st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # 2. Consolidated State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     
-    # Fetch fresh data based on current state
+    # Safely fetch or default data
     data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon, "Default"))
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon, "Default")) or {}
+    
     current_aqi = float(data.get('us_aqi', 0))
+    # Define threshold if not present in your app
+    alert_threshold = st.session_state.get('alert_threshold', 100) 
+    
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 3. Restored Map View (The "Bug-Free" Way)
+    # 3. Restored Map View
     st.subheader("📍 Interactive Region Map")
     m = create_base_map(curr_lat, curr_lon)
-    # Add a marker for the current search location
     folium.Marker([curr_lat, curr_lon], popup="Target Region").add_to(m)
     st_folium(m, width=1200, height=400)
 
