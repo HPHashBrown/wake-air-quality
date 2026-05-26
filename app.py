@@ -495,15 +495,10 @@ st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Respons
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute"])
 
 # --- TAB 1: OVERVIEW ---
-
-# --- TAB 1: OVERVIEW ---
-# --- TAB 1: OVERVIEW ---
-# --- TAB 1: OVERVIEW ---
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
 
-    # [Ensure there is NO space before 'with tab1:' and exactly 4 spaces before 'st.markdown']
     st.markdown("""
         <style>
         .search-box {
@@ -528,23 +523,22 @@ with tab1:
                     # 1. Update state
                     st.session_state.map_center = [lat, lon]
                     st.session_state.forecast_data = fetch_7day_forecast(lat, lon)
-                    
                     # 2. Force immediate update
                     st.rerun() 
                 else:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# 2. State Retrieval (Ensure these are indented 4 spaces)
+    # 2. State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
     current_aqi = float(data.get('us_aqi', 0))
 
-    # Dynamic UI colors (Must be indented 4 spaces)
+    # Dynamic UI colors
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 3. Metrics Display (Must be indented 4 spaces)
+    # 3. Metrics Display
     m1, m2, m3, m4 = st.columns(4)
     with m1: 
         st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
@@ -554,6 +548,7 @@ with tab1:
         st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
     with m4: 
         st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
+    
     # 4. Alert Threshold Logic
     if current_aqi > alert_threshold:
         st.error(f"⚠️ ALERT: Current AQI ({current_aqi}) exceeds your defined threshold of {alert_threshold}!")
