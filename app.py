@@ -529,7 +529,7 @@ with tab1:
         col_search, col_btn = st.columns([4, 1])
         with col_search:
             city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed")
-with col_btn:
+        with col_btn:
             if st.button("📡 Scan Region", use_container_width=True):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
