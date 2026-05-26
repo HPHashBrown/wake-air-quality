@@ -263,7 +263,26 @@ def get_global_fire_layer():
         opacity=0.8
     )
 
-etch_live_weather
+@st.cache_data(ttl=60)
+def fetch_live_weather(lat, lon, city_name="Default"):
+    # Using the correct Open-Meteo endpoint
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            current = data.get("current", {})
+            # Return the values directly; the UI will handle the defaults
+            return {
+                "temperature_2m": current.get("temperature_2m"),
+                "wind_speed_10m": current.get("wind_speed_10m"),
+                "wind_direction_10m": current.get("wind_direction_10m")
+            }
+        else:
+            return {"temperature_2m": None, "wind_speed_10m": None, "wind_direction_10m": None}
+    except Exception as e:
+        st.error(f"Weather API Error: {e}")
+        return {"temperature_2m": None, "wind_speed_10m": None, "wind_direction_10m": None}
 # --- END CLEANED UP SECTION ---
 
 @st.cache_data(ttl=3600)
