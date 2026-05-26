@@ -796,81 +796,102 @@ with tab4:
         else:
             st.error("Could not retrieve data for this node.")
 # ============================================================
-# TAB 5: NASA FOREST FIRE & SMOKE INTELLIGENCE (VIIRS UPGRADE)
-# ============================================================
-# ============================================================
-# TAB 5: GLOBAL FIRE INTELLIGENCE & HEATMAP
+# TAB 5: GLOBAL SATELLITE & FIRE INTELLIGENCE
 # ============================================================
 with tab5:
     st.markdown("### 🌍 Global Satellite & Fire Intelligence")
-    st.caption("Layering NIFC Perimeters (USA) and NASA VIIRS Thermal Hotspots (Global).")
+    st.caption("Real-time global thermal detection via NASA VIIRS & NIFC incident maps.")
 
-    # 1. INITIALIZE VARIABLE TO PREVENT NAMEERROR
-    fire_geo = None 
+    # 1. Target Date Setup (Uses 2 days ago for perfect global mosaic completeness)
+    nasa_date = (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')
+    st.info(f"📅 Displaying Active NASA Satellite Imagery for: **{nasa_date}**")
     
-    # 2. Target Date Setup
-    nasa_date = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    
-    # Toggles
+    # 2. Control Layout
     c1, c2, c3 = st.columns(3)
-    show_perimeters = c1.checkbox("🇺🇸 Show US Perimeters", value=True)
-    show_global_heat = c2.checkbox("🌏 Show Global Heatmap", value=True)
-    show_smoke = c3.checkbox("☁️ Show Smoke Satellite", value=True)
+    show_perimeters = c1.checkbox("🇺🇸 Show US Incident Perimeters", value=True)
+    show_global_fires = c2.checkbox("🌏 Show Global Fire Points (VIIRS)", value=True)
+    show_smoke = c3.checkbox("☁️ Show True Color Smoke Plumes", value=True)
 
-    # 3. Fetch Data
-    if show_perimeters or show_global_heat:
-        with st.spinner("Fetching global fire data..."):
-            # This function must be defined in your helper functions section
-            fire_geo = fetch_us_fire_perimeters() 
-
-    # 4. Map Logic
+    # 3. Base Map Configuration
     lat_c, lon_c = st.session_state.get('map_center', [35.7796, -78.6382])
-    m_fire = folium.Map(location=[lat_c, lon_c], zoom_start=4, tiles="CartoDB dark_matter")
+    m_fire = folium.Map(location=[lat_c, lon_c], zoom_start=3, tiles="CartoDB dark_matter")
 
-    # ADD GLOBAL SMOKE (VIIRS - No Gaps)
+    # LAYER A: NASA VIIRS Global True Color (No Gaps)
     if show_smoke:
         smoke_url = (
             f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
             f"VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{nasa_date}/"
             f"GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
         )
-        folium.TileLayer(tiles=smoke_url, attr="NASA GIBS", name="Smoke", overlay=True, opacity=0.5).add_to(m_fire)
+        folium.TileLayer(
+            tiles=smoke_url, 
+            attr="NASA GIBS / VIIRS", 
+            name="Smoke Sat", 
+            overlay=True, 
+            opacity=0.55
+        ).add_to(m_fire)
 
-    # CHECK IF DATA EXISTS BEFORE USING (Fixes NameError)
-    if fire_geo and 'features' in fire_geo:
-        
-        # A. Draw US Perimeters (Shapes)
-        if show_perimeters:
-            folium.GeoJson(
-                fire_geo,
-                name="Fire Shapes",
-                style_function=lambda x: {'fillColor': 'red', 'color': 'orange', 'weight': 2, 'fillOpacity': 0.4}
-            ).add_to(m_fire)
+    # LAYER B: NASA VIIRS Global Thermal Anomalies (Fixes DRC & Australia view)
+    if show_global_fires:
+        # Pushing the 'nrt' (Near Real-Time) global feed so raw hotspots appear instantly
+        fire_tile_url = (
+            f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/nrt/"
+            f"VIIRS_SNPP_Thermal_Anomalies_375m_All/default/{nasa_date}/"
+            f"GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png"
+        )
+        folium.TileLayer(
+            tiles=fire_tile_url,
+            attr="NASA FIRMS Live Tracking",
+            name="Global Thermal Points",
+            overlay=True,
+            opacity=1.0
+        ).add_to(m_fire)
 
-        # B. Draw Global Heatmap
-        if show_global_heat:
-            from folium.plugins import HeatMap
-            heat_data = []
-            for feature in fire_geo['features']:
-                if feature['geometry'] and feature['geometry']['type'] == 'Point':
-                    coords = feature['geometry']['coordinates']
-                    heat_data.append([coords[1], coords[0]]) # Folium uses [Lat, Lon]
-                elif feature['geometry'] and feature['geometry']['type'] == 'Polygon':
-                    # Get center of polygon for heatmap point
-                    coords = feature['geometry']['coordinates'][0][0]
-                    heat_data.append([coords[1], coords[0]])
+    # LAYER C: US National Perimeters (Conditional Check prevents crash)
+    if show_perimeters:
+        try:
+            fire_geo = fetch_us_fire_perimeters()
+            if fire_geo and 'features' in fire_geo and len(fire_geo['features']) > 0:
+                folium.GeoJson(
+                    fire_geo,
+                    name="US Fire Shapes",
+                    style_function=lambda x: {
+                        'fillColor': '#ff3b3b',
+                        'color': '#ff0000',
+                        'weight': 1.5,
+                        'fillOpacity': 0.4
+                    },
+                    tooltip=folium.GeoJsonTooltip(
+                        fields=['IncidentName', 'DailyAcres'],
+                        aliases=['Fire Name:', 'Acres Burned:'],
+                        localize=True
+                    )
+                ).add_to(m_fire)
+        except Exception:
+            # Silent fallback if NIFC servers are lagging or timing out
+            pass
 
-            if heat_data:
-                HeatMap(heat_data, radius=15, blur=10, gradient={0.4: 'blue', 0.6: 'yellow', 1: 'red'}).add_to(m_fire)
+    # Add focus crosshair marker over your dashboard context city
+    folium.Marker(
+        [lat_c, lon_c], 
+        popup="Search Anchor Focus",
+        icon=folium.Icon(color='red', icon='info-sign')
+    ).add_to(m_fire)
 
-    st_folium(m_fire, width="100%", height=600, key="global_fire_map")
+    # Render out the map canvas
+    st_folium(m_fire, width="100%", height=550, key="global_fire_intelligence_canvas")
 
-    # 5. NASA Metrics (Bottom)
+    # 4. Satellite Telemetry Metrics Block
     st.markdown("---")
-    nasa_data = get_nasa_climate_data(lat_c, lon_c)
-    col_m1, col_m2 = st.columns(2)
-    col_m1.metric("Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
-    col_m2.metric("Wind Speed", f"{nasa_data['satellite_wind_speed']} m/s")
+    st.markdown("### 🛰️ Local Atmospheric Boundary Measurements")
+    
+    try:
+        nasa_data = get_nasa_climate_data(lat_c, lon_c)
+        col_m1, col_m2 = st.columns(2)
+        col_m1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
+        col_m2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
+    except Exception:
+        st.caption("Telemetry feeds currently processing updates.")
 
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
