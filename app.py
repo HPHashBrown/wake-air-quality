@@ -150,6 +150,27 @@ def get_real_pm25_data(lat, lon):
         if not sensor_ids:
             return []
 
+
+
+        import requests
+
+def fetch_us_fire_perimeters():
+    """
+    Fetches active US wildfire perimeters from the NIFC ArcGIS Feature Service.
+    Returns a GeoJSON object or None if the request fails.
+    """
+    url = (
+        "https://services3.arcgis.com/T4sVRZ87U1p7PBYQ/arcgis/rest/services/"
+        "Current_WildlandFire_Perimeters/FeatureServer/0/query?"
+        "where=1%3D1&outFields=IncidentName,DailyAcres,CurrentDate&f=geojson"
+    )
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except Exception:
+        return None
         # 3. Fetch measurements for those specific sensor IDs
         # We use 'measurements.list' with 'sensors_id' instead
         data = client.measurements.list(
