@@ -804,7 +804,7 @@ with tab6:
     if 'route_data' in st.session_state:
         data = st.session_state.route_data
         col1, col2 = st.columns(2)
-        aqi_val = round(data.get('exposure', 0), 1)
+        aqi_val = round(rdata.get('exposure', 0), 1)
         col1.metric("Route AQI", aqi_val)
         col2.metric("Est. Travel Time", f"{data.get('time_est', 'N/A')} min")
 
