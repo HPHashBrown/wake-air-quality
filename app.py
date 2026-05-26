@@ -315,19 +315,20 @@ def get_global_fire_layer():
     )
 
 @st.cache_data(ttl=60)
-def fetch_live_weather(lat, lon, city_name="Default"):
-    # Ensure lat/lon are floats
-    lat, lon = float(lat), float(lon)
-    
-    # Simulate or execute your API call
-    # IMPORTANT: Ensure this returns a plain Python DICT
-    # Do NOT return a request object, a database cursor, or a class instance
-    data = {
-        "temperature_2m": 22.5,  # Replace with actual API logic
-        "wind_speed_10m": 10.2,
-        "wind_direction_10m": 180
-    }
-    return data
+def fetch_live_weather(lat, lon, city_name):
+    # API URL for Open-Meteo current weather
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
+    try:
+        response = requests.get(url).json()
+        current = response.get("current", {})
+        # Return the dictionary with the exact keys your UI expects
+        return {
+            "temperature_2m": current.get("temperature_2m", "N/A"),
+            "wind_speed_10m": current.get("wind_speed_10m", "N/A"),
+            "wind_direction_10m": current.get("wind_direction_10m", "N/A")
+        }
+    except Exception:
+        return {"temperature_2m": "N/A", "wind_speed_10m": "N/A", "wind_direction_10m": "N/A"}
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
