@@ -417,11 +417,15 @@ with st.sidebar:
 # PROCESSING & MODELING
 # ============================================
 
-# --- FIX: Ensure live_weather is always a dictionary ---
+# --- FIX: Save initialization to Session State ---
 with st.spinner("Initializing Atmospheric Sensors..."):
-    # This ensures live_weather is never None, but a safe empty dict instead
-    live_weather_raw = fetch_live_weather(35.7796, -78.6382)
-    live_weather = live_weather_raw if live_weather_raw is not None else {}
+    # If the state is empty (first load), fetch and STORE the data
+    if 'current_weather' not in st.session_state:
+        st.session_state.current_weather = fetch_live_weather(35.7796, -78.6382)
+    
+    # Also ensure current_data is initialized for the AQI metric
+    if 'current_data' not in st.session_state:
+        st.session_state.current_data = fetch_global_aqi(35.7796, -78.6382)
 
 if PROPHET_AVAILABLE:
     prophet_df = df_yearly.copy()
