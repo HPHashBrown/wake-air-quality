@@ -172,6 +172,23 @@ def fetch_global_aqi(lat, lon, metric="pm2_5"):
     except: 
         return {}
 
+@st.cache_data(ttl=3600)
+def fetch_7day_aqi_forecast(lat, lon):
+    # Air Quality API daily forecast endpoint
+    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi,pm2_5_mean&forecast_days=7"
+    try:
+        response = requests.get(url, timeout=10).json()
+        daily = response.get("daily", {})
+        if daily:
+            return pd.DataFrame({
+                "date": daily.get("time"),
+                "aqi": daily.get("us_aqi"),
+                "pm25": daily.get("pm2_5_mean")
+            })
+    except Exception as e:
+        st.warning(f"Forecast fetch failed: {e}")
+    return pd.DataFrame()
+
 # Safe Initialization
 if 'current_data' not in st.session_state:
     st.session_state.current_data = fetch_global_aqi(35.7796, -78.6382)
@@ -652,6 +669,33 @@ with tab2:
                 <span style='font-size: 0.8em;'>Projected Impact: -{reduction}%</span>
             </div>
         """, unsafe_allow_html=True)
+
+st.markdown("### 📅 7-Day Atmospheric Outlook")
+    
+    # Get stored forecast data
+    forecast_df = st.session_state.get('forecast_data', pd.DataFrame())
+
+    if not forecast_df.empty:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=forecast_df["date"], 
+            y=forecast_df["aqi"], 
+            mode="lines+markers", 
+            name="AQI Forecast",
+            line=dict(color="#00f2fe", width=4),
+            fill='tozeroy', 
+            fillcolor='rgba(0, 242, 254, 0.1)'
+        ))
+        fig.update_layout(
+            template="plotly_dark", 
+            paper_bgcolor="rgba(0,0,0,0)", 
+            plot_bgcolor="rgba(0,0,0,0)",
+            hovermode="x unified",
+            yaxis_title="AQI Level"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Searching for location data to generate 7-day forecast...")
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
