@@ -534,7 +534,7 @@ with st.container():
         # This line must be indented to the SAME level as the code inside the container
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. State Retrieval
+# 2. State Retrieval
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', fetch_global_aqi(curr_lat, curr_lon))
     weather = st.session_state.get('current_weather', fetch_live_weather(curr_lat, curr_lon)) or {}
