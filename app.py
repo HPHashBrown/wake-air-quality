@@ -17,16 +17,13 @@ import openaq
 import pydeck as pdk
 import random
 import gspread
-from google.oauth2.service_account import Credentials
-
-
-
+from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import ServiceAccountCredentials
 
 
 # ============================================
 # INITIALIZATION & STATE
 # ============================================
-
 
 def create_base_map(lat, lon, zoom=12):
     return folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB dark_matter")
@@ -36,31 +33,6 @@ def add_heatmap_to_map(m, hotspots):
     HeatMap(hotspots, radius=20, blur=15).add_to(m)
     return m
 
-def get_db_client():
-    creds_dict = st.secrets["gcp_service_account"]
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    client = gspread.authorize(creds)
-
-    # 1. Open the Spreadsheet by Name
-    spreadsheet = client.open("AirQualityHazards")
-
-    # 2. Return the SPECIFIC worksheet (change "Sheet1" if yours is named differently)
-    return spreadsheet.worksheet("Sheet1") 
-
-def get_global_hazards():
-    try:
-        # Get the worksheet object
-        worksheet = get_db_client()
-        # Get the data
-        data = worksheet.get_all_records()
-        return data
-    except Exception as e:
-        st.error(f"Error fetching hazards: {e}")
-        return []
 
 # Ensure this is defined exactly once at the top of your script
 df_yearly = pd.DataFrame({
@@ -219,26 +191,10 @@ selected_risks = ["Good (0-50)", "Moderate (51-100)", "Unhealthy (101+)"]
 POLLUTANT_MAP = {"PM2.5": "pm2_5", "PM10": "pm10", "Ozone": "ozone", "NO2": "nitrogen_dioxide"}
 
 try:
+    from prophet import Prophet
     PROPHET_AVAILABLE = True
 except ImportError:
     PROPHET_AVAILABLE = False
-
-@st.cache_data(ttl=3600)
-def fetch_7day_forecast(lat, lon):
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi_max&timezone=auto&forecast_days=7"
-    try:
-        response = requests.get(url, timeout=5) # Added timeout
-        if response.status_code == 200:
-            data = response.json()
-            daily = data.get("daily", {})
-            if "time" in daily and "us_aqi_max" in daily:
-                return pd.DataFrame({
-                    "date": pd.to_datetime(daily["time"]),
-                    "aqi": daily["us_aqi_max"]
-                })
-        return pd.DataFrame() # Returns empty if API fails
-    except Exception:
-        return pd.DataFrame() # Returns empty if connection fails
 
 @st.cache_data(show_spinner=True)
 def get_map_graph(lat1, lon1, lat2, lon2):
@@ -309,6 +265,34 @@ def get_global_fire_layer():
         f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_Thermal_Anomalies_375m/default/{datetime.now().strftime('%Y-%m-%d')}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.png",
         opacity=0.8
     )
+
+import streamlit as st
+import gspread
+from google.oauth2.service_account import Credentials
+
+def get_db_client():
+    scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets']
+    # Ensure you have your 'credentials.json' file in your project folder
+    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    # 1. Load the secrets dictionary from your Streamlit dashboard
+    creds_dict = st.secrets["gcp_service_account"]
+    
+    # 2. Define the scope
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    
+    # 3. Create credentials object from the dictionary
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    
+    # 4. Authorize gspread
+    client = gspread.authorize(creds)
+    
+    # 5. Connect to your sheet
+    return client.open("AirQualityHazards").sheet1
+
+# Call this to update your map
+def get_global_hazards():
+    sheet = get_db_client()
+    return sheet.get_all_records() # Returns a list of {'lat': x, 'lon': y}
 
 @st.cache_data(ttl=3600)
 def fetch_live_weather(lat, lon):
@@ -470,18 +454,32 @@ with st.spinner("Initializing Atmospheric Sensors..."):
     live_weather_raw = fetch_live_weather(35.7796, -78.6382)
     live_weather = live_weather_raw if live_weather_raw is not None else {}
 
-@st.cache_data(ttl=3600)
-def fetch_7day_forecast(lat, lon):
-    url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={lat}&longitude={lon}&daily=us_aqi_max&timezone=auto&forecast_days=7"
-    try:
-        response = requests.get(url).json()
-        daily = response.get("daily", {})
-        return pd.DataFrame({
-            "date": pd.to_datetime(daily.get("time")),
-            "aqi": daily.get("us_aqi_max")
-        })
-    except:
-        return pd.DataFrame()
+if PROPHET_AVAILABLE:
+    prophet_df = df_yearly.copy()
+    prophet_df['ds'] = pd.to_datetime(prophet_df['year'], format='%Y')
+    prophet_df = prophet_df.rename(columns={'mean_pm25': 'y'})
+    m = Prophet(yearly_seasonality=True)
+    m.fit(prophet_df)
+    future = m.make_future_dataframe(periods=10, freq='YS')
+    forecast = m.predict(future)
+    future_df = pd.DataFrame({
+        "year": forecast['ds'].dt.year,
+        "predicted_pm25": forecast['yhat'],
+        "yhat_lower": forecast['yhat_lower'],
+        "yhat_upper": forecast['yhat_upper']
+    })
+else:
+    X = df_yearly[["year"]]
+    y = df_yearly["mean_pm25"]
+    model = LinearRegression().fit(X, y)
+    future_years = np.arange(current_year, current_year + 11)
+    future_preds = model.predict(future_years.reshape(-1, 1))
+    future_df = pd.DataFrame({
+        "year": future_years, 
+        "predicted_pm25": future_preds,
+        "yhat_lower": future_preds - 1.5, 
+        "yhat_upper": future_preds + 1.5
+    })
 
 # ============================================
 # MAIN UI LAYOUT
@@ -493,7 +491,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 
 # --- TAB 1: OVERVIEW ---
 
-# --- TAB 1: OVERVIEW ---
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
@@ -543,12 +540,31 @@ with tab1:
     with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
     with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
 
-    # --- ALERT THRESHOLD LOGIC (NOW PROPERLY INDENTED) ---
-    if current_aqi > alert_threshold:
-        st.error(f"⚠️ ALERT: Current AQI ({current_aqi}) exceeds your defined threshold of {alert_threshold}!")
-        st.warning("Recommendation: Engage indoor air purification protocols immediately.")
-    else:
-        st.success(f"✅ AQI ({current_aqi}) is within your specified safety threshold ({alert_threshold}).")
+    # 4. PM2.5 Long-term Trajectory (Fixed Layout)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
+
+    forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
+    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
+
+    fig.add_trace(go.Scatter(
+        x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), 
+        y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), 
+        fill='toself', fillcolor='rgba(255, 8, 68, 0.1)', line=dict(color='rgba(255,255,255,0)'), 
+        showlegend=True, name="Confidence"
+    ))
+
+    # Legend fixed to horizontal top to prevent overlap
+    fig.update_layout(
+        title="PM2.5 Long-Term Atmospheric Trajectory", 
+        template="plotly_dark", 
+        plot_bgcolor="rgba(0,0,0,0)", 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.15, xanchor="center", x=0.5),
+        margin=dict(t=100, l=40, r=40, b=40)
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
     # 5. Clinical Advisory
     st.markdown("---")
@@ -657,19 +673,18 @@ with tab2:
         gauge.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=30, b=30, l=30, r=30))
         st.plotly_chart(gauge, use_container_width=True)
 
-with col_sim_slider:
+    with col_sim_slider:
         st.markdown("**Emission Mitigation Simulator**")
         st.write("Adjust the reduction percentage to visualize projected health improvements.")
         reduction = st.slider("Target Mitigation (%)", 0, 50, 0, help="Simulate a reduction in local particulate output.")
 
-        # Updated logic: Use current_aqi as the baseline for the simulation 
-        # since we no longer have the long-term forecast dataframe
-        sim_val = current_aqi * (1 - (reduction/100))
+        # Calculation
+        sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
 
         # Display Metric
         st.markdown(f"""
             <div class='glass-card' style='margin-top: 20px; text-align: center;'>
-                <h5 style='color: #8b9bb4;'>Projected PM2.5 Level</h5>
+                <h5 style='color: #8b9bb4;'>Estimated {future_df['year'].iloc[-1]} PM2.5</h5>
                 <h2 style='color: #00f2fe;'>{sim_val:.2f} µg/m³</h2>
                 <span style='font-size: 0.8em;'>Projected Impact: -{reduction}%</span>
             </div>
@@ -708,39 +723,6 @@ if 'map_center' in st.session_state:
         res_col2.success("✅ Exposure index within acceptable clinical range.")
 
     st.caption("Calculated based on chronic exposure modeling. High AQI significantly accelerates biological lung aging.")
-
-# 4. 7-Day Atmospheric Outlook
-    st.markdown("### 📅 7-Day Atmospheric Outlook")
-    forecast_df = fetch_7day_forecast(curr_lat, curr_lon)
-
-    # --- THE FALLBACK FIX ---
-    if forecast_df.empty:
-        # If the API fails or returns no data, we force-feed it mock data
-        # so your presentation/pitch does not break.
-        forecast_df = pd.DataFrame({
-            "date": pd.date_range(start=datetime.now(), periods=7),
-            "aqi": [45, 52, 60, 58, 42, 38, 40]
-        })
-    # ------------------------
-
-    # Now this will always run because forecast_df is no longer empty
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=forecast_df["date"], y=forecast_df["aqi"], 
-        mode="lines+markers", 
-        name="AQI Forecast",
-        line=dict(color="#00f2fe", width=4),
-        fill='tozeroy', fillcolor='rgba(0, 242, 254, 0.1)'
-    ))
-
-    fig.update_layout(
-        template="plotly_dark",
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        hovermode="x unified",
-        margin=dict(t=30, b=30, l=30, r=30)
-    )
-    st.plotly_chart(fig, use_container_width=True)
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
@@ -804,25 +786,33 @@ with tab4:
         icon=folium.Icon(color="blue", icon="info-sign")
     ).add_to(m)
 
-    # 3. Community Hazard Reporting
+# 3. Community Hazard Reporting
     st.subheader("🚩 Community Hazards")
-    if 'hazard_reports' not in st.session_state:
-        st.session_state.hazard_reports = []
 
-    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
-        st.session_state.hazard_reports.append(st.session_state.map_center)
-        st.toast("Report submitted! Your community thanks you.", icon="✅")
+    # FETCH GLOBAL PINS FROM CLOUD
+    # Replace 'get_global_hazards()' with the actual function call 
+    # to your Google Sheets API integration
+    hazards = get_global_hazards() 
 
-    # Draw Hazard Pins
-    for report in st.session_state.hazard_reports:
+    # Draw Hazard Pins from CLOUD (Global)
+    for h in hazards:
         folium.Marker(
-            report,
+            [h['lat'], h['lon']],
             popup="Community Reported Hazard",
             icon=folium.Icon(color='red', icon='warning-sign')
         ).add_to(m)
 
-    st_folium(m, width="100%", height=400, key="tab4_map")
+    # Keep the report button here if you want users to flag hazards directly from the map
+    if st.button("🚩 Report Poor Air at Current Location", key="report_btn"):
+        # PUSH TO CLOUD
+        sheet = get_db_client()
+        lat, lon = st.session_state.map_center
+        sheet.append_row([lat, lon])
+        st.toast("Report synced to global community map!", icon="✅")
+        # Rerun to refresh the map with the new pin immediately
+        st.rerun()
 
+    st_folium(m, width="100%", height=400, key="tab4_map")
     # 4. Atmospheric Report
     st.markdown("### 📊 Atmospheric Report")
     curr_lat, curr_lon = st.session_state.map_center
@@ -838,6 +828,32 @@ with tab4:
             col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
         else:
             st.error("Could not retrieve data for this node.")
+
+st.subheader("🚩 Community Hazards Map")
+st.write("Report a local pollution spike (e.g., heavy smoke, idling trucks) to warn others.")
+
+# 1. Initialize the storage list if it doesn't exist
+if 'hazard_reports' not in st.session_state:
+    st.session_state.hazard_reports = []
+
+# 2. Add button to report current location
+if st.button("🚩 Report Poor Air at Current Location"):
+    # Save the current map center as a report
+    new_report = st.session_state.map_center
+    st.session_state.hazard_reports.append(new_report)
+    st.toast("Report submitted! Your community thanks you.", icon="✅")
+
+# 3. Render the Map with Hazard Pins
+# We use your existing 'm' map object from tab4
+for report in st.session_state.hazard_reports:
+    folium.Marker(
+        report,
+        popup="Community Reported Hazard",
+        icon=folium.Icon(color='red', icon='warning-sign')
+    ).add_to(m)
+
+# 4. Display the map again (ensuring it shows the new pins)
+st_folium(m, width="100%", height=400, key="hazard_map")
 # --- TAB 5: SPACE INTEL ---
 with tab5:
     st.markdown("### 🌍 Global Satellite Intelligence For Forest Fires")
