@@ -474,6 +474,7 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Telemetry & Forecasting", "�
 
 # --- TAB 1: OVERVIEW ---
 
+# --- TAB 1: OVERVIEW (BUG-FREE REWRITE) ---
 with tab1:
     # 1. High-Tech Console Search Input
     st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
@@ -494,9 +495,9 @@ with tab1:
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
         col_search, col_btn = st.columns([4, 1])
         with col_search:
-            city_input = st.text_input("Search Location", "Raleigh", key="tab1_city", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
+            city_input = st.text_input("Search Location", "Raleigh", key="tab1_city_input", label_visibility="collapsed", placeholder="Enter City or Coordinates...")
         with col_btn:
-            if st.button("📡 Scan Region", use_container_width=True):
+            if st.button("📡 Scan Region", use_container_width=True, key="scan_btn_tab1"):
                 lat, lon, name = get_city_coords(city_input)
                 if lat:
                     st.session_state.map_center = [lat, lon]
@@ -507,36 +508,48 @@ with tab1:
                     st.error("❌ Target lost.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# 2. State Retrieval & Variable Setup
+    # 2. State Retrieval & Variable Setup (FIXED ORDER)
     curr_lat, curr_lon = st.session_state.get('map_center', [35.7796, -78.6382])
     data = st.session_state.get('current_data', {})
-    weather = st.session_state.get('current_weather', {}) or {}
-    current_aqi = float(data.get('us_aqi', 0))
-
-    # --- CRITICAL FIX: Define aqi_color BEFORE the metrics use it ---
+    
+    # Ensure weather is a dict and check if we need to fetch it
+    weather = st.session_state.get('current_weather', {})
+    if not weather:
+        weather = fetch_live_weather(curr_lat, curr_lon)
+        st.session_state.current_weather = weather
+    
+    # Extract AQI and calculate color BEFORE metrics
+    current_aqi = float(data.get('us_aqi') or 0.0)
     aqi_color = "#10b981" if current_aqi <= 50 else ("#f59e0b" if current_aqi <= 100 else ("#f97316" if current_aqi <= 150 else "#ef4444"))
 
-    # 3. Metrics Display (Now aqi_color is defined and safe to use)
+    # 3. Metrics Display (Pulling from Open-Meteo specific keys)
     m1, m2, m3, m4 = st.columns(4)
-    with m1: st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{current_aqi}</h3></div>", unsafe_allow_html=True)
-    with m2: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{weather.get('temperature_2m', 'N/A')}°C</h3></div>", unsafe_allow_html=True)
-    with m3: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{weather.get('wind_speed_10m', 'N/A')} km/h</h3></div>", unsafe_allow_html=True)
-    with m4: st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{weather.get('wind_direction_10m', 'N/A')}°</h3></div>", unsafe_allow_html=True)
-    # 4. PM2.5 Long-term Trajectory (Fixed Layout)
+    with m1: 
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid {aqi_color};'><h5>US AQI</h5><h3 style='color:{aqi_color}'>{int(current_aqi)}</h3></div>", unsafe_allow_html=True)
+    with m2: 
+        temp_val = weather.get('temperature_2m', 'N/A')
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #fbbf24;'><h5>Temp</h5><h3>{temp_val}°C</h3></div>", unsafe_allow_html=True)
+    with m3: 
+        wind_val = weather.get('wind_speed_10m', 'N/A')
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #a78bfa;'><h5>Wind</h5><h3>{wind_val} km/h</h3></div>", unsafe_allow_html=True)
+    with m4: 
+        head_val = weather.get('wind_direction_10m', 'N/A')
+        st.markdown(f"<div class='glass-card' style='border-top: 3px solid #38bdf8;'><h5>Heading</h5><h3>{head_val}°</h3></div>", unsafe_allow_html=True)
+
+    # 4. PM2.5 Long-term Trajectory
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_yearly["year"], y=df_yearly["mean_pm25"], mode="lines+markers", name="Recorded", line=dict(color="#00f2fe", width=3)))
 
-    forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
-    fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
+    if 'future_df' in locals() or 'future_df' in globals():
+        forecast_future = future_df[future_df['year'] > df_yearly['year'].max()]
+        fig.add_trace(go.Scatter(x=forecast_future["year"], y=forecast_future["predicted_pm25"], mode="lines+markers", name="Forecast", line=dict(color="#ff0844", width=3, dash="dot")))
+        fig.add_trace(go.Scatter(
+            x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), 
+            y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), 
+            fill='toself', fillcolor='rgba(255, 8, 68, 0.1)', line=dict(color='rgba(255,255,255,0)'), 
+            showlegend=True, name="Confidence"
+        ))
 
-    fig.add_trace(go.Scatter(
-        x=pd.concat([forecast_future["year"], forecast_future["year"][::-1]]), 
-        y=pd.concat([forecast_future["yhat_upper"], forecast_future["yhat_lower"][::-1]]), 
-        fill='toself', fillcolor='rgba(255, 8, 68, 0.1)', line=dict(color='rgba(255,255,255,0)'), 
-        showlegend=True, name="Confidence"
-    ))
-
-    # Legend fixed to horizontal top to prevent overlap
     fig.update_layout(
         title="PM2.5 Long-Term Atmospheric Trajectory", 
         template="plotly_dark", 
@@ -553,14 +566,14 @@ with tab1:
     st.subheader("🩺 Clinical Neuro-Respiratory Advisory")
     a1, a2 = st.columns([1, 2])
     with a1:
-        st.markdown(f"<div style='text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px;'><h1 style='color:{aqi_color}; font-size: 60px;'>{current_aqi}</h1></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px;'><h1 style='color:{aqi_color}; font-size: 60px;'>{int(current_aqi)}</h1></div>", unsafe_allow_html=True)
     with a2:
         if current_aqi <= 50: st.success("✅ **Air Quality is Optimal.** Ideal conditions for outdoor activities.")
         elif current_aqi <= 100: st.warning("⚠️ **Air Quality is Moderate.** Sensitive individuals should limit prolonged exertion.")
         else: st.error("🚨 **High Toxicity Detected.** Deep-lung particulate risk. Indoor protocols advised.")
 
     # 6. Environmental Resilience Index
-    resilience_val = calculate_resilience_score(current_aqi, weather.get('wind_speed_10m', 0), weather.get('relative_humidity_2m', 50))
+    resilience_val = calculate_resilience_score(current_aqi, float(weather.get('wind_speed_10m', 0)), float(weather.get('relative_humidity_2m', 50)))
     st.markdown("---")
     st.subheader("🛡️ Environmental Resilience Index")
     col_r1, col_r2 = st.columns([1, 3])
@@ -595,7 +608,6 @@ with tab1:
         with col3:
             st.markdown("**Aerosol Optical Depth**")
             st.line_chart(plot_df, x="year", y="aerosol_depth", color="#a78bfa")
-
 # --- TAB 2: ANALYTICS ---
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
