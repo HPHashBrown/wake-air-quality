@@ -78,19 +78,24 @@ def get_ai_health_briefing(pm25_val, aqi_val):
 
 def calculate_resilience_score(aqi, wind_speed, humidity):
     """
-    Calculates a 0-100 score:
-    - Higher is better (more resilient/cleaner/stable)
-    - AQI is the primary detractor
-    - Wind is a bonus (dispersion)
-    - Humidity is a stabilizer (low impact)
+    Safely calculates a 0-100 score. 
+    Handles None/NA by converting them to safe floats.
     """
-    # Normalize AQI: 0 is perfect, 300 is hazardous
-    aqi_impact = max(0, 100 - (aqi / 3)) 
+    # 1. Sanitize Inputs: Convert anything that isn't a number to 0.0
+    try:
+        aqi_val = float(aqi) if aqi is not None and str(aqi) != 'N/A' else 0.0
+        wind_val = float(wind_speed) if wind_speed is not None and str(wind_speed) != 'N/A' else 0.0
+        # Humidity isn't used in your current math but we'll sanitize it anyway
+        hum_val = float(humidity) if humidity is not None and str(humidity) != 'N/A' else 50.0
+    except (ValueError, TypeError):
+        # If conversion fails entirely, default to 0
+        aqi_val, wind_val = 0.0, 0.0
 
-    # Wind bonus: Up to 15 points if wind is strong (helps dispersion)
-    wind_bonus = min(15, wind_speed * 1.5)
+    # 2. Perform Math safely
+    aqi_impact = max(0, 100 - (aqi_val / 3)) 
+    wind_bonus = min(15, wind_val * 1.5)
 
-    # Resilience score
+    # 3. Final Score
     score = aqi_impact + wind_bonus
     return min(100, max(0, round(score)))
 
