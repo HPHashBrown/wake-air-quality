@@ -241,6 +241,11 @@ def get_healthiest_route(start_lat, start_lon, end_lat, end_lon):
     avg_aqi = total_aqi / 3
     return avg_aqi
 
+def refresh_dashboard_data(lat, lon, name):
+    st.session_state.map_center = [lat, lon]
+    st.session_state.current_data = fetch_global_aqi(lat, lon)
+    st.session_state.current_weather = fetch_live_weather(lat, lon)
+
 
 def get_nasa_climate_data(lat, lon):
     target_date = (datetime.now() - timedelta(days=30)).strftime("%Y%m%d")
