@@ -265,22 +265,27 @@ def get_global_fire_layer():
 
 @st.cache_data(ttl=300)
 def fetch_live_weather(lat, lon, city_name="Default"):
-    # The URL needs to request these specific parameters in the 'current' group
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m"
+    # Using 'current' instead of 'current_weather' to match the latest Open-Meteo API
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m&timezone=auto"
     try:
-        response = requests.get(url, timeout=15)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
-            data = response.json()
-            current = data.get("current", {})
-            # We map the API keys directly to the dictionary we return
-            return {
+            raw_data = response.json()
+            # Open-Meteo puts live data inside the 'current' key
+            current = raw_data.get("current", {})
+            
+            # Explicitly building the dictionary to ensure keys exist
+            weather_data = {
                 "temperature_2m": current.get("temperature_2m", 0),
                 "wind_speed_10m": current.get("wind_speed_10m", 0),
-                "wind_direction_10m": current.get("wind_direction_10m", 0)
+                "wind_direction_10m": current.get("wind_direction_10m", 0),
+                "relative_humidity_2m": current.get("relative_humidity_2m", 50)
             }
+            return weather_data
     except Exception as e:
-        st.sidebar.error(f"Weather Fetch Error: {e}")
-    return {"temperature_2m": 0, "wind_speed_10m": 0, "wind_direction_10m": 0}
+        print(f"DEBUG: Weather Fetch Failed: {e}")
+    
+    return None # Return None so the UI knows to try again
 
 @st.cache_data(ttl=3600)
 def fetch_pollutant_data(lat, lon, pollutant_key):
