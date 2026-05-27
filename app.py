@@ -796,13 +796,15 @@ with tab4:
         else:
             st.error("Could not retrieve data for this node.")
 # ============================================================
-# TAB 5: GLOBAL SATELLITE COMMAND CENTER (SYNCED TO TAB 1)
+# TAB 5: GLOBAL SATELLITE COMMAND CENTER 
 # ============================================================
 with tab5:
+    # --- PROMINENT NAVIGATION DISCLAIMER ---
+    st.info("ℹ️ **Navigation Note:** This tab displays fire metrics relative to your active search region. To change or update the displayed location, please enter a city/coordinate query in **Tab 4** first.")
+    
     st.markdown("### 🌍 Global Fire & Smoke Intelligence")
     
-    # 1. FORCE SYNC TO TAB 1 
-    # This pulls directly from the location searched in the main dashboard
+    # 1. Pull search location from Tab 4 state
     search_lat, search_lon = st.session_state.get('map_center', [35.7796, -78.6382])
 
     # 2. LAYER CONTROLS & DISPLAY SETTINGS
@@ -810,12 +812,11 @@ with tab5:
         col_c1, col_c2 = st.columns(2)
         map_mode = col_c1.radio("Base Style", ["Dark Matter", "Satellite View"], horizontal=True)
         
-        # RESTORED: Option to choose Fire, Smoke, or Both
         active_layers = col_c2.multiselect(
             "Intelligence Layers", 
             ["🔥 Active Fires", "☁️ Visual Smoke Plumes"], 
             default=["🔥 Active Fires"],
-            key="tab5_layer_toggle"
+            key="tab5_layer_toggle_final"
         )
 
     # 3. FAST DISTANCE MATH (Vectorized)
@@ -833,6 +834,7 @@ with tab5:
         url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv"
         try:
             df = pd.read_csv(url)
+            # Filter out 'low' confidence but keep 'nominal' and 'high' (ensures Asia/DRC coverage)
             return df[df['confidence'] != 'l'] 
         except:
             return None
@@ -844,25 +846,24 @@ with tab5:
     tileset = "CartoDB dark_matter" if map_mode == "Dark Matter" else "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
     attr = "CartoDB" if map_mode == "Dark Matter" else "Esri World Imagery"
     
-    # Map starts centered on the TAB 1 SEARCH location
     m_cmd = folium.Map(location=[search_lat, search_lon], zoom_start=5, tiles=tileset, attr=attr)
 
-    # LAYER: SMOKE PLUMES (NASA GIBS)
+    # LAYER: VISUAL SMOKE (NASA GIBS)
     if "☁️ Visual Smoke Plumes" in active_layers:
         smoke_url = f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date_yesterday}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
         folium.TileLayer(tiles=smoke_url, attr="NASA GIBS", name="Smoke", overlay=True, opacity=0.6).add_to(m_cmd)
 
-    # LAYER: FIRE DOTS (Regional Scan)
+    # LAYER: FIRE DOTS (Regional Scan for maximum rendering speed)
     if "🔥 Active Fires" in active_layers and fire_df is not None:
         fire_df['dist'] = haversine_np(search_lon, search_lat, fire_df['longitude'], fire_df['latitude'])
         
-        # Display Proximity Metrics
+        # Pull global closest point calculation
         closest_fire = fire_df.loc[fire_df['dist'].idxmin()]
         c1, c2 = st.columns(2)
         c1.metric("Nearest Active Fire", f"{closest_fire['dist']:.1f} mi")
         c2.metric("Fire Intensity (K)", f"{closest_fire['bright_ti4']:.0f}")
 
-        # Plot markers only for current region to ensure app speed
+        # Plot fire markers only within 1,500 miles of the active location to protect performance
         local_fires = fire_df[fire_df['dist'] < 1500].head(500)
         for _, row in local_fires.iterrows():
             folium.CircleMarker(
@@ -871,15 +872,15 @@ with tab5:
                 popup=f"Distance: {row['dist']:.1f} miles"
             ).add_to(m_cmd)
 
-    # Blue Marker for the Tab 1 Search Point
+    # Anchor Marker for active calculation origin
     folium.Marker([search_lat, search_lon], icon=folium.Icon(color='blue', icon='info-sign')).add_to(m_cmd)
 
-    # Render with static key for stability
-    st_folium(m_cmd, width="100%", height=500, key="synced_regional_fire_map")
+    # Clean rendering with explicit key mapping
+    st_folium(m_cmd, width="100%", height=500, key="tab4_synced_fire_map")
 
     # 6. SYSTEM DISCLAIMER
     st.markdown("---")
-    st.warning("⚠️ **Data Accuracy Note:** This tracker utilizes NASA satellite thermal anomalies. Detection may not be 100% accurate at all times due to cloud cover or sensor latency. Active fire markers are displayed for the region surrounding your Tab 1 search location.")
+    st.warning("⚠️ **Data Accuracy Note:** This tracker utilizes NASA satellite thermal anomalies. Detection may not be 100% accurate at all times due to cloud cover or sensor latency. Active fire markers are displayed for the region surrounding your selected location.")
     
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
