@@ -757,7 +757,7 @@ with tab2:
             </div>
         """, unsafe_allow_html=True)
 
-st.markdown("---")
+    st.markdown("---")
 
     # 3. SMART OUTDOOR ACTIVITY SCHEDULER
     st.markdown("### 🏃‍♂️ Smart Outdoor Activity Scheduler")
