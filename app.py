@@ -580,7 +580,7 @@ else:
 # MAIN UI LAYOUT
 # ============================================
 st.markdown('<p class="title-gradient">Project AIR</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Response) is a Global Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Response) is a Global Atmospheric Analytics Engine Made to Analyze Different Pollutants.</p>', unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute", "📈Monthly PM2.5 Comparison", "👤About the Project"])
 
