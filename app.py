@@ -507,7 +507,7 @@ st.markdown("""
 with st.sidebar:
     st.markdown("### 🔔 Automated Alerting")
     with st.form("alert_form"):
-        target_email = st.text_input("Operator Email", placeholder="operator@nc.gov")
+        target_email = st.text_input("Email Notifications", placeholder="youremail@gmail.com")
         alert_threshold = st.slider("US AQI Trigger Threshold", min_value=50, max_value=300, value=100, step=10)
         submit_alert = st.form_submit_button("Initialize Protocol")
         if submit_alert:
