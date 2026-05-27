@@ -796,81 +796,101 @@ with tab4:
         else:
             st.error("Could not retrieve data for this node.")
 # ============================================================
-# TAB 5: SATELLITE COMMAND CENTER (SMOKE & FIRE)
+# TAB 5: SATELLITE COMMAND CENTER (STABILIZED)
 # ============================================================
 with tab5:
     st.markdown("### 🛰️ Global Satellite Command Center")
     
-    # 1. SIDEBAR CONTROLS (Within the Tab)
-    with st.expander("🛠️ Map Display Settings", expanded=True):
-        col_c1, col_c2, col_c3 = st.columns(3)
-        map_mode = col_c1.radio("Base Style", ["Dark Matter", "Satellite View"])
+    # 1. Map Display Settings
+    with st.expander("🛠️ Map Display Settings", expanded=False):
+        col_c1, col_c2 = st.columns(2)
+        map_mode = col_c1.radio("Base Style", ["Dark Matter", "Satellite View"], key="fire_map_style")
         active_layers = col_c2.multiselect(
             "Intelligence Layers", 
             ["🔥 Active Fires (24h)", "☁️ Visual Smoke Plumes"], 
-            default=["🔥 Active Fires (24h)"]
+            default=["🔥 Active Fires (24h)"],
+            key="fire_layers_select"
         )
-        refresh_rate = col_c3.selectbox("Auto-Refresh", ["Every 24h (Default)", "Live NRT Feed"])
 
-    # 2. DATA ORCHESTRATION
-    # NASA dates for 'Best' imagery (yesterday) and 'NRT' (today)
-    date_today = datetime.now().strftime('%Y-%m-%d')
-    date_yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    
-    # Fetch coordinates from state
+    # 2. Data Logic (Cached to prevent refreshing loops)
+    @st.cache_data(ttl=86400) # Only refreshes every 24 hours
+    def get_stable_fire_data():
+        url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv"
+        try:
+            return pd.read_csv(url)
+        except:
+            return None
+
+    fire_df = get_stable_fire_data()
     lat_c, lon_c = st.session_state.get('map_center', [35.7796, -78.6382])
+    date_yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    # 3. BASE MAP GENERATION
+    # 3. Base Map Construction
     tileset = "CartoDB dark_matter" if map_mode == "Dark Matter" else "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
     attr = "CartoDB" if map_mode == "Dark Matter" else "Esri World Imagery"
     
     m_cmd = folium.Map(location=[lat_c, lon_c], zoom_start=5, tiles=tileset, attr=attr)
 
-    # 4. LAYER: SMOKE VIEWING (NASA MODIS/VIIRS True Color)
+    # Layer: Smoke
     if "☁️ Visual Smoke Plumes" in active_layers:
-        smoke_url = (
-            f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
-            f"VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date_yesterday}/"
-            f"GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
-        )
-        folium.TileLayer(
-            tiles=smoke_url, 
-            attr="NASA GIBS", 
-            name="Smoke Plumes", 
-            overlay=True, 
-            opacity=0.6
-        ).add_to(m_cmd)
+        smoke_url = f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date_yesterday}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
+        folium.TileLayer(tiles=smoke_url, attr="NASA GIBS", name="Smoke", overlay=True, opacity=0.6).add_to(m_cmd)
 
-    # 5. LAYER: FIRE MODE (Red Circles from Live CSV)
-    if "🔥 Active Fires (24h)" in active_layers:
-        @st.cache_data(ttl=3600)
-        def get_fire_dots():
-            url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv"
-            try:
-                return pd.read_csv(url)
-            except:
-                return None
+    # Layer: Fire Dots
+    if "🔥 Active Fires (24h)" in active_layers and fire_df is not None:
+        # Filter for quality to keep the map clean and accurate
+        reliable_fires = fire_df[fire_df['confidence'] != 'low'].head(1000)
+        for _, row in reliable_fires.iterrows():
+            folium.CircleMarker(
+                location=[row['latitude'], row['longitude']],
+                radius=3, color="#FF0000", fill=True, fill_color="#FF4500", fill_opacity=0.8,
+                popup=f"Brightness: {row['bright_ti4']}K"
+            ).add_to(m_cmd)
 
-        fire_df = get_fire_dots()
-        if fire_df is not None:
-            # We filter for confidence to ensure "Accuracy"
-            reliable_fires = fire_df[fire_df['confidence'] != 'low'].head(1000)
-            for _, row in reliable_fires.iterrows():
-                folium.CircleMarker(
-                    location=[row['latitude'], row['longitude']],
-                    radius=3,
-                    color="#FF0000",
-                    fill=True,
-                    fill_color="#FF4500",
-                    fill_opacity=0.8,
-                    popup=f"Fire Confidence: {row['confidence']}"
-                ).add_to(m_cmd)
+    # Marker for your searched city
+    folium.Marker([lat_c, lon_c], icon=folium.Icon(color='blue', icon='home')).add_to(m_cmd)
 
-    # Render
-    st_folium(m_cmd, width="100%", height=600, key="satellite_cmd_map")
+    # 4. STABILIZED RENDERING
+    # Use a fixed key to prevent the map from resetting on every script run
+    st_folium(m_cmd, width="100%", height=550, key="static_fire_map_v1")
 
-    # 6. BIOLOGICAL CONTEXT (For your spiky profile)
-    st.info("💡 **Science Note:** Fire detection uses the I-4 (3.74 μm) and I-5 (11.45 μm) bands. By comparing the 'Brightness Temperature' of a pixel to its neighbors, we can identify anomalies that signify combustion even if the fire is small.")
+    # 5. HAZARD PROXIMITY ALERT (The new feature!)
+    st.markdown("---")
+    st.markdown("### 🛑 Hazard Proximity Analysis")
+    
+    if fire_df is not None and not fire_df.empty:
+        from geopy.distance import geodesic
+        
+        # Calculate distances to all fires in the dataframe
+        user_coords = (lat_c, lon_c)
+        fire_df['dist'] = fire_df.apply(lambda row: geodesic(user_coords, (row['latitude'], row['longitude'])).miles, axis=1)
+        
+        # Find the closest fire
+        closest_fire = fire_df.loc[fire_df['dist'].idxmin()]
+        
+        col_dist, col_intense = st.columns(2)
+        
+        with col_dist:
+            st.metric("Nearest Active Fire", f"{closest_fire['dist']:.1f} miles", delta_color="inverse")
+            st.caption(f"Located at: {closest_fire['latitude']:.2f}, {closest_fire['longitude']:.2f}")
+
+        with col_intense:
+            # Most intense fire in the 24h window
+            max_heat = fire_df['bright_ti4'].max()
+            st.metric("Max Thermal Intensity", f"{max_heat} K")
+            st.caption("Satellite-detected brightness temperature.")
+
+        if closest_fire['dist'] < 50:
+            st.warning(f"⚠️ **Caution:** An active thermal anomaly is within 50 miles of your focus area. Monitor Tab 1 for PM2.5 spikes.")
+        else:
+            st.success("✅ No high-intensity fires detected within a 50-mile immediate radius.")
+    
+    # 6. NASA Telemetry
+    nasa_data = get_nasa_climate_data(lat_c, lon_c)
+    c1, c2 = st.columns(2)
+    c1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
+    c2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
+    
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
     from geopy.distance import geodesic
