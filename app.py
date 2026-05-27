@@ -26,12 +26,25 @@ import plotly.express as px
 # Place this at the top of app.py, right after your imports
 with st.sidebar:
     try:
+        # Pulls the MedExplained logo you uploaded to your root folder
         st.image("logo.png", width=100)
     except:
         pass
-    st.title("Made by MedExplained")
+    st.title("MedExplained")
     st.markdown("*Empowering Health Literacy*")
+    
     st.markdown("---")
+    st.info("**Educational Access:** This platform is an open-access tool for environmental monitoring and health literacy.")
+    
+    # 5. SIDEBAR BRANDING WATERMARK
+    st.markdown("""
+        <div style='margin-top: 100px; text-align: left; opacity: 0.35;'>
+            <p style='font-size: 0.75em; color: #94a3b8; margin: 0; letter-spacing: 0.5px;'>
+                © 2026 MedExplained<br>
+                All Rights Reserved.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
 def calculate_activity_scores(hourly_df):
     """
