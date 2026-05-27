@@ -23,6 +23,16 @@ import plotly.express as px
 # INITIALIZATION & STATE
 # ============================================
 
+# Place this at the top of app.py, right after your imports
+with st.sidebar:
+    try:
+        st.image("logo.png", width=100)
+    except:
+        pass
+    st.title("MedExplained")
+    st.markdown("*Empowering Health Literacy*")
+    st.markdown("---")
+
 def calculate_activity_scores(hourly_df):
     """
     Analyzes hourly forecast data to score and rank the best times
@@ -1191,49 +1201,43 @@ with tab7:
             status = "Strong" if abs(val) > 0.6 else ("Moderate" if abs(val) > 0.3 else "Weak")
             col.metric(label, f"{val:+.3f}", delta=status, delta_color="off")
 
-with tab8:
+with tab5:
     st.markdown("## 👤 About the Project")
     
-    # 1. THE CREATOR SECTION (Hybrid Layout with Headshot)
-    col_img, col_bio = st.columns([1, 2.5])
+    # 1. THE BRANDING & CREATOR HEADER
+    col_logo, col_headshot, col_bio = st.columns([1, 1, 2.5])
     
-    with col_img:
+    with col_logo:
         try:
-            # Looks for the file 'headshot.jpg' in your root directory
-            st.image("headshot.jpg", use_container_width=True, caption="Harshith Potluri")
-        except Exception:
-            # Fallback box in case the image file isn't found or named incorrectly
-            st.markdown("""
-                <div style='background: #1e293b; padding: 40px 10px; border-radius: 15px; 
-                            text-align: center; border: 1px dashed #475569;'>
-                    <span style='font-size: 2em;'>👤</span><br>
-                    <small style='color: #94a3b8;'>Photo Placeholder<br>(Name file: headshot.jpg)</small>
-                </div>
-            """, unsafe_allow_html=True)
-    
+            st.image("logo.png", use_container_width=True)
+        except:
+            st.markdown("**(Logo)**")
+            
+    with col_headshot:
+        try:
+            st.image("headshot.jpg", use_container_width=True)
+        except:
+            st.markdown("**(Photo)**")
+            
     with col_bio:
         st.markdown("""
             ### Harshith Potluri
-            **Founder of MedExplained | Aspiring Anesthesiologist**
+            **Founder of MedExplained | Student Researcher**
             
-            I am a freshman at the **Wake Early College of Health and Sciences (WECHS)** with a deep interest 
-            in neuroscience, environmental health, and medical literacy. 
-            
-            This platform was developed to help individuals visualize the invisible impact of 
-            atmospheric stressors on human physiology—specifically neuro-inflammation and 
-            oxidative stress—while translating complex clinical tracking parameters into practical, 
-            actionable daily guidance.
+            Welcome! I am a freshman at the **Wake Early College of Health and Sciences**. 
+            This platform is a culmination of my interests in neuroscience and 
+            environmental health, produced under the **MedExplained** initiative.
         """)
 
     st.markdown("---")
 
-    # 2. THE MISSION & ORGANIZATIONAL PERSONA
+    # 2. THE MISSION
     st.markdown("### 🎯 Our Mission")
     st.info("""
-        **MedExplained** is a non-profit organization dedicated to expanding clinical health literacy 
-        globally. We believe that public safety data should not just be transparently accessible, but 
-        fundamentally intuitive. This dashboard represents our ongoing initiative to offer predictive 
-        technological tools for community health empowerment.
+        **MedExplained** is a non-profit organization dedicated to spreading medical knowledge 
+        globally. We believe that health data should not just be accessible, but *understandable*. 
+        This dashboard is part of our initiative to provide predictive tools for environmental 
+        health awareness.
     """)
 
     # 3. ACKNOWLEDGMENTS
