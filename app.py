@@ -22,6 +22,49 @@ import random
 # INITIALIZATION & STATE
 # ============================================
 
+def calculate_activity_scores(hourly_df):
+    """
+    Analyzes hourly forecast data to score and rank the best times
+    for specific outdoor and household activities.
+    """
+    if hourly_df is None or hourly_df.empty:
+        return None
+        
+    scores = []
+    
+    for _, row in hourly_df.iterrows():
+        time = row.get('time')
+        aqi = float(row.get('aqi', 0))
+        pollen = float(row.get('pollen', 0))
+        humidity = float(row.get('humidity', 0))
+        ozone = float(row.get('ozone', 0))
+        smoke = float(row.get('smoke_forecast', 0)) # Sourced from Tab 5 tracking
+        
+        # 🏃‍♂️ RUNNING SCORE (Prefers low AQI, low humidity, low pollen)
+        run_penalty = (aqi * 1.5) + (pollen * 1.0) + (smoke * 2.0) + (ozone * 1.2)
+        if humidity > 75: run_penalty += 20
+        
+        # 🦮 DOG WALKING SCORE (Prefers cool ground, low AQI, low smoke)
+        # Avoid midday heat if humidity/temp is high to protect paws
+        dog_penalty = (aqi * 1.2) + (smoke * 2.0)
+        
+        # 🚗 COMMUTE WINDOW (Mainly focused on minimizing severe AQI/Ozone exposure)
+        commute_penalty = (aqi * 1.0) + (ozone * 1.5) + (smoke * 1.5)
+        
+        # 🪟 OPEN WINDOWS (Extremely sensitive to pollen, humidity, and smoke)
+        window_penalty = (aqi * 2.0) + (pollen * 2.0) + (smoke * 3.0)
+        if humidity > 65 or humidity < 30: window_penalty += 40 
+
+        scores.append({
+            'Time': time,
+            'Running': run_penalty,
+            'Dog Walking': dog_penalty,
+            'Commute': commute_penalty,
+            'Windows': window_penalty
+        })
+        
+    return pd.DataFrame(scores)
+
 def create_base_map(lat, lon, zoom=12):
     return folium.Map(location=[lat, lon], zoom_start=zoom, tiles="CartoDB dark_matter")
 
@@ -642,6 +685,9 @@ with tab1:
         with col3:
             st.markdown("**Aerosol Depth**")
             st.line_chart(plot_df, x="year", y="aerosol_depth", color="#a78bfa")
+# ============================================================
+# TAB 2: IMPACT SIMULATOR & ACTIVITY SCHEDULER
+# ============================================================
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
 
@@ -652,11 +698,11 @@ with tab2:
 
     # Logic for status
     if pm25_val < 12:
-        status, briefing, col_color = "Baseline Homeostasis", "Air quality is optimal. Minimal systemic inflammation detected. Cognitive function is not under environmental stress.", "#10b981"
+        status, briefing, col_color = "Baseline Homeostasis", "Air quality is optimal. Minimal systemic inflammation detected.", "#10b981"
     elif 12 <= pm25_val < 35:
-        status, briefing, col_color = "Mild Oxidative Stress", "Moderate particulate load. Your body is mobilizing antioxidants. You may experience subtle focus fatigue.", "#f59e0b"
+        status, briefing, col_color = "Mild Oxidative Stress", "Moderate particulate load. Body is mobilizing antioxidants.", "#f59e0b"
     else:
-        status, briefing, col_color = "Neuro-Inflammatory Warning", "High PM2.5 load. Particulates are triggering systemic inflammatory response. Limit intense cognitive tasks.", "#ef4444"
+        status, briefing, col_color = "Neuro-Inflammatory Warning", "High PM2.5 load. Particulates triggering systemic inflammatory response.", "#ef4444"
 
     # Display Risk in a styled container
     st.markdown(f"""
@@ -702,20 +748,60 @@ with tab2:
 
     with col_sim_slider:
         st.markdown("**Emission Mitigation Simulator**")
-        st.write("Adjust the reduction percentage to visualize projected health improvements.")
-        reduction = st.slider("Target Mitigation (%)", 0, 50, 0, help="Simulate a reduction in local particulate output.")
-
-        # Calculation
+        reduction = st.slider("Target Mitigation (%)", 0, 50, 0)
         sim_val = future_df['predicted_pm25'].iloc[-1] * (1 - (reduction/100))
-
-        # Display Metric
         st.markdown(f"""
-            <div class='glass-card' style='margin-top: 20px; text-align: center;'>
-                <h5 style='color: #8b9bb4;'>Estimated {future_df['year'].iloc[-1]} PM2.5</h5>
-                <h2 style='color: #00f2fe;'>{sim_val:.2f} µg/m³</h2>
-                <span style='font-size: 0.8em;'>Projected Impact: -{reduction}%</span>
+            <div style='background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; text-align: center;'>
+                <h5 style='margin:0; color: #8b9bb4;'>Projected {future_df['year'].iloc[-1]} PM2.5</h5>
+                <h2 style='margin:0; color: #00f2fe;'>{sim_val:.2f} µg/m³</h2>
             </div>
         """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # 3. SMART OUTDOOR ACTIVITY SCHEDULER (NEW INTEGRATION)
+    st.markdown("### 🏃‍♂️ Smart Outdoor Activity Scheduler")
+    st.caption("Predictive guidance optimizing your day based on AQI, Pollen, and Wildfire Smoke.")
+
+    # Get hourly data (assuming your API provides a forecast DF)
+    h_df = st.session_state.get('hourly_forecast_df', None)
+
+    if h_df is not None:
+        # Vectorized scoring logic for performance
+        h_df['run_score'] = (h_df['aqi'] * 1.5) + (h_df['pollen'] * 1.2) + (h_df.get('smoke_forecast', 0) * 2.0)
+        h_df['window_score'] = (h_df['aqi'] * 2.0) + (h_df['pollen'] * 2.5) + (h_df['humidity'] * 0.5)
+        h_df['dog_score'] = (h_df['aqi'] * 1.2) + (h_df['temp'] * 0.5) # Heat/AQI focus
+        h_df['commute_score'] = (h_df['aqi'] * 1.0) + (h_df['ozone'] * 1.5)
+
+        # Find best hours
+        best_run = h_df.loc[h_df['run_score'].idxmin()]['time']
+        best_dog = h_df.loc[h_df['dog_score'].idxmin()]['time']
+        best_commute = h_df.loc[h_df['commute_score'].idxmin()]['time']
+        best_window = h_df.loc[h_df['window_score'].idxmin()]['time']
+
+        # Metric Grid
+        m1, m2 = st.columns(2)
+        m3, m4 = st.columns(2)
+        
+        m1.metric("🏃‍♂️ Best Hour to Run", f"{best_run}")
+        m2.metric("🦮 Safest Dog-Walking", f"{best_dog}")
+        m3.metric("🚗 Safest Commute", f"{best_commute}")
+        m4.metric("🪟 Best Time for Windows", f"{best_window}")
+
+        # Safety Timeline
+        st.markdown("#### 📊 Safety Timeline")
+        activity_choice = st.selectbox("Select Activity to Visualize", ["Running", "Dog Walking", "Commute", "Windows"])
+        
+        # Mapping selection to DF column
+        col_map = {"Running": "run_score", "Dog Walking": "dog_score", "Commute": "commute_score", "Windows": "window_score"}
+        
+        # Plotly Line Chart for the selected activity
+        fig_activity = px.line(h_df, x='time', y=col_map[activity_choice], 
+                               title=f"{activity_choice} Risk Profile (Lower is Better)",
+                               template="plotly_dark", color_discrete_sequence=[col_color])
+        st.plotly_chart(fig_activity, use_container_width=True)
+    else:
+        st.info("💡 Search a location in Tab 4 to generate your activity schedule.")
 
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
