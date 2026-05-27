@@ -1202,17 +1202,30 @@ with tab7:
             col.metric(label, f"{val:+.3f}", delta=status, delta_color="off")
 
 with tab8:
-    st.markdown("## 👤 About the Project")
-    
-    # 1. THE BRANDING & CREATOR HEADER
-    col_logo, col_headshot, col_bio = st.columns([1, 1, 2.5])
+    # 1. ORGANIZATIONAL HEADER BANNER
+    col_logo, col_title = st.columns([1, 4])
     
     with col_logo:
         try:
             st.image("logo.png", use_container_width=True)
         except:
-            st.markdown("**(Logo)**")
+            pass
             
+    with col_title:
+        st.markdown("""
+            <div style='padding-top: 10px;'>
+                <h1 style='margin:0; color: #38bdf8; font-size: 2.5em;'>MedExplained</h1>
+                <p style='margin:0; color: #94a3b8; font-size: 1.1em; letter-spacing: 0.5px;'>
+                    Empowering Global Health Through Clinical Clarity
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # 2. THE CREATOR PROFILE SECTION (Clean & Uncluttered)
+    col_headshot, col_bio = st.columns([1, 2.2])
+    
     with col_headshot:
         try:
             st.image("headshot.jpg", use_container_width=True)
@@ -1221,13 +1234,16 @@ with tab8:
             
     with col_bio:
         st.markdown("""
-            ### Harshith Potluri
-            **Founder of MedExplained | Student Researcher**
+            <h3 style='margin-top: 0;'>Harshith Potluri</h3>
+            <p style='color: #38bdf8; font-weight: bold; margin-top: -10px;'>Founder of MedExplained | Student Researcher</p>
             
-            Welcome! I am a freshman at the **Wake Early College of Health and Sciences**. 
-            This platform is a culmination of my interests in neuroscience and 
-            environmental health, produced under the **MedExplained** initiative.
-        """)
+            Welcome! I am a freshman at the <b>Wake Early College of Health and Sciences</b>. 
+            This platform is a culmination of my interests in neuroscience and environmental health, 
+            designed to translate complex clinical metrics into intuitive, actionable public guidance.
+            
+            By breaking down how invisible atmospheric stressors interact with human physiology, 
+            this tool provides a predictive baseline for tracking neuro-inflammation and systemic oxidative stress.
+        """, unsafe_allow_html=True)
 
     st.markdown("---")
 
