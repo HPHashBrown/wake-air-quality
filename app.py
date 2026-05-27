@@ -796,12 +796,16 @@ with tab4:
         else:
             st.error("Could not retrieve data for this node.")
 # ============================================================
-# TAB 5: SATELLITE COMMAND CENTER (STABILIZED)
+# TAB 5: SATELLITE COMMAND CENTER (SYNCED TO TAB 1)
 # ============================================================
 with tab5:
     st.markdown("### 🛰️ Global Satellite Command Center")
     
-    # 1. Map Display Settings
+    # 1. Pull search location from Tab 1 (st.session_state.map_center)
+    # Defaulting to Raleigh coords if no search has occurred yet
+    search_lat, search_lon = st.session_state.get('map_center', [35.7796, -78.6382])
+    
+    # 2. Map Display Settings
     with st.expander("🛠️ Map Display Settings", expanded=False):
         col_c1, col_c2 = st.columns(2)
         map_mode = col_c1.radio("Base Style", ["Dark Matter", "Satellite View"], key="fire_map_style")
@@ -812,8 +816,8 @@ with tab5:
             key="fire_layers_select"
         )
 
-    # 2. Data Logic (Cached to prevent refreshing loops)
-    @st.cache_data(ttl=86400) # Only refreshes every 24 hours
+    # 3. Cached Data Fetch (NASA FIRMS)
+    @st.cache_data(ttl=3600) # Refreshes hourly to keep it live but stable
     def get_stable_fire_data():
         url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv"
         try:
@@ -822,24 +826,23 @@ with tab5:
             return None
 
     fire_df = get_stable_fire_data()
-    lat_c, lon_c = st.session_state.get('map_center', [35.7796, -78.6382])
     date_yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    # 3. Base Map Construction
+    # 4. Map Construction
     tileset = "CartoDB dark_matter" if map_mode == "Dark Matter" else "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
     attr = "CartoDB" if map_mode == "Dark Matter" else "Esri World Imagery"
     
-    m_cmd = folium.Map(location=[lat_c, lon_c], zoom_start=5, tiles=tileset, attr=attr)
+    # Center map on the search location from Tab 1
+    m_cmd = folium.Map(location=[search_lat, search_lon], zoom_start=6, tiles=tileset, attr=attr)
 
-    # Layer: Smoke
+    # Visual Smoke Plumes Layer
     if "☁️ Visual Smoke Plumes" in active_layers:
         smoke_url = f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date_yesterday}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
-        folium.TileLayer(tiles=smoke_url, attr="NASA GIBS", name="Smoke", overlay=True, opacity=0.6).add_to(m_cmd)
+        folium.TileLayer(tiles=smoke_url, attr="NASA GIBS", name="Smoke", overlay=True, opacity=0.5).add_to(m_cmd)
 
-    # Layer: Fire Dots
+    # Active Fire Dots Layer
     if "🔥 Active Fires (24h)" in active_layers and fire_df is not None:
-        # Filter for quality to keep the map clean and accurate
-        reliable_fires = fire_df[fire_df['confidence'] != 'low'].head(1000)
+        reliable_fires = fire_df[fire_df['confidence'] != 'low'].head(1500)
         for _, row in reliable_fires.iterrows():
             folium.CircleMarker(
                 location=[row['latitude'], row['longitude']],
@@ -847,46 +850,48 @@ with tab5:
                 popup=f"Brightness: {row['bright_ti4']}K"
             ).add_to(m_cmd)
 
-    # Marker for your searched city
-    folium.Marker([lat_c, lon_c], icon=folium.Icon(color='blue', icon='home')).add_to(m_cmd)
+    # Marker for the Tab 1 Search Point
+    folium.Marker(
+        [search_lat, search_lon], 
+        popup="Tab 1 Search Location", 
+        icon=folium.Icon(color='blue', icon='screenshot', prefix='glyphicon')
+    ).add_to(m_cmd)
 
-    # 4. STABILIZED RENDERING
-    # Use a fixed key to prevent the map from resetting on every script run
-    st_folium(m_cmd, width="100%", height=550, key="static_fire_map_v1")
+    # Stabilized Rendering with static key
+    st_folium(m_cmd, width="100%", height=550, key="synced_fire_map_tab5")
 
-    # 5. HAZARD PROXIMITY ALERT (The new feature!)
+    # 5. HAZARD PROXIMITY ANALYSIS (The "Distance to Fire" tool)
     st.markdown("---")
     st.markdown("### 🛑 Hazard Proximity Analysis")
     
     if fire_df is not None and not fire_df.empty:
         from geopy.distance import geodesic
         
-        # Calculate distances to all fires in the dataframe
-        user_coords = (lat_c, lon_c)
+        # Calculate distance from Tab 1 search location to all global fires
+        user_coords = (search_lat, search_lon)
         fire_df['dist'] = fire_df.apply(lambda row: geodesic(user_coords, (row['latitude'], row['longitude'])).miles, axis=1)
         
-        # Find the closest fire
         closest_fire = fire_df.loc[fire_df['dist'].idxmin()]
         
         col_dist, col_intense = st.columns(2)
-        
         with col_dist:
-            st.metric("Nearest Active Fire", f"{closest_fire['dist']:.1f} miles", delta_color="inverse")
-            st.caption(f"Located at: {closest_fire['latitude']:.2f}, {closest_fire['longitude']:.2f}")
+            st.metric("Nearest Active Fire", f"{closest_fire['dist']:.1f} miles")
+            st.caption(f"Relative to search focus in Tab 1.")
 
         with col_intense:
-            # Most intense fire in the 24h window
             max_heat = fire_df['bright_ti4'].max()
-            st.metric("Max Thermal Intensity", f"{max_heat} K")
-            st.caption("Satellite-detected brightness temperature.")
+            st.metric("Global Max Intensity", f"{max_heat} K")
+            st.caption("Highest thermal signature detected worldwide.")
 
-        if closest_fire['dist'] < 50:
-            st.warning(f"⚠️ **Caution:** An active thermal anomaly is within 50 miles of your focus area. Monitor Tab 1 for PM2.5 spikes.")
+        # Trigger warnings based on proximity
+        if closest_fire['dist'] < 100:
+            st.warning(f"⚠️ **Regional Alert:** Active fire detected within {closest_fire['dist']:.1f} miles of your searched city. Check local AQI.")
         else:
-            st.success("✅ No high-intensity fires detected within a 50-mile immediate radius.")
-    
-    # 6. NASA Telemetry
-    nasa_data = get_nasa_climate_data(lat_c, lon_c)
+            st.success("✅ No immediate fire hazards detected within a 100-mile radius of your search.")
+
+    # 6. NASA Climate Telemetry
+    st.markdown("### 🛰️ Ambient Telemetry")
+    nasa_data = get_nasa_climate_data(search_lat, search_lon)
     c1, c2 = st.columns(2)
     c1.metric("Surface Solar Irradiance", f"{nasa_data['solar_radiation']} kW/m²")
     c2.metric("Satellite Wind Velocity", f"{nasa_data['satellite_wind_speed']} m/s")
