@@ -1191,82 +1191,81 @@ with tab7:
             status = "Strong" if abs(val) > 0.6 else ("Moderate" if abs(val) > 0.3 else "Weak")
             col.metric(label, f"{val:+.3f}", delta=status, delta_color="off")
 
-with tab8:
+with tab5:
     st.markdown("## 👤 About the Project")
     
-    # 1. THE CREATOR SECTION
-    col_bio, col_logo = st.columns([2, 1])
+    # 1. THE CREATOR SECTION (Hybrid Layout with Headshot)
+    col_img, col_bio = st.columns([1, 2.5])
+    
+    with col_img:
+        try:
+            # Looks for the file 'headshot.jpg' in your root directory
+            st.image("headshot.jpg", use_container_width=True, caption="Harshith Potluri")
+        except Exception:
+            # Fallback box in case the image file isn't found or named incorrectly
+            st.markdown("""
+                <div style='background: #1e293b; padding: 40px 10px; border-radius: 15px; 
+                            text-align: center; border: 1px dashed #475569;'>
+                    <span style='font-size: 2em;'>👤</span><br>
+                    <small style='color: #94a3b8;'>Photo Placeholder<br>(Name file: headshot.jpg)</small>
+                </div>
+            """, unsafe_allow_html=True)
     
     with col_bio:
         st.markdown("""
             ### Harshith Potluri
             **Founder of MedExplained | Aspiring Anesthesiologist**
             
-            I am a freshman at the **Wake Early College of Health and Sciences (WECHS)** with a passion for 
-            neuroscience, anesthesiology and biotechnology. My goal is to bridge the gap between complex clinical 
-            research and public health literacy.
+            I am a freshman at the **Wake Early College of Health and Sciences (WECHS)** with a deep interest 
+            in neuroscience, environmental health, and medical literacy. 
             
             This platform was developed to help individuals visualize the invisible impact of 
-            environmental stressors on human physiology—specifically neuro-inflammation and 
-            oxidative stress—while providing actionable mitigation strategies.
+            atmospheric stressors on human physiology—specifically neuro-inflammation and 
+            oxidative stress—while translating complex clinical tracking parameters into practical, 
+            actionable daily guidance.
         """)
-    
-    with col_logo:
-        # If you have a MedExplained logo, you can use st.image("logo.png")
-        st.markdown("""
-            <div style='background: rgba(56, 189, 248, 0.1); border: 2px solid #38bdf8; 
-                        padding: 20px; border-radius: 15px; text-align: center;'>
-                <h3 style='margin:0; color: #38bdf8;'>MedExplained</h3>
-                <p style='font-size: 0.8em; color: #94a3b8; margin-top: 10px;'>
-                    Empowering global health through medical clarity.
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    # 2. THE MISSION
+    # 2. THE MISSION & ORGANIZATIONAL PERSONA
     st.markdown("### 🎯 Our Mission")
     st.info("""
-        **MedExplained** is a non-profit organization dedicated to spreading medical knowledge 
-        globally. We believe that health data should not just be accessible, but *understandable*. 
-        This dashboard is part of our initiative to provide predictive tools for environmental 
-        health awareness.
+        **MedExplained** is a non-profit organization dedicated to expanding clinical health literacy 
+        globally. We believe that public safety data should not just be transparently accessible, but 
+        fundamentally intuitive. This dashboard represents our ongoing initiative to offer predictive 
+        technological tools for community health empowerment.
     """)
 
-    # 3. ACKNOWLEDGMENTS (The "Thank You" Section)
+    # 3. ACKNOWLEDGMENTS
     st.markdown("### 🤝 Acknowledgments")
     st.write("""
-        Building a tool that sits at the intersection of environmental science and medicine 
-        requires diverse perspectives. I would like to extend my deepest gratitude to the 
-        following people for their time and effort in reviewing this website:
+        Building a multi-disciplinary tool that crosses data science, atmospheric forecasting, 
+        and medical pathology requires rigorous review. I want to extend my sincere appreciation 
+        to the peers, advisors, and community members who graciously tested this web application 
+        and refined its interfaces:
     """)
 
-    # You can list your reviewers here. I've used placeholders for you to fill in.
     acknowledgments = [
-        "**[Name/Role]** - For insights on UI/UX and data visualization.",
-        "**[Name/Role]** - For reviewing the medical accuracy of the oxidative stress metrics.",
-        "**[Name/Role]** - For testing the location-based search and API reliability.",
-        "**The WECHS Faculty** - For providing the academic environment and compassion to teach and inspire students."
+        "**[Name/Role Here]** — For critical revisions regarding interface workflow and scannability.",
+        "**[Name/Role Here]** — For validating the data scaling weights within the impact simulations.",
+        "**The WECHS Community & Faculty** — For fostering an academic ecosystem that encourages technical public health exploration."
     ]
 
     for item in acknowledgments:
         st.markdown(f"- {item}")
 
-    # 4. CONTACT / CALL TO ACTION
-    st.markdown("---")
-    st.caption("© 2026 MedExplained. Built with Streamlit and Open-Source Health Data.")
-
-# 5. USAGE & LICENSING
+    # 4. LEGAL DISCLAIMER & ACCESS TERMS
     st.markdown("---")
     st.markdown("""
-        <div style='background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);'>
-            <p style='font-size: 0.85em; color: #94a3b8; margin: 0;'>
-                <strong>⚖️ Usage & Licensing:</strong> This tool is provided by <b>MedExplained</b> 
-                exclusively for <b>educational and monitoring purposes</b>. It is free to use 
-                globally. The data and simulations provided are intended for health literacy 
-                enhancement and environmental awareness only; they do not constitute medical 
-                advice or clinical diagnosis.
+        <div style='background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);'>
+            <p style='font-size: 0.85em; color: #a1a1aa; margin: 0; line-height: 1.5;'>
+                <strong>⚖️ Educational Access & Regulatory Disclaimer:</strong> This platform is provided open-access by 
+                <b>MedExplained</b> entirely free of charge. It is engineered strictly for <b>educational and monitoring 
+                purposes</b>. All data processing matrices, localized risk index computations, and activity window 
+                projections are optimized for environmental literacy and wellness monitoring; they do not constitute 
+                formal medical advice, diagnostic evaluations, or clinical treatment strategies.
             </p>
         </div>
     """, unsafe_allow_html=True)
+    
+    st.caption("© 2026 MedExplained. Project deployment powered by Streamlit Cloud.")
