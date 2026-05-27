@@ -21,3 +21,4 @@ google-auth
 google-auth-oauthlib
 deep-translator
 statsmodels
+plotly.express
