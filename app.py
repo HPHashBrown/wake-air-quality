@@ -757,7 +757,7 @@ with tab2:
 
     st.markdown("---")
 
-    # 3. SMART OUTDOOR ACTIVITY SCHEDULER (Combined Logic)
+    # 3. SMART OUTDOOR ACTIVITY SCHEDULER (Simplified UI)
     st.markdown("### 🏃‍♂️ Daily Environmental Planning")
     st.caption("Aggregated atmospheric analysis to find your optimal window for outdoor exposure.")
 
@@ -773,12 +773,12 @@ with tab2:
             temp_series = h_df.get('temp', pd.Series(70, index=h_df.index)).astype(float)
             ozone_series = h_df.get('ozone', pd.Series(0, index=h_df.index)).astype(float)
             
-            # 1. UNIVERSAL SAFETY ALGORITHM
+            # UNIVERSAL SAFETY ALGORITHM
             h_df['global_risk_score'] = (
-                (aqi_series * 1.5) +      # Particulates
-                (pollen_series * 1.2) +   # Allergens
-                (ozone_series * 1.3) +    # Oxidative Stress
-                (abs(temp_series - 72) * 0.3) # Thermal stress
+                (aqi_series * 1.5) +      
+                (pollen_series * 1.2) +   
+                (ozone_series * 1.3) +    
+                (abs(temp_series - 72) * 0.3) 
             )
 
             # Find the absolute best hour
@@ -787,37 +787,24 @@ with tab2:
             if not isinstance(best_time, str):
                 best_time = best_time.strftime('%I:%M %p')
 
-            # 2. FEATURED RECOMMENDATION CARD
+            # FEATURED RECOMMENDATION CARD
             st.markdown(f"""
                 <div style='background: linear-gradient(135, #1e293b 0%, #0f172a 100%); 
-                            padding: 25px; border-radius: 20px; border: 1px solid #334155; 
-                            text-align: center; margin-bottom: 20px;'>
-                    <h4 style='margin:0; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;'>Optimal Outdoor Window</h4>
-                    <h1 style='margin:10px 0; color: #38bdf8; font-size: 3em;'>{best_time}</h1>
-                    <p style='color: #cbd5e1; font-size: 1.1em;'>Based on synchronized AQI, Pollen, and Thermal indices, this is your safest period for physical activity.</p>
+                            padding: 30px; border-radius: 20px; border: 1px solid #334155; 
+                            text-align: center; margin-bottom: 25px;'>
+                    <h4 style='margin:0; color: #94a3b8; text-transform: uppercase; letter-spacing: 1.5px; font-size: 0.8em;'>Optimal Outdoor Window</h4>
+                    <h1 style='margin:15px 0; color: #38bdf8; font-size: 3.5em;'>{best_time}</h1>
+                    <p style='color: #cbd5e1; font-size: 1.1em; max-width: 80%; margin: 0 auto;'>
+                        Based on synchronized AQI, Pollen, and Thermal indices, this is your safest period for physical activity and outdoor exposure.
+                    </p>
                 </div>
             """, unsafe_allow_html=True)
 
-            # 3. BREAKDOWN METRICS
+            # BREAKDOWN METRICS
             c1, c2, c3 = st.columns(3)
             c1.metric("Morning Stability", "Stable", help="Atmospheric inversion is minimal.")
             c2.metric("UV/Ozone Peak", "High", delta="-12%", delta_color="inverse")
             c3.metric("Air Density", "Optimal")
-
-            # 4. VISUAL TIMELINE
-            st.markdown("#### 📈 24-Hour Environmental Load Profile")
-            
-            max_risk = h_df['global_risk_score'].max()
-            h_df['safety_index'] = 100 * (1 - (h_df['global_risk_score'] / max_risk))
-            
-            fig_safety = px.area(
-                h_df, x='time', y='safety_index',
-                title="Activity Safety Potential (Higher is Better)",
-                template="plotly_dark",
-                color_discrete_sequence=["#38bdf8"]
-            )
-            fig_safety.update_layout(yaxis_title="Safety Rating (%)", xaxis_title="Time of Day")
-            st.plotly_chart(fig_safety, use_container_width=True)
 
         except Exception as e:
             st.error(f"🔧 Error synchronizing activity data: {e}")
