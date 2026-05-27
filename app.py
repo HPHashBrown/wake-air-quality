@@ -834,20 +834,34 @@ with tab2:
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
-    # 1. Pollutant Matrix (Simplified)
+    # 1. Pollutant Matrix (Restored Expanders)
     col_a, col_b = st.columns(2)
     with col_a:
         st.markdown("#### 🔬 Pollutant Breakdown")
+        
         with st.expander("PM2.5 (Fine Particulates)", expanded=True):
-            st.write("Particles <2.5μm. Bypass defenses, lodge in alveoli.")
+            st.write("Particles <2.5μm. Capable of bypassing upper respiratory defenses, lodging deep in alveoli, and translocating into the bloodstream.")
             st.metric("Safe Limit", "< 12.0 μg/m³")
+            
+        with st.expander("PM10 (Coarse Particulates)", expanded=False):
+            st.write("Particles <10μm. Formed from dust, pollen, and mechanical crushing. Primarily impacts upper airways, exacerbating asthma and bronchitis.")
+            st.metric("Safe Limit", "< 54.0 μg/m³")
+            
+        with st.expander("NO2 (Nitrogen Dioxide)", expanded=False):
+            st.write("Highly reactive gas from vehicle combustion. Triggers acute airway inflammation, increases bronchial hyperresponsiveness, and impairs lung function.")
+            st.metric("Safe Limit", "< 53.0 ppb")
+            
+        with st.expander("O3 (Ground-Level Ozone)", expanded=False):
+            st.write("Secondary pollutant formed by sunlight reacting with emissions. Acts as a powerful oxidizing agent, causing cellular damage and chest constriction.")
+            st.metric("Safe Limit", "< 70.0 ppb")
+
     with col_b:
         st.markdown("#### 🧬 Systemic Physiological Load")
         body_load = min(100, (current_aqi / 300) * 100)
         st.progress(body_load / 100)
         st.caption(f"Estimated inflammatory strain: {int(body_load)}%")
 
-    # 2. Activity & Indoor Tools (Keys made unique)
+    # 2. Activity & Indoor Tools (Keys kept unique)
     st.markdown("---")
     c1, c2 = st.columns(2)
     with c1:
@@ -857,6 +871,7 @@ with tab3:
             st.error("🚨 CRITICAL: High-intensity exercise prohibited.")
         elif activity == "Heavy Exercise" and current_aqi > 50:
             st.warning("⚠️ CAUTION: Reduce intensity recommended.")
+            
     with c2:
         st.subheader("🏠 Indoor Scrubbing Tool")
         room_sqft = st.number_input("Room Square Footage", value=200, key="tab3_sqft")
