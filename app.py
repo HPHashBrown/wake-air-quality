@@ -1266,8 +1266,8 @@ with tab8:
     """)
 
     acknowledgments = [
-        "**[Name/Role Here]** — For critical revisions regarding interface workflow and scannability.",
-        "**[Name/Role Here]** — For validating the data scaling weights within the impact simulations.",
+        "**Raj Dasari** — For critical feedback on functionality improvement and additional features of the application.",
+#        "**[Name/Role Here]** — For validating the data scaling weights within the impact simulations.",
         "**The WECHS Community & Faculty** — For fostering an academic ecosystem that encourages technical public health exploration."
     ]
 
