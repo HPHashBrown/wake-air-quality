@@ -517,7 +517,7 @@ with st.sidebar:
                 st.error("Error: Valid Email Required.")
 
     st.markdown("---")
-    selected_name = st.selectbox("🧬 Select Pollutant", options=list(POLLUTANT_MAP.keys()))
+    selected_name = st.selectbox("🧬 Select Pollutant For Tab 4", options=list(POLLUTANT_MAP.keys()))
     st.session_state['selected_pollutant_key'] = POLLUTANT_MAP[selected_name]
     st.session_state['selected_pollutant_name'] = selected_name
 
