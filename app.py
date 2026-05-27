@@ -572,7 +572,7 @@ else:
 st.markdown('<p class="title-gradient">Project AIR</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Response) is a Global Atmospheric PM2.5 Analytics Engine.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute", "📈Monthly PM2.5 Comparison"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute", "📈Monthly PM2.5 Comparison", "👤About the Project"])
 
 # --- TAB 1: OVERVIEW (STABLE BUILD) ---
 with tab1:
@@ -1190,3 +1190,83 @@ with tab7:
         for col, (label, val) in zip([c1, c2, c3], metrics):
             status = "Strong" if abs(val) > 0.6 else ("Moderate" if abs(val) > 0.3 else "Weak")
             col.metric(label, f"{val:+.3f}", delta=status, delta_color="off")
+
+with tab8:
+    st.markdown("## 👤 About the Project")
+    
+    # 1. THE CREATOR SECTION
+    col_bio, col_logo = st.columns([2, 1])
+    
+    with col_bio:
+        st.markdown("""
+            ### Harshith Potluri
+            **Founder of MedExplained | Aspiring Anesthesiologist**
+            
+            I am a freshman at the **Wake Early College of Health and Sciences (WECHS)** with a passion for 
+            neuroscience, anesthesiology and biotechnology. My goal is to bridge the gap between complex clinical 
+            research and public health literacy.
+            
+            This platform was developed to help individuals visualize the invisible impact of 
+            environmental stressors on human physiology—specifically neuro-inflammation and 
+            oxidative stress—while providing actionable mitigation strategies.
+        """)
+    
+    with col_logo:
+        # If you have a MedExplained logo, you can use st.image("logo.png")
+        st.markdown("""
+            <div style='background: rgba(56, 189, 248, 0.1); border: 2px solid #38bdf8; 
+                        padding: 20px; border-radius: 15px; text-align: center;'>
+                <h3 style='margin:0; color: #38bdf8;'>MedExplained</h3>
+                <p style='font-size: 0.8em; color: #94a3b8; margin-top: 10px;'>
+                    Empowering global health through medical clarity.
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # 2. THE MISSION
+    st.markdown("### 🎯 Our Mission")
+    st.info("""
+        **MedExplained** is a non-profit organization dedicated to spreading medical knowledge 
+        globally. We believe that health data should not just be accessible, but *understandable*. 
+        This dashboard is part of our initiative to provide predictive tools for environmental 
+        health awareness.
+    """)
+
+    # 3. ACKNOWLEDGMENTS (The "Thank You" Section)
+    st.markdown("### 🤝 Acknowledgments")
+    st.write("""
+        Building a tool that sits at the intersection of environmental science and medicine 
+        requires diverse perspectives. I would like to extend my deepest gratitude to the 
+        following people for their time and effort in reviewing this website:
+    """)
+
+    # You can list your reviewers here. I've used placeholders for you to fill in.
+    acknowledgments = [
+        "**[Name/Role]** - For insights on UI/UX and data visualization.",
+        "**[Name/Role]** - For reviewing the medical accuracy of the oxidative stress metrics.",
+        "**[Name/Role]** - For testing the location-based search and API reliability.",
+        "**The WECHS Faculty** - For providing the academic environment and compassion to teach and inspire students."
+    ]
+
+    for item in acknowledgments:
+        st.markdown(f"- {item}")
+
+    # 4. CONTACT / CALL TO ACTION
+    st.markdown("---")
+    st.caption("© 2026 MedExplained. Built with Streamlit and Open-Source Health Data.")
+
+# 5. USAGE & LICENSING
+    st.markdown("---")
+    st.markdown("""
+        <div style='background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);'>
+            <p style='font-size: 0.85em; color: #94a3b8; margin: 0;'>
+                <strong>⚖️ Usage & Licensing:</strong> This tool is provided by <b>MedExplained</b> 
+                exclusively for <b>educational and monitoring purposes</b>. It is free to use 
+                globally. The data and simulations provided are intended for health literacy 
+                enhancement and environmental awareness only; they do not constitute medical 
+                advice or clinical diagnosis.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
