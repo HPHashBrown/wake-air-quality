@@ -597,7 +597,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 Telemetry & Fore
 # --- TAB 1: OVERVIEW (STABLE BUILD) ---
 with tab1:
     # 1. Layout & Search
-    st.markdown("### 🌍 Regional Atmospheric & Bio-Telemetry Analysis")
+    st.markdown("### 🌍 Regional Atmospheric Conditions Analysis")
     
     with st.container():
         col_search, col_btn = st.columns([4, 1])
