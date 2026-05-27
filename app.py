@@ -686,9 +686,6 @@ with tab1:
         with col3:
             st.markdown("**Aerosol Depth**")
             st.line_chart(plot_df, x="year", y="aerosol_depth", color="#a78bfa")
-# ============================================================
-# TAB 2: IMPACT SIMULATOR & ACTIVITY SCHEDULER
-# ============================================================
 with tab2:
     st.markdown("### 🛠️ Impact & Mitigation Simulator")
 
@@ -815,11 +812,11 @@ with tab2:
             
             fig_safety = px.area(
                 h_df, x='time', y='safety_index',
-                title="Activity Safety Potential (Lower is Better)",
+                title="Activity Safety Potential (Higher is Better)",
                 template="plotly_dark",
                 color_discrete_sequence=["#38bdf8"]
             )
-            fig_safety.update_layout(yaxis_title="Pollution Rating (%)", xaxis_title="Time of Day")
+            fig_safety.update_layout(yaxis_title="Safety Rating (%)", xaxis_title="Time of Day")
             st.plotly_chart(fig_safety, use_container_width=True)
 
         except Exception as e:
