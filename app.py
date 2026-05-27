@@ -18,6 +18,18 @@ import pydeck as pdk
 import random
 import plotly.express as px
 
+# Place this at the top of app.py, right after your imports
+with st.sidebar:
+    try:
+        # Pulls the MedExplained logo from your root folder
+        st.image("logo.png", width=100)
+    except:
+        pass
+    st.title("MedExplained")
+    st.markdown("*Empowering Health Literacy*")
+    
+    st.markdown("---")
+    st.info("**Educational Access:** This platform is an open-access tool for environmental monitoring and health literacy.")
 
 
 def calculate_activity_scores(hourly_df):
