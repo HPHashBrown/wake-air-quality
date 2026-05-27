@@ -19,14 +19,10 @@ import random
 import plotly.express as px
 
 
-# ============================================
-# INITIALIZATION & STATE
-# ============================================
-
 # Place this at the top of app.py, right after your imports
 with st.sidebar:
     try:
-        # Pulls the MedExplained logo you uploaded to your root folder
+        # Pulls the MedExplained logo from your root folder
         st.image("logo.png", width=100)
     except:
         pass
@@ -36,10 +32,13 @@ with st.sidebar:
     st.markdown("---")
     st.info("**Educational Access:** This platform is an open-access tool for environmental monitoring and health literacy.")
     
-    # 5. SIDEBAR BRANDING WATERMARK
+    # This empty spacing pushes the watermark down naturally
+    st.markdown("<br>" * 10, unsafe_allow_html=True)
+    
+    # 5. SIDEBAR BRANDING WATERMARK (Pinned to the bottom layout)
     st.markdown("""
-        <div style='margin-top: 100px; text-align: left; opacity: 0.35;'>
-            <p style='font-size: 0.75em; color: #94a3b8; margin: 0; letter-spacing: 0.5px;'>
+        <div style='position: relative; padding-top: 50px; opacity: 0.35; border-top: 1px solid rgba(255,255,255,0.05);'>
+            <p style='font-size: 0.75em; color: #94a3b8; margin: 0; letter-spacing: 0.5px; line-height: 1.4;'>
                 © 2026 MedExplained<br>
                 All Rights Reserved.
             </p>
