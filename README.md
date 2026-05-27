@@ -1,7 +1,7 @@
 PROJECT AIR (Atmospheric Intelligence & Response)
 
 
-This dashboard serves as a real-time, data-driven web application designed to monitor and forecast PM2.5 pollution levels in Wake County, North Carolina. By retrieving the latest air quality readings and applying predictive modeling, the application provides both current atmospheric status and future trends.
+This dashboard serves as a real-time, data-driven web application designed to monitor and forecast PM2.5 pollution levels across the world. By retrieving the latest air quality readings and applying predictive modeling, the application provides both current atmospheric status and future trends.
 
 Overview
 This project synthesizes environmental data with machine learning to offer insight into regional air quality. It is built using Python and Streamlit, leveraging the EPA AirData API to provide live updates, and is deployed via Streamlit Cloud for public access.
