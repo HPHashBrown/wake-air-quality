@@ -16,6 +16,7 @@ from folium.plugins import HeatMap
 import openaq
 import pydeck as pdk
 import random
+import plotly.express as px
 
 
 # ============================================
