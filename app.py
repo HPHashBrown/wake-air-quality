@@ -1201,7 +1201,7 @@ with tab7:
             status = "Strong" if abs(val) > 0.6 else ("Moderate" if abs(val) > 0.3 else "Weak")
             col.metric(label, f"{val:+.3f}", delta=status, delta_color="off")
 
-with tab5:
+with tab8:
     st.markdown("## 👤 About the Project")
     
     # 1. THE BRANDING & CREATOR HEADER
