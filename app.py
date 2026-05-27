@@ -592,7 +592,7 @@ else:
 st.markdown('<p class="title-gradient">Project AIR</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-font">Project AIR (Atmospheric Intelligence & Response) is a Global Atmospheric Analytics Engine Made to Analyze Different Pollutants Across the World.</p>', unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Hypothetical Prediction Measure", "🩺 Health Literacy", "🛰️ Global Vector Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute", "📈Monthly PM2.5 Comparison", "👤About the Project"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 Telemetry & Forecasting", "🧠 Current Physical Effects", "🩺 Health Literacy", "🛰️ Global Statistic Map", "🌌NASA Forest Fire Intelligence", "🚲Clean-Air Commute", "📈Monthly PM2.5 Comparison", "👤About the Project"])
 
 # --- TAB 1: OVERVIEW (STABLE BUILD) ---
 with tab1:
@@ -1022,7 +1022,7 @@ with tab5:
 
     # 6. SYSTEM DISCLAIMER
     st.markdown("---")
-    st.warning("⚠️ **Data Accuracy Note:** This tracker utilizes NASA satellite thermal anomalies. Detection may not be 100% accurate at all times due to cloud cover or sensor latency. Active fire markers are displayed for the region surrounding your selected location.")
+    st.warning("⚠️ **Data Accuracy Note:** This tracker utilizes NASA satellite thermal anomalies. Detection may not be 100% accurate at all times due to cloud cover or sensor latency. Additionally, active fire markers are displayed for the region surrounding your selected location to prevent delay.")
     
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
@@ -1247,12 +1247,12 @@ with tab8:
             <h3 style='margin-top: 0;'>Harshith Potluri</h3>
             <p style='color: #38bdf8; font-weight: bold; margin-top: -10px;'>Founder of MedExplained | Student Researcher</p>
             
-            Welcome! I am a freshman at the <b>Wake Early College of Health and Sciences</b>. 
-            This platform is a culmination of my interests in neuroscience and environmental health, 
+            Hello! I am a freshman at the <b>Wake Early College of Health and Sciences</b>, and welcome to Project AIR! 
+            This platform is a mixture of my interests in neuroscience, anesthesiology and environmental health, 
             designed to translate complex clinical metrics into intuitive, actionable public guidance.
             
-            By breaking down how invisible atmospheric stressors interact with human physiology, 
-            this tool provides a predictive baseline for tracking neuro-inflammation and systemic oxidative stress.
+            By breaking down how invisible atmospheric pollutants interact with human physiology, 
+            this tool provides a predictive baseline for tracking danger levels and the cognitive stress of a person.
         """, unsafe_allow_html=True)
 
     st.markdown("---")
@@ -1261,7 +1261,7 @@ with tab8:
     st.markdown("### 🎯 Our Mission")
     st.info("""
         **MedExplained** is a non-profit organization dedicated to spreading medical knowledge 
-        globally. We believe that health data should not just be accessible, but *understandable*. 
+        globally. We believe that health data should not just be accessible, but *understandable* for everyone. 
         This dashboard is part of our initiative to provide predictive tools for environmental 
         health awareness.
     """)
