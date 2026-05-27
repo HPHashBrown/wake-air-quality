@@ -758,7 +758,7 @@ with tab2:
             </div>
         """, unsafe_allow_html=True)
 
-st.markdown("---")
+    st.markdown("---")
 
     # 3. SMART OUTDOOR ACTIVITY SCHEDULER (Combined Logic)
     st.markdown("### 🏃‍♂️ Daily Environmental Planning")
@@ -777,13 +777,11 @@ st.markdown("---")
             ozone_series = h_df.get('ozone', pd.Series(0, index=h_df.index)).astype(float)
             
             # 1. UNIVERSAL SAFETY ALGORITHM
-            # We combine all threats into one "Total Environmental Load"
-            # Higher load = worse conditions.
             h_df['global_risk_score'] = (
-                (aqi_series * 1.5) +      # Particulates (Heart/Lungs)
-                (pollen_series * 1.2) +   # Allergens (Inflammation)
+                (aqi_series * 1.5) +      # Particulates
+                (pollen_series * 1.2) +   # Allergens
                 (ozone_series * 1.3) +    # Oxidative Stress
-                (abs(temp_series - 72) * 0.3) # Temperature stress
+                (abs(temp_series - 72) * 0.3) # Thermal stress
             )
 
             # Find the absolute best hour
@@ -812,7 +810,6 @@ st.markdown("---")
             # 4. VISUAL TIMELINE
             st.markdown("#### 📈 24-Hour Environmental Load Profile")
             
-            # Invert the score for the chart so "Higher = Better/Safer"
             max_risk = h_df['global_risk_score'].max()
             h_df['safety_index'] = 100 * (1 - (h_df['global_risk_score'] / max_risk))
             
@@ -829,6 +826,7 @@ st.markdown("---")
             st.error(f"🔧 Error synchronizing activity data: {e}")
     else:
         st.info("💡 **Awaiting Data Sync:** Search a location in Tab 4 to calculate your universal activity window.")
+        
 with tab3:
     st.markdown("### 🩺 Advanced Health Literacy & Physiological Impact")
 
