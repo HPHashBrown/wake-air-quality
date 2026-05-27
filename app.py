@@ -913,6 +913,10 @@ with tab4:
             col3.metric("Node Coordinates", f"{curr_lat:.2f}, {curr_lon:.2f}")
         else:
             st.error("Could not retrieve data for this node.")
+
+# 💡 ADD THIS LINE INSIDE YOUR TAB 4 FETCH LOGIC (where your data arrives)
+st.session_state['hourly_forecast_df'] = your_dataframe_name
+
 # ============================================================
 # TAB 5: GLOBAL SATELLITE COMMAND CENTER 
 # ============================================================
