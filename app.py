@@ -1274,10 +1274,10 @@ with tab8:
     for item in acknowledgments:
         st.markdown(f"- {item}")
 
-    # 4. LEGAL DISCLAIMER & ACCESS TERMS
+# 4. LEGAL DISCLAIMER & ACCESS TERMS
     st.markdown("---")
     st.markdown("""
-        <div style='background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);'>
+        <div style='background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 30px;'>
             <p style='font-size: 0.85em; color: #a1a1aa; margin: 0; line-height: 1.5;'>
                 <strong>⚖️ Educational Access & Regulatory Disclaimer:</strong> This platform is provided open-access by 
                 <b>MedExplained</b> entirely free of charge. It is engineered strictly for <b>educational and monitoring 
@@ -1288,4 +1288,11 @@ with tab8:
         </div>
     """, unsafe_allow_html=True)
     
-    st.caption("© 2026 MedExplained. Project deployment powered by Streamlit Cloud.")
+    # 5. ISOLATED FOOTER LINE (Pushed down for breathing room)
+    st.markdown("""
+        <div style='margin-top: 50px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;'>
+            <p style='font-size: 0.75em; color: #52525b; margin: 0;'>
+                © 2026 MedExplained. Project deployment powered by Streamlit Cloud.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
