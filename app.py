@@ -29,7 +29,7 @@ with st.sidebar:
         st.image("logo.png", width=100)
     except:
         pass
-    st.title("MedExplained")
+    st.title("Made by MedExplained")
     st.markdown("*Empowering Health Literacy*")
     st.markdown("---")
 
