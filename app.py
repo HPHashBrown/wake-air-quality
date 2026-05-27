@@ -796,58 +796,74 @@ with tab4:
         else:
             st.error("Could not retrieve data for this node.")
 # ============================================================
-# TAB 5: GLOBAL SATELLITE COMMAND CENTER (REGIONAL FOCUS)
+# TAB 5: GLOBAL SATELLITE COMMAND CENTER (SYNCED TO TAB 1)
 # ============================================================
 with tab5:
     st.markdown("### 🌍 Global Fire & Smoke Intelligence")
     
-    # 1. Pull search location from Tab 1
+    # 1. FORCE SYNC TO TAB 1 
+    # This pulls directly from the location searched in the main dashboard
     search_lat, search_lon = st.session_state.get('map_center', [35.7796, -78.6382])
 
-    # 2. FAST DISTANCE MATH (Vectorized for Performance)
+    # 2. LAYER CONTROLS & DISPLAY SETTINGS
+    with st.expander("🛠️ Map Display & Intelligence Layers", expanded=True):
+        col_c1, col_c2 = st.columns(2)
+        map_mode = col_c1.radio("Base Style", ["Dark Matter", "Satellite View"], horizontal=True)
+        
+        # RESTORED: Option to choose Fire, Smoke, or Both
+        active_layers = col_c2.multiselect(
+            "Intelligence Layers", 
+            ["🔥 Active Fires", "☁️ Visual Smoke Plumes"], 
+            default=["🔥 Active Fires"],
+            key="tab5_layer_toggle"
+        )
+
+    # 3. FAST DISTANCE MATH (Vectorized)
     def haversine_np(lon1, lat1, lon2, lat2):
         lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
         dlon = lon2 - lon1
         dlat = lat2 - lat1
         a = np.sin(dlat/2.0)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2.0)**2
         c = 2 * np.arcsin(np.sqrt(a))
-        return 3956 * c  # Result in miles
+        return 3956 * c 
 
-    # 3. CACHED DATA FETCH
+    # 4. DATA FETCH (NASA FIRMS)
     @st.cache_data(ttl=3600)
     def get_global_fire_data():
         url = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_24h.csv"
         try:
             df = pd.read_csv(url)
-            # Filter out 'low' confidence but keep 'nominal' and 'high'
             return df[df['confidence'] != 'l'] 
         except:
             return None
 
     fire_df = get_global_fire_data()
+    date_yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    # 4. MAP DISPLAY SETTINGS
-    map_mode = st.radio("Base Style", ["Dark Matter", "Satellite View"], horizontal=True, key="fire_style_toggle")
+    # 5. MAP CONSTRUCTION
     tileset = "CartoDB dark_matter" if map_mode == "Dark Matter" else "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    attr = "CartoDB" if map_mode == "Dark Matter" else "Esri World Imagery"
     
-    m_cmd = folium.Map(location=[search_lat, search_lon], zoom_start=5, tiles=tileset, attr="NASA/Esri")
+    # Map starts centered on the TAB 1 SEARCH location
+    m_cmd = folium.Map(location=[search_lat, search_lon], zoom_start=5, tiles=tileset, attr=attr)
 
-    # 5. PROXIMITY ANALYSIS & DYNAMIC MARKERS
-    if fire_df is not None and not fire_df.empty:
-        # Calculate distances across the entire global dataset
+    # LAYER: SMOKE PLUMES (NASA GIBS)
+    if "☁️ Visual Smoke Plumes" in active_layers:
+        smoke_url = f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_CorrectedReflectance_TrueColor/default/{date_yesterday}/GoogleMapsCompatible_Level9/{{z}}/{{y}}/{{x}}.jpg"
+        folium.TileLayer(tiles=smoke_url, attr="NASA GIBS", name="Smoke", overlay=True, opacity=0.6).add_to(m_cmd)
+
+    # LAYER: FIRE DOTS (Regional Scan)
+    if "🔥 Active Fires" in active_layers and fire_df is not None:
         fire_df['dist'] = haversine_np(search_lon, search_lat, fire_df['longitude'], fire_df['latitude'])
-        closest_fire = fire_df.loc[fire_df['dist'].idxmin()]
         
-        # Display Metrics
-        c1, c2, c3 = st.columns(3)
+        # Display Proximity Metrics
+        closest_fire = fire_df.loc[fire_df['dist'].idxmin()]
+        c1, c2 = st.columns(2)
         c1.metric("Nearest Active Fire", f"{closest_fire['dist']:.1f} mi")
         c2.metric("Fire Intensity (K)", f"{closest_fire['bright_ti4']:.0f}")
-        c3.metric("Global Detections", len(fire_df))
 
-        # ACCURACY & VISIBILITY LOGIC:
-        # We only plot markers within 1,500 miles to keep the map fast and visibility focused on your region.
+        # Plot markers only for current region to ensure app speed
         local_fires = fire_df[fire_df['dist'] < 1500].head(500)
-        
         for _, row in local_fires.iterrows():
             folium.CircleMarker(
                 location=[row['latitude'], row['longitude']],
@@ -855,15 +871,15 @@ with tab5:
                 popup=f"Distance: {row['dist']:.1f} miles"
             ).add_to(m_cmd)
 
-    # Marker for your searched city (Tab 1)
+    # Blue Marker for the Tab 1 Search Point
     folium.Marker([search_lat, search_lon], icon=folium.Icon(color='blue', icon='info-sign')).add_to(m_cmd)
 
-    # Render with static key
-    st_folium(m_cmd, width="100%", height=500, key="regional_fire_map_v2")
+    # Render with static key for stability
+    st_folium(m_cmd, width="100%", height=500, key="synced_regional_fire_map")
 
     # 6. SYSTEM DISCLAIMER
     st.markdown("---")
-    st.warning("⚠️ **Data Accuracy Note:** This tracker utilizes NASA satellite thermal anomalies. Detection may not be 100% accurate at all times due to cloud cover, sensor latency, or low-intensity heat signatures. For performance stability, active fire markers are only displayed for the region surrounding your selected location.")
+    st.warning("⚠️ **Data Accuracy Note:** This tracker utilizes NASA satellite thermal anomalies. Detection may not be 100% accurate at all times due to cloud cover or sensor latency. Active fire markers are displayed for the region surrounding your Tab 1 search location.")
     
 with tab6:
     st.markdown("### 🚲 The Clean-Air Commute")
