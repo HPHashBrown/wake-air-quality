@@ -19,31 +19,6 @@ import random
 import plotly.express as px
 
 
-# Place this at the top of app.py, right after your imports
-with st.sidebar:
-    try:
-        # Pulls the MedExplained logo from your root folder
-        st.image("logo.png", width=100)
-    except:
-        pass
-    st.title("MedExplained")
-    st.markdown("*Empowering Health Literacy*")
-    
-    st.markdown("---")
-    st.info("**Educational Access:** This platform is an open-access tool for environmental monitoring and health literacy.")
-    
-    # This empty spacing pushes the watermark down naturally
-    st.markdown("<br>" * 10, unsafe_allow_html=True)
-    
-    # 5. SIDEBAR BRANDING WATERMARK (Pinned to the bottom layout)
-    st.markdown("""
-        <div style='position: relative; padding-top: 50px; opacity: 0.35; border-top: 1px solid rgba(255,255,255,0.05);'>
-            <p style='font-size: 0.75em; color: #94a3b8; margin: 0; letter-spacing: 0.5px; line-height: 1.4;'>
-                © 2026 MedExplained<br>
-                All Rights Reserved.
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
 
 def calculate_activity_scores(hourly_df):
     """
@@ -524,9 +499,10 @@ with st.sidebar:
         alert_threshold = st.slider("US AQI Trigger Threshold", min_value=50, max_value=300, value=100, step=10)
         submit_alert = st.form_submit_button("Initialize Protocol")
         if submit_alert:
-            if target_email: st.success("Protocol Active.")
-            else: st.error("Error: Valid Email Required.")
-
+            if target_email: 
+                st.success("Protocol Active.")
+            else: 
+                st.error("Error: Valid Email Required.")
 
     st.markdown("---")
     selected_name = st.selectbox("🧬 Select Pollutant", options=list(POLLUTANT_MAP.keys()))
@@ -546,6 +522,16 @@ with st.sidebar:
         st.session_state.start_time = datetime.now()
         st.rerun()
 
+    # 5. SIDEBAR BRANDING WATERMARK (Placed at the absolute bottom)
+    st.markdown("<br>" * 3, unsafe_allow_html=True)  # Clean padding underneath the button
+    st.markdown("""
+        <div style='padding-top: 20px; opacity: 0.35; border-top: 1px solid rgba(255,255,255,0.05);'>
+            <p style='font-size: 0.75em; color: #94a3b8; margin: 0; letter-spacing: 0.5px; line-height: 1.4;'>
+                © 2026 MedExplained<br>
+                All Rights Reserved.
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
 
 # ============================================
 # PROCESSING & MODELING
